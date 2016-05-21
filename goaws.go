@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"github.com/gorilla/mux"
 	"io"
+	"flag"
 
 	sqs "github.com/pfortin-urbn/goaws/gosqs"
 	sns "github.com/pfortin-urbn/goaws/gosns"
+	"log"
 )
 
 func BadRequest(w http.ResponseWriter, req *http.Request) {
@@ -44,7 +46,11 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	var portNumber string
+	flag.StringVar(&portNumber, "port", "4100", "Port number to listen on")
+	flag.Parse()
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
-	http.ListenAndServe(":12345", r)
+	log.Printf("GoAws listening on: 0.0.0.0:%s\n", portNumber)
+	http.ListenAndServe("0.0.0.0:"+portNumber, r)
 }
