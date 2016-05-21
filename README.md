@@ -13,7 +13,7 @@ Written in Go this is a clone of AWS for Development purposes.
         go build . 
         
     Run
-        ./goaws
+        ./goaws  (by default goaws listens on port 4100 but you can change it with -port=XXXX)
         
 
 ## USING DOCKER
@@ -25,7 +25,7 @@ Written in Go this is a clone of AWS for Development purposes.
         docker build -f goaws
         
     run
-        docker run -d --name goaws -p 12345:12345 goaws
+        docker run -d --name goaws -p 4100:4100 goaws
 
 
 
