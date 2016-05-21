@@ -22,7 +22,7 @@ Written in Go this is a clone of AWS for Development purposes.
         docker pull pafortin/goaws
         
     run
-        docker run -d --name goaws -p 4100:4100 goaws
+        docker run -d --name goaws -p 4100:4100 pafortin/goaws
 
 
 
