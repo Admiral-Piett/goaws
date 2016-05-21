@@ -18,11 +18,8 @@ Written in Go this is a clone of AWS for Development purposes.
 
 ## USING DOCKER
 
-    compile 
-        gox -osarch="linux/amd64" .
-        
-    build
-        docker build -f goaws
+    Get it
+        docker pull pafortin/goaws
         
     run
         docker run -d --name goaws -p 4100:4100 goaws
