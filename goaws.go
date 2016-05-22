@@ -46,11 +46,15 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+
 	var portNumber string
 	flag.StringVar(&portNumber, "port", "4100", "Port number to listen on")
 	flag.Parse()
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
+
 	log.Printf("GoAws listening on: 0.0.0.0:%s\n", portNumber)
-	http.ListenAndServe("0.0.0.0:"+portNumber, r)
+	err := http.ListenAndServe("0.0.0.0:"+portNumber, r)
+	log.Fatal(err)
 }
