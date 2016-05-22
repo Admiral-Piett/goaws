@@ -1,5 +1,7 @@
 # GoAws
 
+[![Join the chat at https://gitter.im/p4tin/GoAws](https://badges.gitter.im/p4tin/GoAws.svg)](https://gitter.im/p4tin/GoAws?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Written in Go this is a clone of AWS for Development purposes.
 
 ## Install
