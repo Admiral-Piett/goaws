@@ -26,12 +26,18 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 		sqs.ListQueues(w, req)
 	case "CreateQueue":
 		sqs.CreateQueue(w, req)
+	case "GetQueueAttributes":
+		sqs.GetQueueAttributes(w, req)
 	case "SendMessage":
 		sqs.SendMessage(w, req)
 	case "ReceiveMessage":
 		sqs.ReceiveMessage(w, req)
 	case "DeleteMessage":
 		sqs.DeleteMessage(w, req)
+	case "GetQueueUrl":
+		sqs.GetQueueUrl(w, req)
+	case "PurgeQueue":
+		sqs.PurgeQueue(w, req)
 	case "DeleteQueue":
 		sqs.DeleteQueue(w, req)
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"strconv"
 )
 
 type Message struct {
@@ -53,7 +54,7 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
-	queueUrl := "http://" + req.Host + req.URL.RequestURI() + queueName
+	queueUrl := "http://" + req.Host + req.URL.RequestURI() + "queue/" + queueName
 
 	log.Println("Creating Queue:", queueName)
 	queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl}
@@ -176,6 +177,124 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 
 	// Create, encode/xml and send response
 	respStruct := DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+}
+
+
+func PurgeQueue(w http.ResponseWriter, req *http.Request) {
+	// Sent response type
+	w.Header().Set("Content-Type", "application/xml")
+
+	// Retrieve FormValues required
+	queueUrl := req.FormValue("QueueUrl")
+
+	uriSegments := strings.Split(queueUrl, "/")
+	queueName := uriSegments[len(uriSegments)-1]
+
+	log.Println("Purging Queue:", queueName)
+
+	// Find queue/message with the receipt handle and delete
+	if queue, ok := Queues[queueName]; ok {
+		for i, _ := range queue.Messages {
+			Queues[queueName].Messages = append(Queues[queueName].Messages[:i], Queues[queueName].Messages[i + 1:]...)
+		}
+		// Create, encode/xml and send response
+		respStruct := PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			fmt.Printf("error: %v\n", err)
+			createErrorResponse(w, req)
+		}
+	} else {
+		log.Println("Purge Queue:", queueName, ", queue does not exist!!!")
+		createErrorResponse(w, req)
+	}
+
+
+}
+
+func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
+	// Sent response type
+	w.Header().Set("Content-Type", "application/xml")
+	//
+	//// Retrieve FormValues required
+	queueName := req.FormValue("QueueName")
+	if queue, ok := Queues[queueName]; ok {
+		url := queue.URL
+
+		log.Println("Get Queue URL:", queueName)
+		// Create, encode/xml and send response
+		result := GetQueueUrlResult{QueueUrl: url}
+		respStruct := GetQueueUrlResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
+	} else {
+		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		createErrorResponse(w, req)
+	}
+}
+
+
+func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
+	// Sent response type
+	w.Header().Set("Content-Type", "application/xml")
+	//
+	//// Retrieve FormValues required
+	// Retrieve FormValues required
+	queueUrl := req.FormValue("QueueUrl")
+
+	uriSegments := strings.Split(queueUrl, "/")
+	queueName := uriSegments[len(uriSegments)-1]
+
+	log.Println("Get Queue Attributes:", queueName)
+
+	if queue, ok := Queues[queueName]; ok {
+		// Create, encode/xml and send response
+		attribs := make([]Attribute, 0, 0)
+		attr := Attribute{Name: "VisibilityTimeout", Value: "0"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "DelaySeconds", Value: "0"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: "0"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: "0"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "LastModifiedTimestamp", Value: "0000000000"}
+		attribs = append(attribs, attr)
+		attr = Attribute{Name: "QueueArn", Value: queue.Arn}
+		attribs = append(attribs, attr)
+
+		result := GetQueueAttributesResult{Attrs: attribs}
+		respStruct := GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
+	} else {
+		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		createErrorResponse(w, req)
+	}
+
+
+}
+
+func createErrorResponse(w http.ResponseWriter, req *http.Request) {
+	respStruct := ErrorResponse{ErrorResult{Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version.", RequestId: "00000000-0000-0000-0000-000000000000"}}
+
+	w.WriteHeader(http.StatusBadRequest)
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {

@@ -1,26 +1,35 @@
 # GoAws  [![Join the chat at https://gitter.im/p4tin/GoAws](https://badges.gitter.im/p4tin/GoAws.svg)](https://gitter.im/p4tin/GoAws?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
  
-Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS ans SNS in a local environment so developpers can test their interfaces without having to connect the the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
+Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS ans SNS in a local environment so developers can test their interfaces without having to connect the the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
+
 
 ## Current SQS APIs implemented:
 
  * ListQueues
  * CreateQueue
+ * GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
+ * GetQueueUrl
  * SendMessage
- * ReveiveMessage
+ * ReceiveMessage
  * DeleteMessage
+ * PurgeQueue
  * Delete Queue
  
- ## Next SQS APIs to be implemented:
+ Note: Not Yet Done (SetQueueAttributes)
+
+
+ ## Next implement the following SNS APIs:
  
- * GetQueueUrl
- * PurgeQueue
-  
-After those SQS Apis are complete, we will put effort into implementing SNS APIs
+ * ListTopics
+ * CreateTopic
+ * DeleteTopic
+ * CreateSubscription (+raw)
+ * DeleteSubscription
+ * DeteteTopic
 
 
-## Install
+## Installation
 
     go get github.com/p4tin/GoAws
 
