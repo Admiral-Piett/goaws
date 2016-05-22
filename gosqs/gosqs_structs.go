@@ -68,3 +68,52 @@ type DeleteMessageResponse struct {
 	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
 	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
 }
+
+
+/*** Purge Queue Response */
+type PurgeQueueResponse struct {
+	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
+	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
+}
+
+/*** Get Queue Url Response */
+type GetQueueUrlResult struct {
+	QueueUrl string				`xml:"QueueUrl,omitempty"`
+}
+
+type GetQueueUrlResponse struct {
+	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
+	Result 		GetQueueUrlResult 	`xml:"GetQueueUrlResult"`
+	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
+}
+
+/*** Get Queue Attributes ***/
+type Attribute struct {
+	Name 	string	`xml:"Name,omitempty"`
+	Value 	string	`xml:"Value,omitempty"`
+}
+
+type GetQueueAttributesResult struct {
+	/* VisibilityTimeout, DelaySeconds, ReceiveMessageWaitTimeSeconds, ApproximateNumberOfMessages
+	   ApproximateNumberOfMessagesNotVisible, CreatedTimestamp, LastModifiedTimestamp, QueueArn */
+	Attrs []Attribute				`xml:"Attribute,omitempty"`
+}
+
+
+type GetQueueAttributesResponse struct {
+	Xmlns 		string				`xml:"xmlns,attr,omitempty"`
+	Result 		GetQueueAttributesResult 	`xml:"GetQueueAttributesResult"`
+	Metadata 	ResponseMetadata 		`xml:"ResponseMetadata,omitempty"`
+}
+
+/*** Error Responses ***/
+type ErrorResult struct {
+	Type string 		`xml:"Type,omitempty"`
+	Code string		`xml:"Code,omitempty"`
+	Message string		`xml:"Message,omitempty"`
+	RequestId string	`xml:"RequestId,omitempty"`
+}
+
+type ErrorResponse struct {
+	Result	ErrorResult	`xml:"Error"`
+}
