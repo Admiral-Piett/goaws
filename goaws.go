@@ -6,8 +6,8 @@ import (
 	"io"
 	"flag"
 
-	sqs "github.com/pfortin-urbn/goaws/gosqs"
-	sns "github.com/pfortin-urbn/goaws/gosns"
+	sqs "./gosqs"
+	sns "./gosns"
 	"log"
 )
 
