@@ -25,6 +25,7 @@ Note: Not Yet Done (SetQueueAttributes)
 ## Next implement the following SNS APIs:
  
  * CreateTopic
+ * Publish
  * DeleteTopic
  * CreateSubscription (+raw)
  * DeleteSubscription
