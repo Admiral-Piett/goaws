@@ -1,4 +1,4 @@
-package gosqs
+package common
 
 import (
 	"io"

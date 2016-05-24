@@ -1,0 +1,13 @@
+version: '2'
+services:
+  yopa:
+    container_name: yopa
+    image: my-yopa
+    ports:
+      - 47195:47195
+      - 47196:47196
+      - 47197:47197
+    volumes:
+     - ./config:/config
+
+

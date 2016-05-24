@@ -16,12 +16,14 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
  * PurgeQueue
  * Delete Queue
  
- Note: Not Yet Done (SetQueueAttributes)
+Note: Not Yet Done (SetQueueAttributes)
 
+## Current SQS APIs implemented:
 
- ## Next implement the following SNS APIs:
- 
  * ListTopics
+
+## Next implement the following SNS APIs:
+ 
  * CreateTopic
  * DeleteTopic
  * CreateSubscription (+raw)
@@ -114,3 +116,17 @@ You can test that your installation is working correctly in one of two ways:
     No output (There are no Queues left)
 ```
 
+(Topics are created hard coded (until create-topic is implemented)
+* aws --endpoint-url http://localhost:4100 sns list-topics
+```
+    {
+        "Topics": [
+            {
+                "TopicArn": "arn:aws:sns:local:000000000000:topic1"
+            }, 
+            {
+                "TopicArn": "arn:aws:sns:local:000000000000:topic2"
+            }
+        ]
+    }
+```

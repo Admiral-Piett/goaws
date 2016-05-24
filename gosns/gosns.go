@@ -2,28 +2,43 @@ package gosns
 
 import (
 	"net/http"
-	"io"
 	"fmt"
+	"log"
+	"sync"
+	"encoding/xml"
 )
 
 type Topic struct {
 	Name 		string
 	Arn 		string
-	Subscritions 	[]string
 }
 
-var Topics map[string]Topic
+
+var SyncTopics = struct{
+	sync.RWMutex
+	Topics map[string]*Topic
+}{Topics: make(map[string]*Topic)}
 
 func init() {
-	Topics = make(map[string]Topic)
-	Topics["topic1"] = Topic{Name: "topic1"}
-	Topics["topic2"] = Topic{Name: "topic2"}
+	SyncTopics.Topics = make(map[string]*Topic)
+	SyncTopics.Topics["topic1"] = &Topic{ Name: "topic1", Arn: "arn:aws:sns:local:000000000000:topic1" }
+	SyncTopics.Topics["topic2"] = &Topic{ Name: "topic2", Arn: "arn:aws:sns:local:000000000000:topic2" }
 }
 
 func ListTopics(w http.ResponseWriter, req *http.Request) {
-	resp := ""
-	for _, topic := range Topics {
-		resp = resp + fmt.Sprintf("%s<br>", topic.Name)
+	respStruct := ListTopicsResponse{}
+	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
+	respStruct.Metadata = ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
+
+	respStruct.Result.Topics.Member = make([]TopicArnResult, 0, 0)
+	log.Println("Listing Topics")
+	for _, topic := range SyncTopics.Topics {
+		ta := TopicArnResult{TopicArn: topic.Arn}
+		respStruct.Result.Topics.Member = append(respStruct.Result.Topics.Member, ta)
 	}
-	io.WriteString(w, resp)
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
