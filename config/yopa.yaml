@@ -1,0 +1,46 @@
+# YOPA Configuration
+
+# optional configuration: the default values below are used if missing
+region: yopa-local
+host: localhost
+bind-address: 0.0.0.0
+sqs:
+  port: 47195
+  # `https` and `host` are used for the regions override XML.
+  # This is useful if yopa is fronted by a proxy that offloads HTTPS.
+  # https: false
+  # host: (defaults to top level `host`:`port`)
+  # host: localhost:47195
+sns:
+  port: 47196
+  https: false
+s3:
+  port: 47197
+  https: false
+  data-dir: /tmp/yopa-fake-s3/
+
+
+messaging:
+  # creates a topic with an SQS and an HTTP subscription
+  - sns://test-topic-with-subscriptions:
+
+    # creates and subscribes a queue, with standard delivery
+    - sqs://test-subscribed-queue-standard
+
+    # creates and subscribes a queue, with raw delivery
+    - { endpoint: "sqs://test-subscribed-queue-raw", rawDelivery: true }
+
+    # subscribes an HTTP endpoint, with standard delivery
+    - http://localhost:47196/request-logger
+
+  # creates a topic without subscription: messages sent to it will be logged and discarded
+  - sns://test-topic-without-subscription
+
+  # creates a queue, not subscribed to any topic
+  - sqs://test-standalone-queue
+
+storage:
+  buckets:
+    - test-bucket
+    - NOT-DNS-HAPPY-NAME
+

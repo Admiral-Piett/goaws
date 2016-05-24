@@ -9,6 +9,8 @@ import (
 	"log"
 	"strconv"
 	"sync"
+
+	"github.com/p4tin/goaws/common"
 )
 
 type Message struct {
@@ -88,9 +90,9 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Putting Message in Queue:", queueName)
 	msg := Message{messageBody: []byte(messageBody)}
-	msg.MD5OfMessageAttributes = GetMD5Hash("GoAws")
-	msg.MD5OfMessageBody = GetMD5Hash(messageBody)
-	msg.Uuid, _ = NewUUID()
+	msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
+	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
+	msg.Uuid, _ = common.NewUUID()
 	SyncQueues.Lock()
 	SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages, msg)
 	SyncQueues.Unlock()
@@ -122,7 +124,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			if SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
 				continue
 			}
-			uuid, _ := NewUUID()
+			uuid, _ := common.NewUUID()
 			SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
 			SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
 			message = SyncQueues.Queues[queueName].Messages[i]
