@@ -25,3 +25,25 @@ type ListTopicsResponse struct {
 	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
 }
 
+/*** Create Topic Response */
+type CreateTopicResult struct {
+	TopicArn string			`xml:"TopicArn"`
+}
+
+type CreateTopicResponse struct {
+	Xmlns 		string			`xml:"xmlns,attr"`
+	Result		CreateTopicResult	`xml:"CreateTopicResult"`
+	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+}
+
+
+/*** Create Subscription ***/
+type SubscribeResult struct {
+	SubscriptionArn string			`xml:"SubscriptionArn"`
+}
+
+type SubscribeResponse struct {
+	Xmlns 		string			`xml:"xmlns,attr"`
+	Result		SubscribeResult		`xml:"SubscribeResult"`
+	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+}

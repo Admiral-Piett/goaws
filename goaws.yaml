@@ -1,0 +1,21 @@
+Local:
+  Topics:
+    - { Name: LocalTopic1 }
+#      Subscriptions: [
+#        LocalSubscriptionQueueTest1,
+#        LocalSubscriptionQueueTest1
+#      ]
+    - { Name: LocalTopic2 }
+  Queues:
+    - { Name: LocalTest1 }
+    - { Name: LocalTest2 }
+
+Dev:
+  Topics:
+    - { Name: DevTopic1 }
+#      Subscriptions:
+#        - DevSubscriptionQueueTest1
+#        - DevSubscriptionQueueTest1 <raw>
+  Queues:
+    - { Name: DevTest1 }
+    - { Name: DevTest2 }
