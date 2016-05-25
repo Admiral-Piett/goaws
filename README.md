@@ -22,7 +22,7 @@ Note: Not Yet Done (SetQueueAttributes)
 
  * ListTopics
  * CreateTopic
- * CreateSubscription
+ * Subscribe
  
 ## Next implement the following SNS APIs:
  
