@@ -21,10 +21,11 @@ Note: Not Yet Done (SetQueueAttributes)
 ## Current SQS APIs implemented:
 
  * ListTopics
-
+ * CreateTopic
+ * CreateSubscription
+ 
 ## Next implement the following SNS APIs:
  
- * CreateTopic
  * Publish
  * DeleteTopic
  * CreateSubscription (+raw)
@@ -32,7 +33,20 @@ Note: Not Yet Done (SetQueueAttributes)
  * DeteteTopic
 
 
-## Installation
+## Yaml Configuration Implemented
+
+ * Read config file 
+
+## Next implement the following Configuration:
+
+ * Implement flag to chose configuration type
+ * Process Queue Creations
+ * Process Topic Creations
+ * Process Create Subscriptions
+
+## Write Unit Tests
+
+# Installation
 
     go get github.com/p4tin/GoAws
 
