@@ -53,7 +53,7 @@ Note: Not Yet Done (SetQueueAttributes)
 
     go get github.com/p4tin/GoAws
 
-## Build and Run (Stamdalone)
+## Build and Run (Standalone)
 
     Build
         cd to GoAws directory
