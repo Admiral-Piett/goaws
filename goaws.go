@@ -72,8 +72,16 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 	/*** SNS Actions ***/
 	case "CreateTopic":
 		sns.CreateTopic(w, req)
+	case "DeleteTopic":
+		sns.DeleteTopic(w, req)
 	case "Subscribe":
 		sns.Subscribe(w, req)
+	case "ListSubscriptions":
+		sns.ListSubscriptions(w, req)
+	case "Unsubscribe":
+		sns.Unsubscribe(w, req)
+	case "Publish":
+		sns.Publish(w, req)
 
 	/*** Bad Request ***/
 	default:
