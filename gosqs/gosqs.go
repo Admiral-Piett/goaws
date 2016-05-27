@@ -14,12 +14,12 @@ import (
 )
 
 type Message struct {
-	messageBody 		[]byte
-	Uuid 			string
-	MD5OfMessageAttributes 	string
-	MD5OfMessageBody 	string
-	ReceiptHandle		string
-	ReceiptTime 		time.Time
+	MessageBody            []byte
+	Uuid                   string
+	MD5OfMessageAttributes string
+	MD5OfMessageBody       string
+	ReceiptHandle          string
+	ReceiptTime            time.Time
 }
 
 type Queue struct {
@@ -89,7 +89,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	queueName := uriSegments[len(uriSegments)-1]
 
 	log.Println("Putting Message in Queue:", queueName)
-	msg := Message{messageBody: []byte(messageBody)}
+	msg := Message{MessageBody: []byte(messageBody)}
 	msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 	msg.Uuid, _ = common.NewUUID()
@@ -130,7 +130,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			message = SyncQueues.Queues[queueName].Messages[i]
 		}
 
-		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.messageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
+		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
 		respStruct = ReceiveMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ReceiveMessageResult{Message: &respMsg}, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	} else {
 		log.Println("No messages in Queue:", queueName)

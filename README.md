@@ -22,13 +22,16 @@ Note: Not Yet Done (SetQueueAttributes)
 
  * ListTopics
  * CreateTopic
- * Subscribe
- 
+ * Subscribe (raw)
+ * ListSubscriptions
+ * Publish
+
+
 ## Next implement the following SNS APIs:
  
- * Publish
+ * ListSubscriptionsByTopic
  * DeleteTopic
- * CreateSubscription (+raw)
+ * Subscribe (not-raw)
  * DeleteSubscription
  * DeteteTopic
 
