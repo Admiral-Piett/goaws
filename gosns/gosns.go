@@ -10,13 +10,25 @@ import (
 
 	"github.com/p4tin/goaws/common"
 	sqs "github.com/p4tin/goaws/gosqs"
+	"time"
+	"gopkg.in/square/go-jose.v1/json"
 )
+
+type SnsErrorType struct {
+	HttpError int
+	Type string
+	Code string
+	Message string
+}
+
+var SnsErrors map[string]SnsErrorType
 
 type Subscription struct {
 	TopicArn 	string
 	Protocol 	string
 	SubscriptionArn string
 	EndPoint 	string
+	Raw 		bool
 }
 
 type Topic struct {
@@ -33,6 +45,14 @@ var SyncTopics = struct{
 
 func init() {
 	SyncTopics.Topics = make(map[string]*Topic)
+
+	SnsErrors = make(map[string]SnsErrorType)
+	err1 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic" , Message:"The specified topic does not exist for this wsdl version."}
+	SnsErrors["TopicNotFound"] = err1
+	err2 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription" , Message:"The specified subscription does not exist for this wsdl version."}
+	SnsErrors["SubscriptionNotFound"] = err2
+	err3 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists" , Message:"The specified topic already exists."}
+	SnsErrors["TopicExists"] = err3
 }
 
 func ListTopics(w http.ResponseWriter, req *http.Request) {
@@ -60,6 +80,12 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	topicName := req.FormValue("Name")
+
+	if _, ok := SyncTopics.Topics[topicName] ; ok {
+		createErrorResponse(w, req, "TopicExists")
+		return
+	}
+
 	topicArn := "arn:aws:sns:local:000000000000:" + topicName
 
 	log.Println("Creating Topic:", topicName)
@@ -89,7 +115,7 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicName := uriSegments[len(uriSegments)-1]
 
 	log.Println("Creating Subscription from", topicName, "to", endpoint, "using protocol", protocol)
-	subscription := Subscription{EndPoint:endpoint, Protocol: protocol, TopicArn: topicArn}
+	subscription := Subscription{EndPoint:endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
@@ -137,6 +163,39 @@ func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	subsArn := req.FormValue("SubscriptionArn")
+	Attribute := req.FormValue("AttributeName")
+	Value := req.FormValue("AttributeValue")
+
+	for _, topic := range SyncTopics.Topics {
+		for _, sub := range topic.Subscriptions {
+			if sub.SubscriptionArn == subsArn {
+				if Attribute == "RawMessageDelivery" {
+					SyncTopics.Lock()
+					if Value == "true" {
+						sub.Raw = true
+					} else {
+						sub.Raw = false
+					}
+					SyncTopics.Unlock()
+					//Good Response == return
+					uuid, _ := common.NewUUID()
+					respStruct := SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
+					enc := xml.NewEncoder(w)
+					enc.Indent("  ", "    ")
+					if err := enc.Encode(respStruct); err != nil {
+						fmt.Printf("error: %v\n", err)
+					}
+					return
+				}
+			}
+		}
+	}
+	createErrorResponse(w, req, "SubscriptionNotFound")
+}
+
 func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 
 }
@@ -161,7 +220,11 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 			queueName := uriSegments[len(uriSegments) - 1]
 
 			msg := sqs.Message{}
-			msg.MessageBody = []byte(messageBody)
+			if !subs.Raw {
+				msg.MessageBody = CreateMessageBody(messageBody, topicArn)
+			} else {
+				msg.MessageBody = []byte(messageBody)
+			}
 			msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 			msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 			msg.Uuid, _ = common.NewUUID()
@@ -175,6 +238,43 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	msgId, _ := common.NewUUID()
 	uuid, _ := common.NewUUID()
 	respStruct := PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", PublishResult{MessageId: msgId}, ResponseMetadata{RequestId: uuid}}
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+}
+
+type TopicMessage struct {
+	Type string
+	MessageId string
+	TopicArn string
+	Subject string
+	Message string
+	TimeStamp string
+}
+
+func CreateMessageBody(msg string, topicArn string) []byte {
+	msgId, _ := common.NewUUID()
+
+	message := TopicMessage{}
+	message.Type = "Notification"
+	message.Message = msg
+	message.MessageId = msgId
+	message.TopicArn = topicArn
+	t := time.Now()
+	message.TimeStamp = fmt.Sprintln(t.Format("2006-01-02T15:04:05:001Z"))
+
+	byteMsg, _ := json.Marshal(message)
+	return byteMsg
+}
+
+
+func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
+	er := SnsErrors[err]
+	respStruct := ErrorResponse{ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
+
+	w.WriteHeader(er.HttpError)
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {

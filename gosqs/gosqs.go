@@ -13,6 +13,15 @@ import (
 	"github.com/p4tin/goaws/common"
 )
 
+type SqsErrorType struct {
+	HttpError int
+	Type string
+	Code string
+	Message string
+}
+
+var SqsErrors map[string]SqsErrorType
+
 type Message struct {
 	MessageBody            []byte
 	Uuid                   string
@@ -38,6 +47,14 @@ var SyncQueues = struct{
 
 func init() {
 	SyncQueues.Queues = make(map[string]*Queue)
+
+	SqsErrors = make(map[string]SqsErrorType)
+	err1 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue" , Message:"The specified ueue does not exist for this wsdl version."}
+	SqsErrors["QueueNotFound"] = err1
+	err2 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleQueueService.QueueExists" , Message:"The specified queue already exists."}
+	SqsErrors["QueueExists"] = err2
+	err3 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "GeneralError", Code: "AWS.SimpleQueueService.GeneralError" , Message:"General Error."}
+	SqsErrors["GeneralError"] = err3
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -65,6 +82,11 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
 	queueUrl := "http://" + req.Host + req.URL.RequestURI() + "queue/" + queueName
+
+	if _, ok := SyncQueues.Queues[queueName] ; ok {
+		createErrorResponse(w, req, "QueueExists")
+		return
+	}
 
 	log.Println("Creating Queue:", queueName)
 	queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl}
@@ -112,6 +134,11 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 	uriSegments := strings.Split(queueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
+
+	if _, ok := SyncQueues.Queues[queueName] ; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
 
 	var message Message
 	respMsg := ResultMessage{}
@@ -229,11 +256,11 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
 			fmt.Printf("error: %v\n", err)
-			createErrorResponse(w, req)
+			createErrorResponse(w, req, "GeneralError")
 		}
 	} else {
 		log.Println("Purge Queue:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req)
+		createErrorResponse(w, req, "QueueNotFound")
 	}
 	SyncQueues.Unlock()
 }
@@ -258,7 +285,7 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req)
+		createErrorResponse(w, req, "QueueNotFound")
 	}
 	SyncQueues.RUnlock()
 }
@@ -306,16 +333,17 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req)
+		createErrorResponse(w, req, "QueueNotFound")
 	}
 	SyncQueues.Unlock()
 
 }
 
-func createErrorResponse(w http.ResponseWriter, req *http.Request) {
-	respStruct := ErrorResponse{ErrorResult{Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version.", RequestId: "00000000-0000-0000-0000-000000000000"}}
+func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
+	er := SqsErrors[err]
+	respStruct := ErrorResponse{ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
 
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(er.HttpError)
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {

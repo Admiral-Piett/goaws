@@ -76,6 +76,8 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 		sns.DeleteTopic(w, req)
 	case "Subscribe":
 		sns.Subscribe(w, req)
+	case "SetSubscriptionAttributes":
+		sns.SetSubscriptionAttributes(w, req)
 	case "ListSubscriptions":
 		sns.ListSubscriptions(w, req)
 	case "Unsubscribe":
