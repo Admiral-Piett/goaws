@@ -34,7 +34,7 @@ type Subscription struct {
 type Topic struct {
 	Name 		string
 	Arn 		string
-	Subscriptions 	[]Subscription
+	Subscriptions 	[]*Subscription
 }
 
 
@@ -90,7 +90,7 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Creating Topic:", topicName)
 	topic := &Topic{Name: topicName, Arn: topicArn}
-	topic.Subscriptions = make([]Subscription, 0 ,0)
+	topic.Subscriptions = make([]*Subscription, 0 ,0)
 	SyncTopics.RLock()
 	SyncTopics.Topics[topicName] = topic
 	SyncTopics.RUnlock()
@@ -115,7 +115,7 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicName := uriSegments[len(uriSegments)-1]
 
 	log.Println("Creating Subscription from", topicName, "to", endpoint, "using protocol", protocol)
-	subscription := Subscription{EndPoint:endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
+	subscription := &Subscription{EndPoint:endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
@@ -173,6 +173,7 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 		for _, sub := range topic.Subscriptions {
 			if sub.SubscriptionArn == subsArn {
 				if Attribute == "RawMessageDelivery" {
+					log.Println("Before - Subs:", sub.EndPoint, "Raw:", sub.Raw)
 					SyncTopics.Lock()
 					if Value == "true" {
 						sub.Raw = true
@@ -180,6 +181,7 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 						sub.Raw = false
 					}
 					SyncTopics.Unlock()
+					log.Println("After - Subs:", sub.EndPoint, "Raw:", sub.Raw)
 					//Good Response == return
 					uuid, _ := common.NewUUID()
 					respStruct := SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
@@ -220,7 +222,8 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 			queueName := uriSegments[len(uriSegments) - 1]
 
 			msg := sqs.Message{}
-			if !subs.Raw {
+			log.Println("Subscript:", subs.EndPoint, "Raw: ", subs.Raw)
+			if subs.Raw == false {
 				msg.MessageBody = CreateMessageBody(messageBody, topicArn)
 			} else {
 				msg.MessageBody = []byte(messageBody)
