@@ -35,6 +35,7 @@ type Queue struct {
 	Name 		string
 	URL 		string
 	Arn 		string
+	TimeoutSecs	int
 	Messages 	[]Message
 }
 
@@ -89,7 +90,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Creating Queue:", queueName)
-	queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl}
+	queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
 	SyncQueues.RLock()
 	SyncQueues.Queues[queueName] = queue
 	SyncQueues.RUnlock()
@@ -148,7 +149,8 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	SyncQueues.Lock()		// Lock the Queues
 	if len(SyncQueues.Queues[queueName].Messages) > 0 {
 		for i, _ := range SyncQueues.Queues[queueName].Messages {
-			if SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
+			timeout := time.Now().Add(time.Duration(-SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			if (SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
 			}
 			uuid, _ := common.NewUUID()
