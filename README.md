@@ -77,9 +77,9 @@ Note: Not Yet Done (SetQueueAttributes)
 
 You can test that your installation is working correctly in one of two ways:
 
- 1.  Usign the postman collection provided in this repository ( refer to [postman docs](https://www.getpostman.com/docs/) on how to use it )
+ 1.  Usign the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e)
 
- 2. by using the [AWS cli tools](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) and using the following commands.
+ 2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 
 * aws --endpoint-url http://localhost:4100 sqs create-queue --queue-name test1  
 ```

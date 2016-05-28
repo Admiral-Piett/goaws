@@ -48,6 +48,15 @@ type SubscribeResponse struct {
 	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
 }
 
+
+/***  Set Subscription Response ***/
+
+type SetSubscriptionAttributesResponse struct {
+	Xmlns  		string  		`xml:"xmlns,attr"`
+	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+
+}
+
 /*** List Subscriptions Response */
 type TopicMemberResult struct {
 	TopicArn 		string		`xml:"TopicArn"`
@@ -84,4 +93,16 @@ type PublishResponse struct {
 	Result		PublishResult		`xml:"PublishResult"`
 	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
 
+}
+
+/*** Error Responses ***/
+type ErrorResult struct {
+	Type string 		`xml:"Type,omitempty"`
+	Code string		`xml:"Code,omitempty"`
+	Message string		`xml:"Message,omitempty"`
+	RequestId string	`xml:"RequestId,omitempty"`
+}
+
+type ErrorResponse struct {
+	Result	ErrorResult	`xml:"Error"`
 }
