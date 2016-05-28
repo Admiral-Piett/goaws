@@ -246,13 +246,9 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Purging Queue:", queueName)
 
-	// Find queue/message with the receipt handle and delete
 	SyncQueues.Lock()
-	if queue, ok := SyncQueues.Queues[queueName]; ok {
-		for i, _ := range queue.Messages {
-			SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages[:i], SyncQueues.Queues[queueName].Messages[i + 1:]...)
-		}
-		// Create, encode/xml and send response
+	if _, ok := SyncQueues.Queues[queueName]; ok {
+		SyncQueues.Queues[queueName].Messages = nil
 		respStruct := PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
