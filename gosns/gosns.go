@@ -202,11 +202,17 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	subArn := req.FormValue("SubscriptionArn")
 
+	log.Println("Unsubcribing:", subArn)
 	for _, topic := range SyncTopics.Topics {
 		for i, sub := range topic.Subscriptions {
+			log.Println(subArn, sub.SubscriptionArn)
 			if sub.SubscriptionArn == subArn {
 				SyncTopics.Lock()
-				topic.Subscriptions = append(topic.Subscriptions[:1], topic.Subscriptions[i+1:]...)
+
+				copy(topic.Subscriptions[i:], topic.Subscriptions[i+1:])
+				topic.Subscriptions[len(topic.Subscriptions)-1] = nil
+				topic.Subscriptions = topic.Subscriptions[:len(topic.Subscriptions)-1]
+
 				SyncTopics.Unlock()
 
 				uuid, _ := common.NewUUID()
