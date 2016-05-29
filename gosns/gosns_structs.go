@@ -95,6 +95,12 @@ type PublishResponse struct {
 
 }
 
+/*** Unsubscribe ***/
+type UnsubscribeResponse struct {
+	Xmlns  		string  		`xml:"xmlns,attr"`
+	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+}
+
 /*** Error Responses ***/
 type ErrorResult struct {
 	Type string 		`xml:"Type,omitempty"`

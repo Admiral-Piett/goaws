@@ -1,21 +1,29 @@
 Local:
+  Host: localhost
+  Port: 4100
   Topics:
-    - { Name: LocalTopic1 }
-#      Subscriptions: [
-#        LocalSubscriptionQueueTest1,
-#        LocalSubscriptionQueueTest1
-#      ]
-    - { Name: LocalTopic2 }
+    - Name: local-topic1
+      Subscriptions:
+        - QueueName: local-queue3
+          Raw: false
+        - QueueName: local-queue4
+          Raw: true
+    - Name: local-topic2
   Queues:
-    - { Name: LocalTest1 }
-    - { Name: LocalTest2 }
+    - Name: local-queue1
+    - Name: local-queue2
 
 Dev:
+  Host: localhost
+  Port: 4100
   Topics:
-    - { Name: DevTopic1 }
-#      Subscriptions:
-#        - DevSubscriptionQueueTest1
-#        - DevSubscriptionQueueTest1 <raw>
+    - Name: dev-topic1
+      Subscriptions:
+        - QueueName: dev-queue3
+          Raw: false
+        - QueueName: dev-queue4
+          Raw: true
+    - Name: dev-topic2
   Queues:
-    - { Name: DevTest1 }
-    - { Name: DevTest2 }
+    - Name: dev-queue1
+    - Name: dev-queue2
