@@ -6,35 +6,11 @@ import (
 	"io"
 	"flag"
 	"log"
-	"path/filepath"
-	"io/ioutil"
-	"fmt"
 
 	sqs "github.com/p4tin/goaws/gosqs"
 	sns "github.com/p4tin/goaws/gosns"
-	"github.com/ghodss/yaml"
+	"github.com/p4tin/goaws/conf"
 )
-
-type EnvSubsciption struct {
-	Name string
-	Attr []string
-}
-
-type EnvTopic struct {
-	Name string
-	Subs []EnvSubsciption
-}
-
-type EnvQueue struct {
-	Name string
-}
-
-type Environment struct {
-	Topics []EnvTopic
-	Queues []EnvQueue
-}
-
-var envs map[string]Environment
 
 func BadRequest(w http.ResponseWriter, req *http.Request) {
 	resp := "Bad Request"
@@ -92,28 +68,16 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	filename, _ := filepath.Abs("./goaws.yaml")
-	yamlFile, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	err = yaml.Unmarshal(yamlFile, &envs)
-	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return
-	}
-//	fmt.Println(envs["Local"])
-
-
 	var portNumber string
 	flag.StringVar(&portNumber, "port", "4100", "Port number to listen on")
 	flag.Parse()
+
+	conf.LoadYamlConfig("Dev", portNumber)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
 
 	log.Printf("GoAws listening on: 0.0.0.0:%s\n", portNumber)
-	err = http.ListenAndServe("0.0.0.0:"+portNumber, r)
+	err := http.ListenAndServe("0.0.0.0:"+portNumber, r)
 	log.Fatal(err)
 }

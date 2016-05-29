@@ -199,7 +199,28 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 }
 
 func Unsubscribe(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	subArn := req.FormValue("SubscriptionArn")
 
+	for _, topic := range SyncTopics.Topics {
+		for i, sub := range topic.Subscriptions {
+			if sub.SubscriptionArn == subArn {
+				SyncTopics.Lock()
+				topic.Subscriptions = append(topic.Subscriptions[:1], topic.Subscriptions[i+1:]...)
+				SyncTopics.Unlock()
+
+				uuid, _ := common.NewUUID()
+				respStruct := UnsubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
+				enc := xml.NewEncoder(w)
+				enc.Indent("  ", "    ")
+				if err := enc.Encode(respStruct); err != nil {
+					fmt.Printf("error: %v\n", err)
+				}
+				return
+			}
+		}
+	}
+	createErrorResponse(w, req, "SubscriptionNotFound")
 }
 
 func DeleteTopic(w http.ResponseWriter, req *http.Request) {
