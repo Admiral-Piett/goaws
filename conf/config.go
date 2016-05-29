@@ -3,7 +3,7 @@ package conf
 import (
 	"path/filepath"
 	"io/ioutil"
-	"fmt"
+	"log"
 
 	sqs "github.com/p4tin/goaws/gosqs"
 	sns "github.com/p4tin/goaws/gosns"
@@ -39,12 +39,12 @@ func LoadYamlConfig(env string, portNumber string) {
 	filename, _ := filepath.Abs("./goaws.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	err = yaml.Unmarshal(yamlFile, &envs)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		log.Printf("err: %v\n", err)
 		return
 	}
 	if env == "" {
@@ -52,14 +52,12 @@ func LoadYamlConfig(env string, portNumber string) {
 	}
 	sqs.SyncQueues.Lock()
 	for _, queue := range envs[env].Queues {
-		fmt.Println(queue.Name)
 		queueUrl := "http://" + envs[env].Host + ":" + envs[env].Port +"/queue/" + queue.Name
 		sqs.SyncQueues.Queues[queue.Name] = &sqs.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 	}
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
 	for _, topic := range envs["Dev"].Topics {
-		fmt.Println(topic.Name)
 		topicArn := "arn:aws:sns:local:000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
@@ -77,6 +75,7 @@ func LoadYamlConfig(env string, portNumber string) {
 			newSub := &sns.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
 			subArn, _ := common.NewUUID()
 			subArn = topicArn + ":" + subArn
+			log.Println(subArn)
 			newSub.SubscriptionArn = subArn
 			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
