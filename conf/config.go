@@ -35,29 +35,37 @@ type Environment struct {
 var envs map[string]Environment
 
 
-func LoadYamlConfig(env string, portNumber string) {
+func LoadYamlConfig(env string, portNumber string) string {
 	filename, _ := filepath.Abs("./goaws.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return
+		return portNumber
 	}
 
 	err = yaml.Unmarshal(yamlFile, &envs)
 	if err != nil {
 		log.Printf("err: %v\n", err)
-		return
+		return portNumber
 	}
 	if env == "" {
 		env = "Local"
 	}
+
+	if portNumber == "" {
+		portNumber = envs[env].Port
+		if portNumber == "" {
+			portNumber = "4100"
+		}
+	}
+
 	sqs.SyncQueues.Lock()
 	for _, queue := range envs[env].Queues {
-		queueUrl := "http://" + envs[env].Host + ":" + envs[env].Port +"/queue/" + queue.Name
+		queueUrl := "http://" + envs[env].Host + ":" + portNumber +"/queue/" + queue.Name
 		sqs.SyncQueues.Queues[queue.Name] = &sqs.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 	}
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
-	for _, topic := range envs["Dev"].Topics {
+	for _, topic := range envs[env].Topics {
 		topicArn := "arn:aws:sns:local:000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
@@ -67,7 +75,7 @@ func LoadYamlConfig(env string, portNumber string) {
 			if _, ok := sqs.SyncQueues.Queues[subs.QueueName] ; !ok {
 				//Queue does not exist yet, create it.
 				sqs.SyncQueues.Lock()
-				queueUrl := "http://" + envs[env].Host + ":" + envs[env].Port +"/queue/" + subs.QueueName
+				queueUrl := "http://" + envs[env].Host + ":" + portNumber +"/queue/" + subs.QueueName
 				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 				sqs.SyncQueues.Unlock()
 			}
@@ -75,11 +83,12 @@ func LoadYamlConfig(env string, portNumber string) {
 			newSub := &sns.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
 			subArn, _ := common.NewUUID()
 			subArn = topicArn + ":" + subArn
-			log.Println(subArn)
 			newSub.SubscriptionArn = subArn
 			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
 		sns.SyncTopics.Topics[topic.Name] = newTopic
 	}
 	sns.SyncTopics.Unlock()
+
+	return envs[env].Port
 }

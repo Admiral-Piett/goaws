@@ -1,21 +1,25 @@
-Local:
-  Host: localhost
-  Port: 4100
-  Topics:
-    - Name: local-topic1
-      Subscriptions:
-        - QueueName: local-queue3
-          Raw: false
-        - QueueName: local-queue4
-          Raw: true
-    - Name: local-topic2
-  Queues:
-    - Name: local-queue1
-    - Name: local-queue2
+Local:                              # Environment name that can be passed on the command line
+                                    #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
+  Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
+  Port: 4100                        # port to listen on.
+  Queues:                           # List of queues to create at startup
+    - Name: local-queue1            # Queue name
+    - Name: local-queue2            # Queue name
+  Topics:                           # List of topic to create at startup
+    - Name: local-topic1            # Topic name - with some Subscriptions
+      Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)
+        - QueueName: local-queue3   # Queue name
+          Raw: false                # Raw message delivery (true/false)
+        - QueueName: local-queue4   # Queue name
+          Raw: true                 # Raw message delivery (true/false)
+    - Name: local-topic2            # Topic name - no Subscriptions
 
-Dev:
+Dev:                                # Another environment
   Host: localhost
   Port: 4100
+  Queues:
+    - Name: dev-queue1
+    - Name: dev-queue2
   Topics:
     - Name: dev-topic1
       Subscriptions:
@@ -24,6 +28,4 @@ Dev:
         - QueueName: dev-queue4
           Raw: true
     - Name: dev-topic2
-  Queues:
-    - Name: dev-queue1
-    - Name: dev-queue2
+

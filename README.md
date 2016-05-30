@@ -6,48 +6,38 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
 
 ## Current SQS APIs implemented:
 
- * ListQueues
- * CreateQueue
- * GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
- * GetQueueUrl
- * SendMessage
- * ReceiveMessage
- * DeleteMessage
- * PurgeQueue
- * Delete Queue
- 
-Note: Not Yet Done (SetQueueAttributes)
+ - [x] ListQueues
+ - [x] CreateQueue
+ - [x] GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
+ - [x] GetQueueUrl
+ - [x] SendMessage
+ - [x] ReceiveMessage
+ - [x] DeleteMessage
+ - [x] PurgeQueue
+ - [x] Delete Queue
 
 ## Current SQS APIs implemented:
 
- * ListTopics
- * CreateTopic
- * Subscribe (raw)
- * ListSubscriptions
- * Publish
-
-
-## Next implement the following SNS APIs:
+ - [x] ListTopics
+ - [x] CreateTopic
+ - [x] Subscribe (raw)
+ - [x] ListSubscriptions
+ - [x] Publish
+ - [x] DeleteTopic
+ - [x] Subscribe
+ - [x] Unsubscribe
+ - [ ] ListSubscriptionsByTopic
  
- * ListSubscriptionsByTopic
- * DeleteTopic
- * Subscribe (not-raw)
- * DeleteSubscription
- * DeteteTopic
-
-
 ## Yaml Configuration Implemented
 
- * Read config file 
+ - [x] Read config file 
+ - [x] Implement flag to chose configuration type
+ - [x] Process Queue Creations
+ - [x] Process Topic Creations
+ - [x] Process Create Subscriptions
+ 
 
-## Next implement the following Configuration:
-
- * Implement flag to chose configuration type
- * Process Queue Creations
- * Process Topic Creations
- * Process Create Subscriptions
-
-## Write Unit Tests
+## Note:  The system does not authenticate or presently use https
 
 # Installation
 
