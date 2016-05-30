@@ -230,6 +230,28 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 }
 
 func DeleteTopic(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	topicArn := req.FormValue("TopicArn")
+
+	uriSegments := strings.Split(topicArn, ":")
+	topicName := uriSegments[len(uriSegments)-1]
+
+	log.Println("Delete Topic - TopicArn:", topicArn, ", topicName:", topicName)
+
+	_, ok := SyncTopics.Topics[topicName];
+	if ok {
+		SyncTopics.Lock()
+		delete(SyncTopics.Topics, topicName);
+		SyncTopics.Unlock()
+	}
+
+	uuid, _ := common.NewUUID()
+	respStruct := DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 
 }
 

@@ -101,6 +101,13 @@ type UnsubscribeResponse struct {
 	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
 }
 
+
+/*** Delete Topic ***/
+type DeleteTopicResponse struct {
+	Xmlns  		string  		`xml:"xmlns,attr"`
+	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+}
+
 /*** Error Responses ***/
 type ErrorResult struct {
 	Type string 		`xml:"Type,omitempty"`
