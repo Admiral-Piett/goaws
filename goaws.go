@@ -64,6 +64,7 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 
 	/*** Bad Request ***/
 	default:
+		log.Println("Action:", req.FormValue("Action"))
 		BadRequest(w, req)
 	}
 }
@@ -81,6 +82,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
+	r.HandleFunc("/queue/{queueName}", IndexServer).Methods("GET", "POST")
 
 	log.Printf("GoAws listening on: 0.0.0.0:%s\n", portNumber)
 	err := http.ListenAndServe("0.0.0.0:"+portNumber, r)

@@ -6,12 +6,12 @@ import (
 	"log"
 	"sync"
 	"strings"
+	"time"
 	"encoding/xml"
+	"encoding/json"
 
 	"github.com/p4tin/goaws/common"
 	sqs "github.com/p4tin/goaws/gosqs"
-	"time"
-	"gopkg.in/square/go-jose.v1/json"
 )
 
 type SnsErrorType struct {
@@ -56,7 +56,7 @@ func init() {
 }
 
 func ListTopics(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 
 	respStruct := ListTopicsResponse{}
 	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
@@ -70,15 +70,12 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 		ta := TopicArnResult{TopicArn: topic.Arn}
 		respStruct.Result.Topics.Member = append(respStruct.Result.Topics.Member, ta)
 	}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
+
+	SendResponseBack(w, req, respStruct, content)
 }
 
 func CreateTopic(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	topicName := req.FormValue("Name")
 
 	if _, ok := SyncTopics.Topics[topicName] ; ok {
@@ -97,16 +94,12 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 
 	uuid, _ := common.NewUUID()
 	respStruct := CreateTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", CreateTopicResult{TopicArn: topicArn}, ResponseMetadata{RequestId: uuid}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
+	SendResponseBack(w, req, respStruct, content)
 }
 
 // aws --endpoint-url http://localhost:47194 sns subscribe --topic-arn arn:aws:sns:us-west-2:0123456789012:my-topic --protocol email --notification-endpoint my-email@example.com
 func Subscribe(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")
 	protocol := req.FormValue("Protocol")
 	endpoint := req.FormValue("Endpoint")
@@ -128,18 +121,14 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 		//Create the response
 		uuid, _ := common.NewUUID()
 		respStruct := SubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", SubscribeResult{SubscriptionArn: subArn}, ResponseMetadata{RequestId: uuid}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
-		}
+		SendResponseBack(w, req, respStruct, content)
 	} else {
-		// Return error
+		createErrorResponse(w, req, "TopicNotFound")
 	}
 }
 
 func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 
 	uuid, _ := common.NewUUID()
 	respStruct := ListSubscriptionsResponse{}
@@ -155,16 +144,11 @@ func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
+	SendResponseBack(w, req, respStruct, content)
 }
 
 func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	subsArn := req.FormValue("SubscriptionArn")
 	Attribute := req.FormValue("AttributeName")
 	Value := req.FormValue("AttributeValue")
@@ -185,11 +169,7 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 					//Good Response == return
 					uuid, _ := common.NewUUID()
 					respStruct := SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
-					enc := xml.NewEncoder(w)
-					enc.Indent("  ", "    ")
-					if err := enc.Encode(respStruct); err != nil {
-						fmt.Printf("error: %v\n", err)
-					}
+					SendResponseBack(w, req, respStruct, content)
 					return
 				}
 			}
@@ -199,7 +179,7 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 }
 
 func Unsubscribe(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	subArn := req.FormValue("SubscriptionArn")
 
 	log.Println("Unsubcribing:", subArn)
@@ -217,11 +197,7 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 
 				uuid, _ := common.NewUUID()
 				respStruct := UnsubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
-				enc := xml.NewEncoder(w)
-				enc.Indent("  ", "    ")
-				if err := enc.Encode(respStruct); err != nil {
-					fmt.Printf("error: %v\n", err)
-				}
+				SendResponseBack(w, req, respStruct, content)
 				return
 			}
 		}
@@ -230,7 +206,7 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 }
 
 func DeleteTopic(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")
 
 	uriSegments := strings.Split(topicArn, ":")
@@ -243,21 +219,20 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 		SyncTopics.Lock()
 		delete(SyncTopics.Topics, topicName);
 		SyncTopics.Unlock()
+		uuid, _ := common.NewUUID()
+		respStruct := DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
+		SendResponseBack(w, req, respStruct, content)
+	} else {
+		createErrorResponse(w, req, "TopicNotFound")
 	}
 
-	uuid, _ := common.NewUUID()
-	respStruct := DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
+
 
 }
 
 // aws --endpoint-url http://localhost:47194 sns publish --topic-arn arn:aws:sns:yopa-local:000000000000:test1 --message "This is a test"
 func Publish(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
+	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")
 	messageBody := req.FormValue("Message")
 
@@ -290,11 +265,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	msgId, _ := common.NewUUID()
 	uuid, _ := common.NewUUID()
 	respStruct := PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", PublishResult{MessageId: msgId}, ResponseMetadata{RequestId: uuid}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
-	}
+	SendResponseBack(w, req, respStruct, content)
 }
 
 type TopicMessage struct {
@@ -331,5 +302,27 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
 		fmt.Printf("error: %v\n", err)
+	}
+}
+
+
+func SendResponseBack(w http.ResponseWriter, req *http.Request, respStruct interface{}, content string) {
+	if content == "JSON" {
+		w.Header().Set("Content-Type", "application/json")
+	} else {
+		w.Header().Set("Content-Type", "application/xml")
+	}
+
+	if(content == "JSON") {
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(respStruct); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
+	} else {
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			fmt.Printf("error: %v\n", err)
+		}
 	}
 }
