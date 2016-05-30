@@ -12,7 +12,7 @@ Integration test for boto using GoAws SNS interface
 # Connect GOAws in Python
 endpoint='localhost'
 region = boto.sqs.regioninfo.RegionInfo(name='local', endpoint=endpoint)
-conn = boto.connect_sqs(aws_access_key_id='x', aws_secret_access_key='x', is_secure=False, port='4099', region=region)
+conn = boto.connect_sqs(aws_access_key_id='x', aws_secret_access_key='x', is_secure=False, port='4100', region=region)
 
 
 # Get all Queues in Python
