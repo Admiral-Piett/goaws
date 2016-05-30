@@ -10,6 +10,7 @@ import (
 	sqs "github.com/p4tin/goaws/gosqs"
 	sns "github.com/p4tin/goaws/gosns"
 	"github.com/p4tin/goaws/conf"
+	"os"
 )
 
 func BadRequest(w http.ResponseWriter, req *http.Request) {
@@ -68,11 +69,15 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	env := "Local"
+	if len(os.Args) == 2 {
+		env = os.Args[1]
+	}
 	var portNumber string
-	flag.StringVar(&portNumber, "port", "4100", "Port number to listen on")
+	flag.StringVar(&portNumber, "port", "", "Port number to listen on")
 	flag.Parse()
 
-	conf.LoadYamlConfig("Dev", portNumber)
+	portNumber = conf.LoadYamlConfig(env, portNumber)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
