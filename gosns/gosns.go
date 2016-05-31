@@ -239,26 +239,32 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 
-	for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
-		if subs.Protocol == "sqs" {
-			queueUrl := subs.EndPoint
-			uriSegments := strings.Split(queueUrl, "/")
-			queueName := uriSegments[len(uriSegments) - 1]
+	_, ok := SyncTopics.Topics[topicName];
+	if ok {
+		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
+			if subs.Protocol == "sqs" {
+				queueUrl := subs.EndPoint
+				uriSegments := strings.Split(queueUrl, "/")
+				queueName := uriSegments[len(uriSegments) - 1]
 
-			msg := sqs.Message{}
-			log.Println("Subscript:", subs.EndPoint, "Raw: ", subs.Raw)
-			if subs.Raw == false {
-				msg.MessageBody = CreateMessageBody(messageBody, topicArn)
-			} else {
-				msg.MessageBody = []byte(messageBody)
+				msg := sqs.Message{}
+				if subs.Raw == false {
+					msg.MessageBody = CreateMessageBody(messageBody, topicArn)
+				} else {
+					msg.MessageBody = []byte(messageBody)
+				}
+				msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
+				msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
+				msg.Uuid, _ = common.NewUUID()
+				sqs.SyncQueues.Lock()
+				sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
+				sqs.SyncQueues.Unlock()
+				common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 			}
-			msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
-			msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-			msg.Uuid, _ = common.NewUUID()
-			sqs.SyncQueues.Lock()
-			sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
-			sqs.SyncQueues.Unlock()
 		}
+	} else {
+		createErrorResponse(w, req, "TopicNotFound")
+		return
 	}
 
 	//Create the response

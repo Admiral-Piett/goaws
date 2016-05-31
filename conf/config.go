@@ -12,24 +12,26 @@ import (
 )
 
 type EnvSubsciption struct {
-	QueueName string
-	Raw bool
+	QueueName 	string
+	Raw 		bool
 }
 
 type EnvTopic struct {
-	Name string
-	Subscriptions []EnvSubsciption
+	Name 		string
+	Subscriptions 	[]EnvSubsciption
 }
 
 type EnvQueue struct {
-	Name string
+	Name 		string
 }
 
 type Environment struct {
-	Host string
-	Port string
-	Topics []EnvTopic
-	Queues []EnvQueue
+	Host 		string
+	Port 		string
+	LogMessages 	bool
+	LogFile 	string
+	Topics 		[]EnvTopic
+	Queues 		[]EnvQueue
 }
 
 var envs map[string]Environment
@@ -55,6 +57,17 @@ func LoadYamlConfig(env string, portNumber string) string {
 		portNumber = envs[env].Port
 		if portNumber == "" {
 			portNumber = "4100"
+		}
+	}
+
+
+	common.LogMessages = false
+	common.LogFile = "./goaws_messages.log"
+
+	if envs[env].LogMessages == true {
+		common.LogMessages = true
+		if envs[env].LogFile != "" {
+			common.LogFile = envs[env].LogFile
 		}
 	}
 
