@@ -6,7 +6,13 @@ import (
 	"crypto/rand"
 	"crypto/md5"
 	"encoding/hex"
+	"io/ioutil"
+	"os"
+	"log"
 )
+
+var LogMessages bool
+var LogFile	string
 
 func NewUUID() (string, error) {
 	uuid := make([]byte, 16)
@@ -26,4 +32,17 @@ func GetMD5Hash(text string) string {
 	hasher := md5.New()
 	hasher.Write([]byte(text))
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func LogMessage(msg string) {
+	if _, err := os.Stat(LogFile); os.IsNotExist(err) {
+		_, err := os.Create("/tmp/dat2")
+		if err != nil {
+			log.Println("could not create log file:", LogFile)
+			return
+		}
+	}
+	if LogMessages == true {
+		ioutil.WriteFile(LogFile, []byte(msg), 0644)
+	}
 }
