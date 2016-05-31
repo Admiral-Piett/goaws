@@ -2,118 +2,114 @@ package gosqs
 
 /*** Common ***/
 type ResponseMetadata struct {
-	RequestId string                `xml:"RequestId"`
+	RequestId string `xml:"RequestId"`
 }
 
 /*** List Queues Response */
-type  ListQueuesResult struct {
-	QueueUrl []string			`xml:"QueueUrl"`
+type ListQueuesResult struct {
+	QueueUrl []string `xml:"QueueUrl"`
 }
 
 type ListQueuesResponse struct {
-	Xmlns  		string  		`xml:"xmlns,attr"`
-	Result		ListQueuesResult	`xml:"ListQueuesResult"`
-	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+	Xmlns    string           `xml:"xmlns,attr"`
+	Result   ListQueuesResult `xml:"ListQueuesResult"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
-
 
 /*** Create Queue Response */
 type CreateQueueResult struct {
-	QueueUrl string			`xml:"QueueUrl"`
+	QueueUrl string `xml:"QueueUrl"`
 }
 
 type CreateQueueResponse struct {
-	Xmlns 		string			`xml:"xmlns,attr"`
-	Result		CreateQueueResult	`xml:"CreateQueueResult"`
-	Metadata 	ResponseMetadata	`xml:"ResponseMetadata"`
+	Xmlns    string            `xml:"xmlns,attr"`
+	Result   CreateQueueResult `xml:"CreateQueueResult"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
 }
 
 /*** Send Message Response */
 
 type SendMessageResult struct {
-	MD5OfMessageAttributes 	string		`xml:"MD5OfMessageAttributes"`
-	MD5OfMessageBody 	string		`xml:"MD5OfMessageBody"`
-	MessageId 		string		`xml:"MessageId"`
+	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
+	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
+	MessageId              string `xml:"MessageId"`
 }
 
 type SendMessageResponse struct {
-	Xmlns 		string			`xml:"xmlns,attr"`
-	Result 		SendMessageResult	`xml:"SendMessageResult"`
-	Metadata	ResponseMetadata	`xml:"ResponseMetadata"`
+	Xmlns    string            `xml:"xmlns,attr"`
+	Result   SendMessageResult `xml:"SendMessageResult"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
 }
 
 /*** Receive Message Response */
 
 type ResultMessage struct {
-	MessageId		string 	`xml:"MessageId,omitempty"`
-	ReceiptHandle		string 	`xml:"ReceiptHandle,omitempty"`
-	MD5OfBody		string 	`xml:"MD5OfBody,omitempty"`
-	Body		[]byte 		`xml:"Body,omitempty"`
-	MD5OfMessageAttributes 	string 	`xml:"MD5OfMessageAttributes,omitempty"`
+	MessageId              string `xml:"MessageId,omitempty"`
+	ReceiptHandle          string `xml:"ReceiptHandle,omitempty"`
+	MD5OfBody              string `xml:"MD5OfBody,omitempty"`
+	Body                   []byte `xml:"Body,omitempty"`
+	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes,omitempty"`
 }
 
 type ReceiveMessageResult struct {
-	Message		*ResultMessage `xml:"Message,omitempty"`
+	Message *ResultMessage `xml:"Message,omitempty"`
 }
 
 type ReceiveMessageResponse struct {
-	xmlns 		string			`xml:"xmlns,attr"`
-	Result 		ReceiveMessageResult 	`xml:"ReceiveMessageResult"`
-	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata"`
+	xmlns    string               `xml:"xmlns,attr"`
+	Result   ReceiveMessageResult `xml:"ReceiveMessageResult"`
+	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
 }
-
 
 /*** Delete Message Response */
 type DeleteMessageResponse struct {
-	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
-	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `xml:"xmlns,attr,omitempty"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }
-
 
 /*** Purge Queue Response */
 type PurgeQueueResponse struct {
-	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
-	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `xml:"xmlns,attr,omitempty"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }
 
 /*** Get Queue Url Response */
 type GetQueueUrlResult struct {
-	QueueUrl string				`xml:"QueueUrl,omitempty"`
+	QueueUrl string `xml:"QueueUrl,omitempty"`
 }
 
 type GetQueueUrlResponse struct {
-	Xmlns 		string			`xml:"xmlns,attr,omitempty"`
-	Result 		GetQueueUrlResult 	`xml:"GetQueueUrlResult"`
-	Metadata 	ResponseMetadata 	`xml:"ResponseMetadata,omitempty"`
+	Xmlns    string            `xml:"xmlns,attr,omitempty"`
+	Result   GetQueueUrlResult `xml:"GetQueueUrlResult"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata,omitempty"`
 }
 
 /*** Get Queue Attributes ***/
 type Attribute struct {
-	Name 	string	`xml:"Name,omitempty"`
-	Value 	string	`xml:"Value,omitempty"`
+	Name  string `xml:"Name,omitempty"`
+	Value string `xml:"Value,omitempty"`
 }
 
 type GetQueueAttributesResult struct {
 	/* VisibilityTimeout, DelaySeconds, ReceiveMessageWaitTimeSeconds, ApproximateNumberOfMessages
 	   ApproximateNumberOfMessagesNotVisible, CreatedTimestamp, LastModifiedTimestamp, QueueArn */
-	Attrs []Attribute				`xml:"Attribute,omitempty"`
+	Attrs []Attribute `xml:"Attribute,omitempty"`
 }
 
-
 type GetQueueAttributesResponse struct {
-	Xmlns 		string				`xml:"xmlns,attr,omitempty"`
-	Result 		GetQueueAttributesResult 	`xml:"GetQueueAttributesResult"`
-	Metadata 	ResponseMetadata 		`xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
+	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult"`
+	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
 }
 
 /*** Error Responses ***/
 type ErrorResult struct {
-	Type string 		`xml:"Type,omitempty"`
-	Code string		`xml:"Code,omitempty"`
-	Message string		`xml:"Message,omitempty"`
-	RequestId string	`xml:"RequestId,omitempty"`
+	Type      string `xml:"Type,omitempty"`
+	Code      string `xml:"Code,omitempty"`
+	Message   string `xml:"Message,omitempty"`
+	RequestId string `xml:"RequestId,omitempty"`
 }
 
 type ErrorResponse struct {
-	Result	ErrorResult	`xml:"Error"`
+	Result ErrorResult `xml:"Error"`
 }

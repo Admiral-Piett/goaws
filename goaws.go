@@ -1,15 +1,15 @@
 package main
 
 import (
-	"net/http"
+	"flag"
 	"github.com/gorilla/mux"
 	"io"
-	"flag"
 	"log"
+	"net/http"
 
-	sqs "github.com/p4tin/goaws/gosqs"
-	sns "github.com/p4tin/goaws/gosns"
 	"github.com/p4tin/goaws/conf"
+	sns "github.com/p4tin/goaws/gosns"
+	sqs "github.com/p4tin/goaws/gosqs"
 	"os"
 )
 
@@ -19,10 +19,9 @@ func BadRequest(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, resp)
 }
 
-
 // hello world, the web server
 func IndexServer(w http.ResponseWriter, req *http.Request) {
-	switch(req.FormValue("Action")) {
+	switch req.FormValue("Action") {
 	/*** SQS Actions ***/
 	case "ListQueues":
 		sqs.ListQueues(w, req)
