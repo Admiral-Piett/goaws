@@ -1,14 +1,14 @@
 package gosns
 
 import (
-	"net/http"
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"log"
-	"sync"
+	"net/http"
 	"strings"
+	"sync"
 	"time"
-	"encoding/xml"
-	"encoding/json"
 
 	"github.com/p4tin/goaws/common"
 	sqs "github.com/p4tin/goaws/gosqs"
@@ -16,29 +16,28 @@ import (
 
 type SnsErrorType struct {
 	HttpError int
-	Type string
-	Code string
-	Message string
+	Type      string
+	Code      string
+	Message   string
 }
 
 var SnsErrors map[string]SnsErrorType
 
 type Subscription struct {
-	TopicArn 	string
-	Protocol 	string
+	TopicArn        string
+	Protocol        string
 	SubscriptionArn string
-	EndPoint 	string
-	Raw 		bool
+	EndPoint        string
+	Raw             bool
 }
 
 type Topic struct {
-	Name 		string
-	Arn 		string
-	Subscriptions 	[]*Subscription
+	Name          string
+	Arn           string
+	Subscriptions []*Subscription
 }
 
-
-var SyncTopics = struct{
+var SyncTopics = struct {
 	sync.RWMutex
 	Topics map[string]*Topic
 }{Topics: make(map[string]*Topic)}
@@ -47,11 +46,11 @@ func init() {
 	SyncTopics.Topics = make(map[string]*Topic)
 
 	SnsErrors = make(map[string]SnsErrorType)
-	err1 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic" , Message:"The specified topic does not exist for this wsdl version."}
+	err1 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."}
 	SnsErrors["TopicNotFound"] = err1
-	err2 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription" , Message:"The specified subscription does not exist for this wsdl version."}
+	err2 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."}
 	SnsErrors["SubscriptionNotFound"] = err2
-	err3 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists" , Message:"The specified topic already exists."}
+	err3 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."}
 	SnsErrors["TopicExists"] = err3
 }
 
@@ -78,7 +77,7 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicName := req.FormValue("Name")
 	topicArn := ""
-	if _, ok := SyncTopics.Topics[topicName] ; ok {
+	if _, ok := SyncTopics.Topics[topicName]; ok {
 		topicArn = SyncTopics.Topics[topicName].Arn
 	} else {
 		topicArn = "arn:aws:sns:local:000000000000:" + topicName
@@ -106,7 +105,7 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicName := uriSegments[len(uriSegments)-1]
 
 	log.Println("Creating Subscription from", topicName, "to", endpoint, "using protocol", protocol)
-	subscription := &Subscription{EndPoint:endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
+	subscription := &Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
@@ -212,10 +211,10 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Delete Topic - TopicArn:", topicArn, ", topicName:", topicName)
 
-	_, ok := SyncTopics.Topics[topicName];
+	_, ok := SyncTopics.Topics[topicName]
 	if ok {
 		SyncTopics.Lock()
-		delete(SyncTopics.Topics, topicName);
+		delete(SyncTopics.Topics, topicName)
 		SyncTopics.Unlock()
 		uuid, _ := common.NewUUID()
 		respStruct := DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: uuid}}
@@ -223,8 +222,6 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 	} else {
 		createErrorResponse(w, req, "TopicNotFound")
 	}
-
-
 
 }
 
@@ -237,13 +234,13 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 
-	_, ok := SyncTopics.Topics[topicName];
+	_, ok := SyncTopics.Topics[topicName]
 	if ok {
 		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
 			if subs.Protocol == "sqs" {
 				queueUrl := subs.EndPoint
 				uriSegments := strings.Split(queueUrl, "/")
-				queueName := uriSegments[len(uriSegments) - 1]
+				queueName := uriSegments[len(uriSegments)-1]
 
 				msg := sqs.Message{}
 				if subs.Raw == false {
@@ -273,11 +270,11 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 }
 
 type TopicMessage struct {
-	Type string
+	Type      string
 	MessageId string
-	TopicArn string
-	Subject string
-	Message string
+	TopicArn  string
+	Subject   string
+	Message   string
 	TimeStamp string
 }
 
@@ -296,7 +293,6 @@ func CreateMessageBody(msg string, topicArn string) []byte {
 	return byteMsg
 }
 
-
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := SnsErrors[err]
 	respStruct := ErrorResponse{ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
@@ -309,7 +305,6 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	}
 }
 
-
 func SendResponseBack(w http.ResponseWriter, req *http.Request, respStruct interface{}, content string) {
 	if content == "JSON" {
 		w.Header().Set("Content-Type", "application/json")
@@ -317,7 +312,7 @@ func SendResponseBack(w http.ResponseWriter, req *http.Request, respStruct inter
 		w.Header().Set("Content-Type", "application/xml")
 	}
 
-	if(content == "JSON") {
+	if content == "JSON" {
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(respStruct); err != nil {
 			fmt.Printf("error: %v\n", err)

@@ -2,9 +2,9 @@ package gosns
 
 import (
 	"net/http"
-	"testing"
 	"net/http/httptest"
 	"strings"
+	"testing"
 )
 
 func TestListTopicshandler_NoTopics(t *testing.T) {

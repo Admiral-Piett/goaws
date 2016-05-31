@@ -1,18 +1,18 @@
 package common
 
 import (
-	"io"
-	"fmt"
-	"crypto/rand"
 	"crypto/md5"
+	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"io"
 	"io/ioutil"
-	"os"
 	"log"
+	"os"
 )
 
 var LogMessages bool
-var LogFile	string
+var LogFile string
 
 func NewUUID() (string, error) {
 	uuid := make([]byte, 16)
@@ -26,7 +26,6 @@ func NewUUID() (string, error) {
 	uuid[6] = uuid[6]&^0xf0 | 0x40
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
 }
-
 
 func GetMD5Hash(text string) string {
 	hasher := md5.New()
