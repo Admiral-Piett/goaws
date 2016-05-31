@@ -87,16 +87,13 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	queueName := req.FormValue("QueueName")
 	queueUrl := "http://" + req.Host + "/queue/" + queueName
 
-	if _, ok := SyncQueues.Queues[queueName] ; ok {
-		createErrorResponse(w, req, "QueueExists")
-		return
+	if _, ok := SyncQueues.Queues[queueName] ; !ok {
+		log.Println("Creating Queue:", queueName)
+		queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
+		SyncQueues.RLock()
+		SyncQueues.Queues[queueName] = queue
+		SyncQueues.RUnlock()
 	}
-
-	log.Println("Creating Queue:", queueName)
-	queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
-	SyncQueues.RLock()
-	SyncQueues.Queues[queueName] = queue
-	SyncQueues.RUnlock()
 
 	respStruct := CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", CreateQueueResult{QueueUrl: queueUrl}, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	enc := xml.NewEncoder(w)

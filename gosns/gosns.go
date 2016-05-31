@@ -77,21 +77,19 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicName := req.FormValue("Name")
-
+	topicArn := ""
 	if _, ok := SyncTopics.Topics[topicName] ; ok {
-		createErrorResponse(w, req, "TopicExists")
-		return
+		topicArn = SyncTopics.Topics[topicName].Arn
+	} else {
+		topicArn = "arn:aws:sns:local:000000000000:" + topicName
+
+		log.Println("Creating Topic:", topicName)
+		topic := &Topic{Name: topicName, Arn: topicArn}
+		topic.Subscriptions = make([]*Subscription, 0, 0)
+		SyncTopics.RLock()
+		SyncTopics.Topics[topicName] = topic
+		SyncTopics.RUnlock()
 	}
-
-	topicArn := "arn:aws:sns:local:000000000000:" + topicName
-
-	log.Println("Creating Topic:", topicName)
-	topic := &Topic{Name: topicName, Arn: topicArn}
-	topic.Subscriptions = make([]*Subscription, 0 ,0)
-	SyncTopics.RLock()
-	SyncTopics.Topics[topicName] = topic
-	SyncTopics.RUnlock()
-
 	uuid, _ := common.NewUUID()
 	respStruct := CreateTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", CreateTopicResult{TopicArn: topicArn}, ResponseMetadata{RequestId: uuid}}
 	SendResponseBack(w, req, respStruct, content)
