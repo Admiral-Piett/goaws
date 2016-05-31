@@ -38,7 +38,7 @@ var envs map[string]Environment
 
 
 func LoadYamlConfig(env string, portNumber string) string {
-	filename, _ := filepath.Abs("./goaws.yaml")
+	filename, _ := filepath.Abs("./conf/goaws.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return portNumber
