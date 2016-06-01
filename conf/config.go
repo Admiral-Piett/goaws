@@ -40,7 +40,7 @@ func LoadYamlConfig(env string, portNumber string) string {
 	filename, _ := filepath.Abs("./conf/goaws.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return portNumber
+		return "4100"
 	}
 
 	err = yaml.Unmarshal(yamlFile, &envs)
@@ -101,5 +101,5 @@ func LoadYamlConfig(env string, portNumber string) string {
 	}
 	sns.SyncTopics.Unlock()
 
-	return envs[env].Port
+	return portNumber
 }
