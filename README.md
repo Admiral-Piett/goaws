@@ -50,7 +50,7 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
         go build . 
         
     Run
-        ./goaws  (by default goaws listens on port 4100 but you can change it with -port=XXXX)
+        ./goaws  (by default goaws listens on port 4100 but you can change it in the goaws.yaml file to another port of your choice)
         
 
 ## Run (Docker Version)
