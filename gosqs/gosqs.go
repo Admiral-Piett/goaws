@@ -163,11 +163,13 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			timeout := time.Now().Add(time.Duration(-SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 			if (SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
+			} else {
+				uuid, _ := common.NewUUID()
+				SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
+				SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
+				message = SyncQueues.Queues[queueName].Messages[i]
+				break
 			}
-			uuid, _ := common.NewUUID()
-			SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
-			SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
-			message = SyncQueues.Queues[queueName].Messages[i]
 		}
 
 		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
