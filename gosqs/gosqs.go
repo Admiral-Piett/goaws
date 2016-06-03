@@ -136,8 +136,19 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	queueUrl := req.FormValue("QueueUrl")
 
+	waitTimeSeconds := 0
+	wts := req.FormValue("WaitTimeSeconds")
+	if wts != "" {
+		waitTimeSeconds, _ = strconv.Atoi(wts)
+	}
+	maxNumberOfMessages := 1
+	mom := req.FormValue("MaxNumberOfMessages")
+	if mom != "" {
+		maxNumberOfMessages, _ = strconv.Atoi(mom)
+	}
+
+	queueUrl := req.FormValue("QueueUrl")
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -152,38 +163,65 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var message Message
-	respMsg := ResultMessage{}
+	var message []*ResultMessage
+//	respMsg := ResultMessage{}
 	respStruct := ReceiveMessageResponse{}
 
+	loops := waitTimeSeconds * 10
+	for len(SyncQueues.Queues[queueName].Messages) - numberOfHiddenMessagesInQueue(*SyncQueues.Queues[queueName]) == 0 && loops > 0 {
+		time.Sleep(100 * time.Millisecond)
+		loops--
+	}
 	log.Println("Getting Message from Queue:", queueName)
-	SyncQueues.Lock() // Lock the Queues
+
 	if len(SyncQueues.Queues[queueName].Messages) > 0 {
+		numMsg := 0
+		message = make([]*ResultMessage, 0)
 		for i, _ := range SyncQueues.Queues[queueName].Messages {
+			if numMsg >= maxNumberOfMessages {
+				break
+			}
 			timeout := time.Now().Add(time.Duration(-SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 			if (SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
 			} else {
+				SyncQueues.Lock() // Lock the Queues
 				uuid, _ := common.NewUUID()
 				SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
 				SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
-				message = SyncQueues.Queues[queueName].Messages[i]
-				break
+				message = append(message, &ResultMessage{})
+				message[numMsg].MessageId = SyncQueues.Queues[queueName].Messages[i].Uuid
+				message[numMsg].Body = SyncQueues.Queues[queueName].Messages[i].MessageBody
+				message[numMsg].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
+				message[numMsg].MD5OfBody = common.GetMD5Hash(string(message[numMsg].Body))
+				SyncQueues.Unlock() // Unlock the Queues
+				numMsg++
 			}
 		}
 
-		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
-		respStruct = ReceiveMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ReceiveMessageResult{Message: &respMsg}, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
+		respStruct = ReceiveMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ReceiveMessageResult{Message: message}, ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	} else {
 		log.Println("No messages in Queue:", queueName)
 		respStruct = ReceiveMessageResponse{xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: ReceiveMessageResult{}, Metadata: ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
-	SyncQueues.Unlock() // Unlock the Queues
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
+}
+
+
+func numberOfHiddenMessagesInQueue(queue Queue) int {
+	num := 0
+	for i, _ := range queue.Messages {
+		timeout := time.Now().Add(time.Duration(-queue.TimeoutSecs) * time.Second)
+		if (queue.Messages[i].ReceiptHandle != "") && (timeout.Before(queue.Messages[i].ReceiptTime)) {
+			num++
+		}
+	}
+	return num
 }
 
 func DeleteMessage(w http.ResponseWriter, req *http.Request) {
@@ -337,7 +375,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		SyncQueues.RLock()
 		// Create, encode/xml and send response
 		attribs := make([]Attribute, 0, 0)
-		attr := Attribute{Name: "VisibilityTimeout", Value: "0"}
+		attr := Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.TimeoutSecs)}
 		attribs = append(attribs, attr)
 		attr = Attribute{Name: "DelaySeconds", Value: "0"}
 		attribs = append(attribs, attr)
@@ -345,7 +383,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
 		attribs = append(attribs, attr)
-		attr = Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: "0"}
+		attr = Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
 		attribs = append(attribs, attr)
 		attr = Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
 		attribs = append(attribs, attr)
