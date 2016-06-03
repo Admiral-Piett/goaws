@@ -52,7 +52,7 @@ type ResultMessage struct {
 }
 
 type ReceiveMessageResult struct {
-	Message *ResultMessage `xml:"Message,omitempty"`
+	Message []*ResultMessage `xml:"Message,omitempty"`
 }
 
 type ReceiveMessageResponse struct {
