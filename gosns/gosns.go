@@ -236,6 +236,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 	_, ok := SyncTopics.Topics[topicName]
 	if ok {
+		log.Println("Publish to Topic:", topicName)
 		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
 			if subs.Protocol == "sqs" {
 				queueUrl := subs.EndPoint
