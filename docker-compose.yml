@@ -1,12 +1,10 @@
 version: '2'
 services:
   yopa:
-    container_name: yopa
-    image: my-yopa
+    container_name: goaws
+    image: pafortin/goaws
     ports:
-      - 47195:47195
-      - 47196:47196
-      - 47197:47197
+      - 4100:4100
     volumes:
      - ./config:/config
 
