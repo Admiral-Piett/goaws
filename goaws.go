@@ -6,11 +6,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/p4tin/goaws/conf"
 	sns "github.com/p4tin/goaws/gosns"
 	sqs "github.com/p4tin/goaws/gosqs"
-	"os"
+	"github.com/p4tin/goaws/conf"
 )
 
 func BadRequest(w http.ResponseWriter, req *http.Request) {
@@ -74,10 +74,12 @@ func main() {
 		env = os.Args[1]
 	}
 	var portNumber string
+	var filename string
 	flag.StringVar(&portNumber, "port", "", "Port number to listen on")
+	flag.StringVar(&filename, "config", "", "config file location + name")
 	flag.Parse()
 
-	portNumber = conf.LoadYamlConfig(env, portNumber)
+	portNumber = conf.LoadYamlConfig(filename, env, portNumber)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")

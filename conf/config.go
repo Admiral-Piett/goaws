@@ -36,8 +36,10 @@ type Environment struct {
 
 var envs map[string]Environment
 
-func LoadYamlConfig(env string, portNumber string) string {
-	filename, _ := filepath.Abs("./conf/goaws.yaml")
+func LoadYamlConfig(filename string, env string, portNumber string) string {
+	if filename == "" {
+		filename, _ = filepath.Abs("./conf/goaws.yaml")
+	}
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return "4100"
