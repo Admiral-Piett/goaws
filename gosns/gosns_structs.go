@@ -76,6 +76,19 @@ type ListSubscriptionsResponse struct {
 	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
 }
 
+/*** List Subscriptions By Topic Response */
+
+type ListSubscriptionsByTopicResult struct {
+	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
+}
+
+type ListSubscriptionsByTopicResponse struct {
+	Xmlns    string                  `xml:"xmlns,attr"`
+	Result   ListSubscriptionsResult `xml:"ListSubscriptionsResult"`
+	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
+}
+
+
 /*** Publish ***/
 
 type PublishResult struct {

@@ -3,7 +3,6 @@ package gosqs
 import (
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/p4tin/goaws/common"
+	"log"
 )
 
 type SqsErrorType struct {

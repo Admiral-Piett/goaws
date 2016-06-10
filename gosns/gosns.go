@@ -144,6 +144,32 @@ func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
 	SendResponseBack(w, req, respStruct, content)
 }
 
+func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
+	content := req.FormValue("ContentType")
+	topicArn := req.FormValue("TopicArn")
+
+	uriSegments := strings.Split(topicArn, ":")
+	topicName := uriSegments[len(uriSegments)-1]
+
+	if topic, ok := SyncTopics.Topics[topicName]; ok {
+		uuid, _ := common.NewUUID()
+		respStruct := ListSubscriptionsByTopicResponse{}
+		respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
+		respStruct.Metadata.RequestId = uuid
+		respStruct.Result.Subscriptions.Member = make([]TopicMemberResult, 0, 0)
+
+		for _, sub := range topic.Subscriptions {
+			tar := TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
+				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint}
+			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
+		}
+		SendResponseBack(w, req, respStruct, content)
+	} else {
+		createErrorResponse(w, req, "TopicNotFound")
+	}
+}
+
+
 func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	subsArn := req.FormValue("SubscriptionArn")

@@ -54,6 +54,8 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 		sns.Subscribe(w, req)
 	case "SetSubscriptionAttributes":
 		sns.SetSubscriptionAttributes(w, req)
+	case "ListSubscriptionsByTopic":
+		sns.ListSubscriptionsByTopic(w, req)
 	case "ListSubscriptions":
 		sns.ListSubscriptions(w, req)
 	case "Unsubscribe":
