@@ -61,6 +61,10 @@ func init() {
 	SqsErrors["GeneralError"] = err4
 }
 
+func ResetSyncQueues() {
+	SyncQueues.Queues = make(map[string]*Queue)
+}
+
 func ListQueues(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	respStruct := ListQueuesResponse{}

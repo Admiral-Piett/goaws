@@ -1,67 +1,34 @@
 package conf
 
 import (
-	"testing"
 	"github.com/p4tin/goaws/gosns"
 	"github.com/p4tin/goaws/gosqs"
+	. "gopkg.in/check.v1"
 )
 
-func TestConfig_NoQueuesOrTopics(t *testing.T) {
-	env := "NoQueuesOrTopics"
-	port :=LoadYamlConfig("./mock-data/mock-config.yaml", env, "4200")
-	if port != "4200" {
-		t.Errorf("Expected port number 4200 but got %s\n", port)
-	}
+type ConfSuite struct{}
 
-	numQueues := len(envs[env].Queues)
-	if numQueues != 0 {
-		t.Errorf("Expected zero queues to be in the environment but got %s\n", numQueues)
-	}
-	numQueues = len(gosqs.SyncQueues.Queues)
-	if numQueues != 0 {
-		t.Errorf("Expected zero queues to be in the sqs topics but got %s\n", numQueues)
-	}
+var _ = Suite(&ConfSuite{})
 
-
-	numTopics := len(envs[env].Topics)
-	if numTopics != 0 {
-		t.Errorf("Expected zero topics to be in the environment but got %s\n", numTopics)
-	}
-	numTopics = len(gosns.SyncTopics.Topics)
-	if numTopics != 0 {
-		t.Errorf("Expected zero topics to be in the sns topics but got %s\n", numTopics)
-	}
+func (s *ConfSuite) TestConfig_NoQueuesOrTopics(c *C) {
+	loadedEnv, err := LoadYamlConfig("./mock-data/mock-config.yaml", "NoQueuesOrTopics", "1111", "2222")
+	c.Assert(err, IsNil)
+	c.Assert(loadedEnv.SQSPort, Equals, "1111")
+	c.Assert(loadedEnv.SNSPort, Equals, "2222")
+	c.Assert(len(loadedEnv.Queues), Equals, 0)
+	c.Assert(len(gosqs.SyncQueues.Queues), Equals, 0)
+	c.Assert(len(loadedEnv.Topics), Equals, 0)
+	c.Assert(len(gosns.SyncTopics.Topics), Equals, 0)
 }
 
-func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
-	env := "Local"
-	port :=LoadYamlConfig("./mock-data/mock-config.yaml", env, "")
-	if port != "4100" {
-		t.Errorf("Expected port number 4100 but got %s\n", port)
-	}
-
-	numQueues := len(envs[env].Queues)
-	if numQueues != 3 {
-		t.Errorf("Expected three queues to be in the environment but got %s\n", numQueues)
-	}
-	numQueues = len(gosqs.SyncQueues.Queues)
-	if numQueues != 5 {
-		t.Errorf("Expected five queues to be in the sqs topics but got %s\n", numQueues)
-	}
-
-
-	numTopics := len(envs[env].Topics)
-	if numTopics != 2 {
-		t.Errorf("Expected two topics to be in the environment but got %s\n", numTopics)
-	}
-	numTopics = len(gosns.SyncTopics.Topics)
-	if numTopics != 2 {
-		t.Errorf("Expected two topics to be in the sns topics but got %s\n", numTopics)
-	}
-
-	numSubscriptions := 2
-	if numSubscriptions != 2 {
-		t.Errorf("Expected two Subscriptions to be in the environment but got %s\n", numTopics)
-	}
+func (s *ConfSuite) TestConfig_CreateQueuesTopicsAndSubscriptions(c *C) {
+	loadedEnv, err := LoadYamlConfig("./mock-data/mock-config.yaml", "Local", "", "")
+	c.Assert(err, IsNil)
+	c.Assert(loadedEnv.SQSPort, Equals, "9324")
+	c.Assert(loadedEnv.SNSPort, Equals, "9292")
+	c.Assert(len(loadedEnv.Queues), Equals, 3)
+	c.Assert(len(gosqs.SyncQueues.Queues), Equals, 5)
+	c.Assert(len(loadedEnv.Topics), Equals, 2)
+	c.Assert(len(gosns.SyncTopics.Topics), Equals, 2)
 }
 
