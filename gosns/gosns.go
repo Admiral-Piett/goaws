@@ -37,6 +37,15 @@ type Topic struct {
 	Subscriptions []*Subscription
 }
 
+type (
+	Protocol string
+)
+
+const (
+	ProtocolSQS Protocol = "sqs"
+	ProtocolDefault Protocol = "default"
+)
+
 var SyncTopics = struct {
 	sync.RWMutex
 	Topics map[string]*Topic
@@ -264,14 +273,19 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	if ok {
 		log.Println("Publish to Topic:", topicName)
 		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
-			if subs.Protocol == "sqs" {
+			if Protocol(subs.Protocol) == ProtocolSQS {
 				queueUrl := subs.EndPoint
 				uriSegments := strings.Split(queueUrl, "/")
 				queueName := uriSegments[len(uriSegments)-1]
 
+				parts := strings.Split(queueName, ":")
+				if len(parts) > 0 {
+					queueName = parts[len(parts)-1]
+				}
+
 				msg := sqs.Message{}
 				if subs.Raw == false {
-					msg.MessageBody = CreateMessageBody(messageBody, topicArn)
+					msg.MessageBody = CreateMessageBody(messageBody, topicArn, subs.Protocol)
 				} else {
 					msg.MessageBody = []byte(messageBody)
 				}
@@ -305,12 +319,26 @@ type TopicMessage struct {
 	TimeStamp string
 }
 
-func CreateMessageBody(msg string, topicArn string) []byte {
+func CreateMessageBody(msg string, topicArn string, protocol string) []byte {
+	msgWithProtocols := struct {
+		Default string `json:"default"`
+		SQS string `json:"sqs"`
+	}{}
+
+	json.Unmarshal([]byte(msg), &msgWithProtocols)
+
 	msgId, _ := common.NewUUID()
 
 	message := TopicMessage{}
 	message.Type = "Notification"
-	message.Message = msg
+	if Protocol(protocol) == ProtocolSQS {
+		message.Message = msgWithProtocols.SQS
+	}
+
+	if Protocol(protocol) == ProtocolDefault {
+		message.Message = msgWithProtocols.Default
+	}
+
 	message.MessageId = msgId
 	message.TopicArn = topicArn
 	t := time.Now()

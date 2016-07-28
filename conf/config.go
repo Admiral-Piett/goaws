@@ -28,6 +28,7 @@ type EnvQueue struct {
 type Environment struct {
 	Host        string
 	Port        string
+	Region      string
 	LogMessages bool
 	LogFile     string
 	Topics      []EnvTopic
@@ -52,6 +53,11 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 	}
 	if env == "" {
 		env = "Local"
+	}
+
+	region := "local"
+	if envs[env].Region != "" {
+		region = envs[env].Region
 	}
 
 	if portNumber == "" {
@@ -79,7 +85,7 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
 	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:local:000000000000:" + topic.Name
+		topicArn := "arn:aws:sns:"+region+":000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
