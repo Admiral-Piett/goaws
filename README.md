@@ -43,11 +43,13 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
 # Installation
 
     go get github.com/p4tin/GoAws
+    go get github.com/tools/godep
 
 ## Build and Run (Standalone)
-
+   
     Build
         cd to GoAws directory
+        godep restore
         go build . 
         
     Run
