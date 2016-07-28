@@ -29,6 +29,7 @@ type Environment struct {
 	Host        string
 	SQSPort     string
 	SNSPort     string
+	Region      string
 	LogMessages bool
 	LogFile     string
 	Topics      []EnvTopic
@@ -80,11 +81,16 @@ func LoadYamlConfig(filename, env, sqsPortNumber, snsPortNumber string) (*Enviro
         return nil, errors.Errorf("Error: Env %s was not found in config!", env)
     }
 
-	if sqsPortNumber == "" {
+    region := "local"
+    if envs[env].Region != "" {
+        region = envs[env].Region
+    }
+
+    if sqsPortNumber == "" {
 		sqsPortNumber = requiredEnv.SQSPort
 		if sqsPortNumber == "" {
-			sqsPortNumber = "9324"
-		}
+            sqsPortNumber = "9324"
+        }
 	} else {
         requiredEnv.SetSQSPort(sqsPortNumber)
     }
@@ -116,7 +122,7 @@ func LoadYamlConfig(filename, env, sqsPortNumber, snsPortNumber string) (*Enviro
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
 	for _, topic := range requiredEnv.Topics {
-		topicArn := "arn:aws:sns:local:000000000000:" + topic.Name
+		topicArn := "arn:aws:sns:"+region+":000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
