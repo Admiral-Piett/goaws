@@ -43,16 +43,21 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
 # Installation
 
     go get github.com/p4tin/GoAws
+    go get github.com/tools/godep
 
 ## Build and Run (Standalone)
-
+   
     Build
         cd to GoAws directory
+        godep restore
         go build . 
         
     Run
         ./goaws  (by default goaws listens on port 4100 but you can change it in the goaws.yaml file to another port of your choice)
         
+    Test
+    
+        go test -cover -race `go list ./... | grep -v /vendor/`
 
 ## Run (Docker Version)
 
@@ -68,7 +73,7 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
 
 You can test that your installation is working correctly in one of two ways:
 
- 1.  Usign the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
+ 1. Usign the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
 
  2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 

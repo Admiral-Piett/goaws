@@ -11,6 +11,7 @@ import (
 	sns "github.com/p4tin/goaws/gosns"
 	sqs "github.com/p4tin/goaws/gosqs"
 	"github.com/p4tin/goaws/conf"
+	"github.com/spf13/pflag"
 )
 
 func BadRequest(w http.ResponseWriter, req *http.Request) {
@@ -75,19 +76,33 @@ func main() {
 	if len(os.Args) == 2 {
 		env = os.Args[1]
 	}
-	var portNumber string
+
+	var snsPortNumber string
+	var sqsPortNumber string
 	var filename string
-	flag.StringVar(&portNumber, "port", "", "Port number to listen on")
+	flag.StringVar(&sqsPortNumber, "sqs-port", "", "Port number SQS listens on")
+	flag.StringVar(&snsPortNumber, "sns-port", "", "Port number SNS listens on")
 	flag.StringVar(&filename, "config", "", "config file location + name")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	flag.Parse()
 
-	portNumber = conf.LoadYamlConfig(filename, env, portNumber)
+	loadedEnv, err := conf.LoadYamlConfig(filename, env, sqsPortNumber, snsPortNumber)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", IndexServer).Methods("GET", "POST")
 	r.HandleFunc("/queue/{queueName}", IndexServer).Methods("GET", "POST")
 
-	log.Printf("GoAws listening on: 0.0.0.0:%s\n", portNumber)
-	err := http.ListenAndServe("0.0.0.0:"+portNumber, r)
+	go func(port string) {
+		log.Printf("GoAws SQS listening on: 0.0.0.0:%s\n", port)
+		err := http.ListenAndServe(":"+port, r)
+		log.Fatal(err)
+	}(loadedEnv.SQSPort)
+
+	log.Printf("GoAws SNS listening on: 0.0.0.0:%s\n", loadedEnv.SNSPort)
+	err = http.ListenAndServe(":"+loadedEnv.SNSPort, r)
 	log.Fatal(err)
 }

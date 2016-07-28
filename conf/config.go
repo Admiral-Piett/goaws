@@ -1,14 +1,14 @@
 package conf
 
 import (
-	"io/ioutil"
-	"log"
 	"path/filepath"
 
-	"github.com/ghodss/yaml"
 	"github.com/p4tin/goaws/common"
+    "github.com/spf13/viper"
 	sns "github.com/p4tin/goaws/gosns"
 	sqs "github.com/p4tin/goaws/gosqs"
+    "strings"
+    "github.com/juju/errors"
 )
 
 type EnvSubsciption struct {
@@ -27,59 +27,102 @@ type EnvQueue struct {
 
 type Environment struct {
 	Host        string
-	Port        string
+	SQSPort     string
+	SNSPort     string
+	Region      string
 	LogMessages bool
 	LogFile     string
 	Topics      []EnvTopic
 	Queues      []EnvQueue
 }
 
-var envs map[string]Environment
+var envs map[string]*Environment
+var requiredEnv *Environment
 
-func LoadYamlConfig(filename string, env string, portNumber string) string {
-	if filename == "" {
+func GetLoadedEnv() *Environment {
+    return requiredEnv
+}
+
+func (e *Environment) SetSQSPort(port string) {
+    e.SQSPort = port
+}
+
+func (e *Environment) SetSNSPort(port string) {
+    e.SNSPort = port
+}
+
+func LoadYamlConfig(filename, env, sqsPortNumber, snsPortNumber string) (*Environment, error) {
+    // Reset when loading
+    sqs.ResetSyncQueues()
+    sns.ResetSyncTopics()
+
+    if filename == "" {
 		filename, _ = filepath.Abs("./conf/goaws.yaml")
 	}
-	yamlFile, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return "4100"
-	}
 
-	err = yaml.Unmarshal(yamlFile, &envs)
-	if err != nil {
-		log.Printf("err: %v\n", err)
-		return portNumber
-	}
+    viper.SetConfigFile(filename)
+    err := viper.ReadInConfig()
+    if err != nil {
+        return nil, err
+    }
+
+    err = viper.Unmarshal(&envs)
+    if err != nil {
+        return nil, err
+    }
+
 	if env == "" {
 		env = "Local"
 	}
 
-	if portNumber == "" {
-		portNumber = envs[env].Port
-		if portNumber == "" {
-			portNumber = "4100"
+    env = strings.ToLower(env)
+    requiredEnv, ok := envs[env];
+    if !ok {
+        return nil, errors.Errorf("Error: Env %s was not found in config!", env)
+    }
+
+    region := "local"
+    if envs[env].Region != "" {
+        region = envs[env].Region
+    }
+
+    if sqsPortNumber == "" {
+		sqsPortNumber = requiredEnv.SQSPort
+		if sqsPortNumber == "" {
+            sqsPortNumber = "9324"
+        }
+	} else {
+        requiredEnv.SetSQSPort(sqsPortNumber)
+    }
+
+	if snsPortNumber == "" {
+		snsPortNumber = requiredEnv.SNSPort
+		if snsPortNumber == "" {
+			snsPortNumber = "9292"
 		}
-	}
+	} else {
+        requiredEnv.SetSNSPort(snsPortNumber)
+    }
 
 	common.LogMessages = false
 	common.LogFile = "./goaws_messages.log"
 
 	if envs[env].LogMessages == true {
 		common.LogMessages = true
-		if envs[env].LogFile != "" {
-			common.LogFile = envs[env].LogFile
+		if requiredEnv.LogFile != "" {
+			common.LogFile = requiredEnv.LogFile
 		}
 	}
 
 	sqs.SyncQueues.Lock()
-	for _, queue := range envs[env].Queues {
-		queueUrl := "http://" + envs[env].Host + ":" + portNumber + "/queue/" + queue.Name
+	for _, queue := range requiredEnv.Queues {
+		queueUrl := "http://" + requiredEnv.Host + ":" + sqsPortNumber + "/queue/" + queue.Name
 		sqs.SyncQueues.Queues[queue.Name] = &sqs.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 	}
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
-	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:local:000000000000:" + topic.Name
+	for _, topic := range requiredEnv.Topics {
+		topicArn := "arn:aws:sns:"+region+":000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
@@ -88,7 +131,7 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
 				sqs.SyncQueues.Lock()
-				queueUrl := "http://" + envs[env].Host + ":" + portNumber + "/queue/" + subs.QueueName
+				queueUrl := "http://" + requiredEnv.Host + ":" + sqsPortNumber + "/queue/" + subs.QueueName
 				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 				sqs.SyncQueues.Unlock()
 			}
@@ -103,5 +146,5 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 	}
 	sns.SyncTopics.Unlock()
 
-	return portNumber
+	return requiredEnv, nil
 }
