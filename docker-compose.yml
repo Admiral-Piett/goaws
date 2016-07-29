@@ -7,5 +7,3 @@ services:
       - 4100:4100
     volumes:
      - ./conf:/conf
-
-
