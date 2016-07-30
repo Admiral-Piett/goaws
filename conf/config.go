@@ -28,6 +28,8 @@ type EnvQueue struct {
 type Environment struct {
 	Host        string
 	Port        string
+	SqsPort	    string
+	SnsPort     string
 	Region      string
 	LogMessages bool
 	LogFile     string
@@ -37,19 +39,20 @@ type Environment struct {
 
 var envs map[string]Environment
 
-func LoadYamlConfig(filename string, env string, portNumber string) string {
+func LoadYamlConfig(filename string, env string) []string {
+	ports := []string{ "4100" }
 	if filename == "" {
 		filename, _ = filepath.Abs("./conf/goaws.yaml")
 	}
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return "4100"
+		return ports
 	}
 
 	err = yaml.Unmarshal(yamlFile, &envs)
 	if err != nil {
 		log.Printf("err: %v\n", err)
-		return portNumber
+		return ports
 	}
 	if env == "" {
 		env = "Local"
@@ -60,11 +63,10 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 		region = envs[env].Region
 	}
 
-	if portNumber == "" {
-		portNumber = envs[env].Port
-		if portNumber == "" {
-			portNumber = "4100"
-		}
+	if envs[env].Port != "" {
+		ports = []string{ envs[env].Port }
+	} else if  envs[env].SqsPort != "" && envs[env].SnsPort != "" {
+		ports = []string{ envs[env].SqsPort, envs[env].SnsPort }
 	}
 
 	common.LogMessages = false
@@ -79,7 +81,7 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 
 	sqs.SyncQueues.Lock()
 	for _, queue := range envs[env].Queues {
-		queueUrl := "http://" + envs[env].Host + ":" + portNumber + "/queue/" + queue.Name
+		queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + queue.Name
 		sqs.SyncQueues.Queues[queue.Name] = &sqs.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 	}
 	sqs.SyncQueues.Unlock()
@@ -94,7 +96,7 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
 				sqs.SyncQueues.Lock()
-				queueUrl := "http://" + envs[env].Host + ":" + portNumber + "/queue/" + subs.QueueName
+				queueUrl := "http://" + envs[env].Host + ":" +  ports[0] + "/queue/" + subs.QueueName
 				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 				sqs.SyncQueues.Unlock()
 			}
@@ -109,5 +111,5 @@ func LoadYamlConfig(filename string, env string, portNumber string) string {
 	}
 	sns.SyncTopics.Unlock()
 
-	return portNumber
+	return ports
 }

@@ -1,7 +1,11 @@
 Local:                              # Environment name that can be passed on the command line
                                     #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
   Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
+# you can now use either 1 port for both sns and sqs or alternatively you can comment out Port and use SqsPort + SnsPort for compatibilyt with
+# yopa and (fage-sns + face-sqs).  If both ways are in the config file on the one "Port" will be used by GoAws
   Port: 4100                        # port to listen on.
+# SqsPort: 9324                     # alterante Sqs Port
+# SnsPort: 9292                     # alternate Sns Port
   LogMessages: true                 # Log messages (true/false)
   LogFile: ./goaws_messages.log  # Log filename (for message logging
   Queues:                           # List of queues to create at startup
@@ -19,6 +23,8 @@ Local:                              # Environment name that can be passed on the
 Dev:                                # Another environment
   Host: localhost
   Port: 4100
+# SqsPort: 9324
+# SnsPort: 9292
   LogMessages: true
   LogFile: ./goaws_messages.log
   Queues:
