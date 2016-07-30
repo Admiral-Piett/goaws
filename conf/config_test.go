@@ -8,8 +8,8 @@ import (
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	env := "NoQueuesOrTopics"
-	port :=LoadYamlConfig("./mock-data/mock-config.yaml", env, "4200")
-	if port != "4200" {
+	port :=LoadYamlConfig("./mock-data/mock-config.yaml", env)
+	if port[0] != "4100" {
 		t.Errorf("Expected port number 4200 but got %s\n", port)
 	}
 
@@ -35,8 +35,8 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 
 func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	env := "Local"
-	port := LoadYamlConfig("./mock-data/mock-config.yaml", env, "")
-	if port != "4100" {
+	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+	if port[0] != "4100" {
 		t.Errorf("Expected port number 4100 but got %s\n", port)
 	}
 
