@@ -277,25 +277,28 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 				queueUrl := subs.EndPoint
 				uriSegments := strings.Split(queueUrl, "/")
 				queueName := uriSegments[len(uriSegments)-1]
+				if _, ok := sqs.SyncQueues.Queues[queueName]; ok {
+					parts := strings.Split(queueName, ":")
+					if len(parts) > 0 {
+						queueName = parts[len(parts)-1]
+					}
 
-				parts := strings.Split(queueName, ":")
-				if len(parts) > 0 {
-					queueName = parts[len(parts)-1]
-				}
-
-				msg := sqs.Message{}
-				if subs.Raw == false {
-					msg.MessageBody = CreateMessageBody(messageBody, topicArn, subs.Protocol)
+					msg := sqs.Message{}
+					if subs.Raw == false {
+						msg.MessageBody = CreateMessageBody(messageBody, topicArn, subs.Protocol)
+					} else {
+						msg.MessageBody = []byte(messageBody)
+					}
+					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
+					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
+					msg.Uuid, _ = common.NewUUID()
+					sqs.SyncQueues.Lock()
+					sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
+					sqs.SyncQueues.Unlock()
+					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 				} else {
-					msg.MessageBody = []byte(messageBody)
+					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
 				}
-				msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
-				msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-				msg.Uuid, _ = common.NewUUID()
-				sqs.SyncQueues.Lock()
-				sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
-				sqs.SyncQueues.Unlock()
-				common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 			}
 		}
 	} else {
