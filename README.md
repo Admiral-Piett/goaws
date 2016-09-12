@@ -17,7 +17,7 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
  - [x] PurgeQueue
  - [x] Delete Queue
 
-## Current SQS APIs implemented:
+## Current SNS APIs implemented:
 
  - [x] ListTopics
  - [x] CreateTopic
