@@ -125,8 +125,7 @@ You can test that your installation is working correctly in one of two ways:
     No output (There are no Queues left)
 ```
 
-(Topics are created hard coded (until create-topic is implemented)
-* aws --endpoint-url http://localhost:4100 sns list-topics
+* aws --endpoint-url http://localhost:4100 sns list-topics  (Example Response from list-topics)
 ```
     {
         "Topics": [
