@@ -42,7 +42,7 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
 
 # Installation
 
-    go get github.com/p4tin/GoAws
+    go get github.com/p4tin/goaws
 
 ## Build and Run (Standalone)
 
