@@ -3,6 +3,7 @@ package gosns
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -39,11 +40,21 @@ type Topic struct {
 
 type (
 	Protocol string
+	MessageStructure string
 )
 
 const (
 	ProtocolSQS Protocol = "sqs"
 	ProtocolDefault Protocol = "default"
+)
+
+const (
+	MessageStructureJSON MessageStructure = "json"
+)
+
+// Predefined errors
+const (
+	ErrNoDefaultElementInJSON = "Invalid parameter: Message Structure - No default entry in JSON message body"
 )
 
 var SyncTopics = struct {
@@ -265,6 +276,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")
 	messageBody := req.FormValue("Message")
+	messageStructure := req.FormValue("MessageStructure")
 
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
@@ -285,7 +297,13 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 					msg := sqs.Message{}
 					if subs.Raw == false {
-						msg.MessageBody = CreateMessageBody(messageBody, topicArn, subs.Protocol)
+						m, err := CreateMessageBody(messageBody, topicArn, subs.Protocol, messageStructure)
+						if err != nil {
+							createErrorResponse(w, req, err.Error())
+							return
+						}
+
+						msg.MessageBody = m
 					} else {
 						msg.MessageBody = []byte(messageBody)
 					}
@@ -322,24 +340,20 @@ type TopicMessage struct {
 	TimeStamp string
 }
 
-func CreateMessageBody(msg string, topicArn string, protocol string) []byte {
-	msgWithProtocols := struct {
-		Default string `json:"default"`
-		SQS string `json:"sqs"`
-	}{}
-
-	json.Unmarshal([]byte(msg), &msgWithProtocols)
-
+func CreateMessageBody(msg string, topicArn string, protocol string, messageStructure string) ([]byte, error) {
 	msgId, _ := common.NewUUID()
 
 	message := TopicMessage{}
 	message.Type = "Notification"
-	if Protocol(protocol) == ProtocolSQS {
-		message.Message = msgWithProtocols.SQS
-	}
 
-	if Protocol(protocol) == ProtocolDefault {
-		message.Message = msgWithProtocols.Default
+	if MessageStructure(messageStructure) == MessageStructureJSON {
+		m, err := extractMessageFromJSON(msg, protocol)
+		if err != nil {
+			return nil, err
+		}
+		message.Message = m
+	} else {
+		message.Message = msg
 	}
 
 	message.MessageId = msgId
@@ -348,7 +362,25 @@ func CreateMessageBody(msg string, topicArn string, protocol string) []byte {
 	message.TimeStamp = fmt.Sprintln(t.Format("2006-01-02T15:04:05:001Z"))
 
 	byteMsg, _ := json.Marshal(message)
-	return byteMsg
+	return byteMsg, nil
+}
+
+func extractMessageFromJSON(msg string, protocol string) (string, error) {
+	var msgWithProtocols map[string]string
+	if err := json.Unmarshal([]byte(msg), &msgWithProtocols); err != nil {
+		return "", err
+	}
+
+	defaultMsg, ok := msgWithProtocols[string(ProtocolDefault)]
+	if !ok {
+		return "", errors.New(ErrNoDefaultElementInJSON)
+	}
+
+	if m, ok := msgWithProtocols[protocol]; ok {
+		return m, nil
+	}
+
+	return defaultMsg, nil
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
