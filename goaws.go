@@ -29,6 +29,8 @@ func IndexServer(w http.ResponseWriter, req *http.Request) {
 		sqs.CreateQueue(w, req)
 	case "GetQueueAttributes":
 		sqs.GetQueueAttributes(w, req)
+	case "SetQueueAttributes":
+		sqs.SetQueueAttributes(w, req)
 	case "SendMessage":
 		sqs.SendMessage(w, req)
 	case "ReceiveMessage":
