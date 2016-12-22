@@ -298,7 +298,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 					msg := sqs.Message{}
 					if subs.Raw == false {
-						m, err := CreateMessageBody(messageBody, topicArn, subs.Protocol, messageStructure, subject)
+						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
 						if err != nil {
 							createErrorResponse(w, req, err.Error())
 							return
@@ -341,7 +341,7 @@ type TopicMessage struct {
 	TimeStamp string
 }
 
-func CreateMessageBody(msg string, topicArn string, protocol string, messageStructure string, subject string) ([]byte, error) {
+func CreateMessageBody(msg string, subject string, topicArn string, protocol string, messageStructure string) ([]byte, error) {
 	msgId, _ := common.NewUUID()
 
 	message := TopicMessage{}
