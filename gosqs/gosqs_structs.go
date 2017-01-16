@@ -102,6 +102,11 @@ type GetQueueAttributesResponse struct {
 	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
 }
 
+type SetQueueAttributesResponse struct {
+	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
+	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
+}
+
 /*** Error Responses ***/
 type ErrorResult struct {
 	Type      string `xml:"Type,omitempty"`

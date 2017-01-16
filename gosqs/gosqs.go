@@ -406,6 +406,17 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
+	log.Println("setQueueAttributes was called but it's not implemented")
+	respStruct := SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		fmt.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "GeneralError")
+	}
+}
+
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := SqsErrors[err]
 	respStruct := ErrorResponse{ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
