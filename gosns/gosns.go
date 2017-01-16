@@ -275,6 +275,7 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 func Publish(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")
+	subject := req.FormValue("Subject")
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
 
@@ -297,7 +298,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 					msg := sqs.Message{}
 					if subs.Raw == false {
-						m, err := CreateMessageBody(messageBody, topicArn, subs.Protocol, messageStructure)
+						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
 						if err != nil {
 							createErrorResponse(w, req, err.Error())
 							return
@@ -340,11 +341,12 @@ type TopicMessage struct {
 	TimeStamp string
 }
 
-func CreateMessageBody(msg string, topicArn string, protocol string, messageStructure string) ([]byte, error) {
+func CreateMessageBody(msg string, subject string, topicArn string, protocol string, messageStructure string) ([]byte, error) {
 	msgId, _ := common.NewUUID()
 
 	message := TopicMessage{}
 	message.Type = "Notification"
+	message.Subject = subject
 
 	if MessageStructure(messageStructure) == MessageStructureJSON {
 		m, err := extractMessageFromJSON(msg, protocol)
