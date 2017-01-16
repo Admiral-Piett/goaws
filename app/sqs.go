@@ -1,9 +1,4 @@
-package gosqs
-
-/*** Common ***/
-type ResponseMetadata struct {
-	RequestId string `xml:"RequestId"`
-}
+package app
 
 /*** List Queues Response */
 type ListQueuesResult struct {
@@ -56,7 +51,7 @@ type ReceiveMessageResult struct {
 }
 
 type ReceiveMessageResponse struct {
-	xmlns    string               `xml:"xmlns,attr"`
+	Xmlns    string               `xml:"xmlns,attr"`
 	Result   ReceiveMessageResult `xml:"ReceiveMessageResult"`
 	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
 }
@@ -105,16 +100,4 @@ type GetQueueAttributesResponse struct {
 type SetQueueAttributesResponse struct {
 	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
 	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
-}
-
-/*** Error Responses ***/
-type ErrorResult struct {
-	Type      string `xml:"Type,omitempty"`
-	Code      string `xml:"Code,omitempty"`
-	Message   string `xml:"Message,omitempty"`
-	RequestId string `xml:"RequestId,omitempty"`
-}
-
-type ErrorResponse struct {
-	Result ErrorResult `xml:"Error"`
 }
