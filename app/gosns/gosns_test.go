@@ -3,9 +3,9 @@ package gosns
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 )
 
 func TestListTopicshandler_POST_NoTopics(t *testing.T) {
@@ -51,7 +51,6 @@ func TestCreateTopicshandler_POST_CreateTopics(t *testing.T) {
 	form.Add("Name", "UnitTestTopic1")
 	req.PostForm = form
 
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(CreateTopic)
@@ -86,7 +85,6 @@ func TestPublishhandler_POST_SendMessage(t *testing.T) {
 	form.Add("TopicArn", "arn:aws:sns:local:000000000000:UnitTestTopic1")
 	form.Add("Message", "TestMessage1")
 	req.PostForm = form
-
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
@@ -124,7 +122,6 @@ func TestSubscribehandler_POST_Success(t *testing.T) {
 	form.Add("Endpoint", "http://localhost:4100/queue/noqueue1")
 	req.PostForm = form
 
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(Subscribe)
@@ -160,7 +157,6 @@ func TestPublish_No_Queue_Error_handler_POST_Success(t *testing.T) {
 	form.Add("Message", "TestMessage1")
 	req.PostForm = form
 
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(Publish)
@@ -183,7 +179,6 @@ func TestPublish_No_Queue_Error_handler_POST_Success(t *testing.T) {
 	}
 }
 
-
 func TestDeleteTopichandler_POST_Success(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -196,7 +191,6 @@ func TestDeleteTopichandler_POST_Success(t *testing.T) {
 	form.Add("TopicArn", "arn:aws:sns:local:000000000000:UnitTestTopic1")
 	form.Add("Message", "TestMessage1")
 	req.PostForm = form
-
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
@@ -225,4 +219,3 @@ func TestDeleteTopichandler_POST_Success(t *testing.T) {
 			rr.Body.String(), expected)
 	}
 }
-

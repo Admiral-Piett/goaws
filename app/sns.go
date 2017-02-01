@@ -1,9 +1,4 @@
-package gosns
-
-/*** Common ***/
-type ResponseMetadata struct {
-	RequestId string `xml:"RequestId"`
-}
+package app
 
 /*** List Topics Response */
 type TopicArnResult struct {
@@ -88,7 +83,6 @@ type ListSubscriptionsByTopicResponse struct {
 	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
 }
 
-
 /*** Publish ***/
 
 type PublishResult struct {
@@ -111,16 +105,4 @@ type UnsubscribeResponse struct {
 type DeleteTopicResponse struct {
 	Xmlns    string           `xml:"xmlns,attr"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
-/*** Error Responses ***/
-type ErrorResult struct {
-	Type      string `xml:"Type,omitempty"`
-	Code      string `xml:"Code,omitempty"`
-	Message   string `xml:"Message,omitempty"`
-	RequestId string `xml:"RequestId,omitempty"`
-}
-
-type ErrorResponse struct {
-	Result ErrorResult `xml:"Error"`
 }
