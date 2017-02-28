@@ -118,6 +118,12 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
+	if _, ok := SyncQueues.Queues[queueName]; !ok {
+		// Queue does not exists
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
 	log.Println("Putting Message in Queue:", queueName)
 	msg := Message{MessageBody: []byte(messageBody)}
 	msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
