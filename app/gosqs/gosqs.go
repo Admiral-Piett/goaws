@@ -107,7 +107,9 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
-	queueUrl := req.FormValue("QueueUrl")
+
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
+
 
 	queueName := ""
 	if queueUrl == "" {
@@ -156,7 +158,9 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		maxNumberOfMessages, _ = strconv.Atoi(mom)
 	}
 
-	queueUrl := req.FormValue("QueueUrl")
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
+	log.Println("Queue for receive:", queueUrl)
+
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -240,7 +244,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 	receiptHandle := req.FormValue("ReceiptHandle")
 
 	// Retrieve FormValues required
-	queueUrl := req.FormValue("QueueUrl")
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -286,7 +290,7 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 
 	// Retrieve FormValues required
-	queueUrl := req.FormValue("QueueUrl")
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -315,7 +319,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 
 	// Retrieve FormValues required
-	queueUrl := req.FormValue("QueueUrl")
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
 
 	uriSegments := strings.Split(queueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
@@ -368,7 +372,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	// Sent response type
 	w.Header().Set("Content-Type", "application/xml")
 	// Retrieve FormValues required
-	queueUrl := req.FormValue("QueueUrl")
+	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -423,6 +427,15 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		fmt.Printf("error: %v\n", err)
 		createErrorResponse(w, req, "GeneralError")
 	}
+}
+
+
+func getQueueUrl(formVal string, url string) string {
+	if formVal != "" {
+		return formVal
+	}
+	parts := strings.Split(url, "/")
+	return parts[len(parts)-1]
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
