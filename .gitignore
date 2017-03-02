@@ -1,6 +1,6 @@
 .idea
 
-/app/vendor/github.com/
+/vendor/github.com/
 
 goaws
 goaws_linux_amd64

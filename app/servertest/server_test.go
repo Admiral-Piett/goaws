@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/p4tin/goaws/servertest"
+	"github.com/p4tin/goaws/app/servertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -93,10 +93,10 @@ func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {
 		WithEndpoint(endpoint).
 		WithCredentials(creds)
 
-	session, err := session.NewSession(awsConfig)
-	noSetupError(t, err)
 
-	svc := sqs.New(session)
+	session1 := session.New(awsConfig)
+
+	svc := sqs.New(session1)
 	return svc
 }
 
