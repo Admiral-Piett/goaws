@@ -188,7 +188,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	if len(SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		message = make([]*app.ResultMessage, 0)
-		for i, _ := range SyncQueues.Queues[queueName].Messages {
+		for i := range SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
 			}
@@ -225,7 +225,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 func numberOfHiddenMessagesInQueue(queue Queue) int {
 	num := 0
-	for i, _ := range queue.Messages {
+	for i := range queue.Messages {
 		timeout := time.Now().Add(time.Duration(-queue.TimeoutSecs) * time.Second)
 		if (queue.Messages[i].ReceiptHandle != "") && (timeout.Before(queue.Messages[i].ReceiptTime)) {
 			num++
