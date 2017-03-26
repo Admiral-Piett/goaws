@@ -110,7 +110,6 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	queueUrl := getQueueUrl(req.FormValue("QueueUrl"), req.URL.String())
 
-
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -176,11 +175,11 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var message []*app.ResultMessage
-//	respMsg := ResultMessage{}
+	//	respMsg := ResultMessage{}
 	respStruct := app.ReceiveMessageResponse{}
 
 	loops := waitTimeSeconds * 10
-	for len(SyncQueues.Queues[queueName].Messages) - numberOfHiddenMessagesInQueue(*SyncQueues.Queues[queueName]) == 0 && loops > 0 {
+	for len(SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*SyncQueues.Queues[queueName]) == 0 && loops > 0 {
 		time.Sleep(100 * time.Millisecond)
 		loops--
 	}
@@ -211,7 +210,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
+		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
 		respStruct = app.ReceiveMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ReceiveMessageResult{Message: message}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	} else {
 		log.Println("No messages in Queue:", queueName)
@@ -223,7 +222,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		fmt.Printf("error: %v\n", err)
 	}
 }
-
 
 func numberOfHiddenMessagesInQueue(queue Queue) int {
 	num := 0
@@ -428,7 +426,6 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "GeneralError")
 	}
 }
-
 
 func getQueueUrl(formVal string, url string) string {
 	if formVal != "" {

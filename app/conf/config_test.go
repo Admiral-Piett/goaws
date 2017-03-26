@@ -1,14 +1,14 @@
 package conf
 
 import (
-	"testing"
 	"github.com/p4tin/goaws/app/gosns"
 	"github.com/p4tin/goaws/app/gosqs"
+	"testing"
 )
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	env := "NoQueuesOrTopics"
-	port :=LoadYamlConfig("./mock-data/mock-config.yaml", env)
+	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
 	if port[0] != "4100" {
 		t.Errorf("Expected port number 4200 but got %s\n", port)
 	}
@@ -21,7 +21,6 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	if numQueues != 0 {
 		t.Errorf("Expected zero queues to be in the sqs topics but got %s\n", numQueues)
 	}
-
 
 	numTopics := len(envs[env].Topics)
 	if numTopics != 0 {
@@ -49,7 +48,6 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 		t.Errorf("Expected five queues to be in the sqs topics but got %s\n", numQueues)
 	}
 
-
 	numTopics := len(envs[env].Topics)
 	if numTopics != 2 {
 		t.Errorf("Expected two topics to be in the environment but got %s\n", numTopics)
@@ -64,4 +62,3 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 		t.Errorf("Expected two Subscriptions to be in the environment but got %s\n", numTopics)
 	}
 }
-
