@@ -28,7 +28,7 @@ type EnvQueue struct {
 type Environment struct {
 	Host        string
 	Port        string
-	SqsPort	    string
+	SqsPort     string
 	SnsPort     string
 	Region      string
 	LogMessages bool
@@ -40,7 +40,7 @@ type Environment struct {
 var envs map[string]Environment
 
 func LoadYamlConfig(filename string, env string) []string {
-	ports := []string{ "4100" }
+	ports := []string{"4100"}
 	if filename == "" {
 		filename, _ = filepath.Abs("./conf/goaws.yaml")
 	}
@@ -64,9 +64,9 @@ func LoadYamlConfig(filename string, env string) []string {
 	}
 
 	if envs[env].Port != "" {
-		ports = []string{ envs[env].Port }
-	} else if  envs[env].SqsPort != "" && envs[env].SnsPort != "" {
-		ports = []string{ envs[env].SqsPort, envs[env].SnsPort }
+		ports = []string{envs[env].Port}
+	} else if envs[env].SqsPort != "" && envs[env].SnsPort != "" {
+		ports = []string{envs[env].SqsPort, envs[env].SnsPort}
 	}
 
 	common.LogMessages = false
@@ -87,7 +87,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	sqs.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
 	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:"+region+":000000000000:" + topic.Name
+		topicArn := "arn:aws:sns:" + region + ":000000000000:" + topic.Name
 
 		newTopic := &sns.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
@@ -96,7 +96,7 @@ func LoadYamlConfig(filename string, env string) []string {
 			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
 				sqs.SyncQueues.Lock()
-				queueUrl := "http://" + envs[env].Host + ":" +  ports[0] + "/queue/" + subs.QueueName
+				queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + subs.QueueName
 				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 				sqs.SyncQueues.Unlock()
 			}

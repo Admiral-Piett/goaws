@@ -93,7 +93,6 @@ func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {
 		WithEndpoint(endpoint).
 		WithCredentials(creds)
 
-
 	session1 := session.New(awsConfig)
 
 	svc := sqs.New(session1)

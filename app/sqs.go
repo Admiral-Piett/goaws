@@ -98,6 +98,6 @@ type GetQueueAttributesResponse struct {
 }
 
 type SetQueueAttributesResponse struct {
-	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `xml:"xmlns,attr,omitempty"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }

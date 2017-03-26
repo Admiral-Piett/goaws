@@ -40,12 +40,12 @@ type Topic struct {
 }
 
 type (
-	Protocol string
+	Protocol         string
 	MessageStructure string
 )
 
 const (
-	ProtocolSQS Protocol = "sqs"
+	ProtocolSQS     Protocol = "sqs"
 	ProtocolDefault Protocol = "default"
 )
 
@@ -189,7 +189,6 @@ func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "TopicNotFound")
 	}
 }
-
 
 func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")

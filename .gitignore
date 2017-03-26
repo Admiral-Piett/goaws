@@ -1,6 +1,10 @@
 .idea
 
+<<<<<<< Updated upstream
 /vendor/github.com/
+=======
+vendor/github.com/
+>>>>>>> Stashed changes
 
 goaws
 goaws_linux_amd64
