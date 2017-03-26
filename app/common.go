@@ -5,7 +5,6 @@ type ResponseMetadata struct {
 	RequestId string `xml:"RequestId"`
 }
 
-
 /*** Error Responses ***/
 type ErrorResult struct {
 	Type      string `xml:"Type,omitempty"`
@@ -17,7 +16,3 @@ type ErrorResult struct {
 type ErrorResponse struct {
 	Result ErrorResult `xml:"Error"`
 }
-
-
-
-

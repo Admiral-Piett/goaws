@@ -3,9 +3,9 @@ package gosqs
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 )
 
 func TestListQueues_POST_NoQueues(t *testing.T) {
@@ -51,7 +51,6 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	form.Add("QueueName", "UnitTestQueue1")
 	req.PostForm = form
 
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(CreateQueue)
@@ -74,7 +73,6 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 }
 
-
 func TestSendQueue_POST_NonExistant(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -89,7 +87,6 @@ func TestSendQueue_POST_NonExistant(t *testing.T) {
 	form.Add("MessageBody", "Test123")
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
-
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()

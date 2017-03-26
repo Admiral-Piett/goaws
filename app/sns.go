@@ -83,7 +83,6 @@ type ListSubscriptionsByTopicResponse struct {
 	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
 }
 
-
 /*** Publish ***/
 
 type PublishResult struct {
