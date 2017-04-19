@@ -1,0 +1,22 @@
+{
+	"email": "paul@cp-soft.com",
+	"registration": {
+		"body": {
+			"resource": "reg",
+			"id": 2247358,
+			"key": {
+				"kty": "EC",
+				"crv": "P-384",
+				"x": "QX13S0nIay7gztJZPoEpiPgOx976GM8G6dDHIkIRTrzjY5mbsBMlF-Vt3kGO3H8o",
+				"y": "bm9baljy5di_oYKKbMBAv8agdFfe3kqysXEZuphcCh1GJjKXHZvZhqEe4dw6xd33"
+			},
+			"contact": [
+				"mailto:paul@cp-soft.com"
+			],
+			"agreement": "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf"
+		},
+		"uri": "https://acme-v01.api.letsencrypt.org/acme/reg/2247358",
+		"new_authzr_uri": "https://acme-v01.api.letsencrypt.org/acme/new-authz",
+		"terms_of_service": "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf"
+	}
+}
