@@ -1,3 +1,5 @@
+TEST TEST TEST
+
 # GoAws  [![Join the chat at https://gitter.im/p4tin/GoAws](https://badges.gitter.im/p4tin/GoAws.svg)](https://gitter.im/p4tin/GoAws?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)  
 [![Build Status](https://travis-ci.org/p4tin/goaws.svg?branch=master)](https://travis-ci.org/p4tin/goaws)
 
