@@ -2,8 +2,9 @@ package router
 
 import (
 	"io"
-	"log"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	sns "github.com/p4tin/goaws/app/gosns"

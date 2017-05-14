@@ -10,10 +10,9 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
-
-	"log"
-
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
 )
@@ -81,7 +80,7 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -102,7 +101,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -141,7 +140,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -160,7 +159,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-	log.Println("Queue for receive:", queueUrl)
 
 	queueName := ""
 	if queueUrl == "" {
@@ -221,7 +219,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -262,7 +260,6 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				//Delete message from Q
-				log.Println("Found receipt")
 				SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages[:i], SyncQueues.Queues[queueName].Messages[i+1:]...)
 
 				SyncQueues.Unlock()
@@ -271,7 +268,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 				enc := xml.NewEncoder(w)
 				enc.Indent("  ", "    ")
 				if err := enc.Encode(respStruct); err != nil {
-					fmt.Printf("error: %v\n", err)
+					log.Printf("error: %v\n", err)
 				}
 				return
 			}
@@ -310,7 +307,7 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -333,7 +330,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Printf("error: %v\n", err)
 			createErrorResponse(w, req, "GeneralError")
 		}
 	} else {
@@ -359,7 +356,7 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Printf("error: %v\n", err)
 		}
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
@@ -411,7 +408,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Printf("error: %v\n", err)
 		}
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
@@ -425,7 +422,7 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 		createErrorResponse(w, req, "GeneralError")
 	}
 }
@@ -449,6 +446,6 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
