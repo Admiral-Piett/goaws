@@ -17,7 +17,6 @@ func main() {
 	flag.StringVar(&filename, "config", "", "config file location + name")
 	flag.BoolVar(&debug, "debug", false, "debug log level (default Warning)")
 	flag.Parse()
-	log.Warnf("file: %s\n", filename)
 
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
@@ -29,11 +28,9 @@ func main() {
 
 	env := "Local"
 	if flag.NArg() > 0 {
-		log.Warn(flag.Args())
 		env = flag.Arg(0)
 	}
 
-	log.Warnf("file: %s, Env: %s\n", filename, env)
 	portNumbers := conf.LoadYamlConfig(filename, env)
 
 	r := router.New()
