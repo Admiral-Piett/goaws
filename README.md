@@ -1,12 +1,16 @@
-# GoAws  [![Join the chat at https://gitter.im/p4tin/GoAws](https://badges.gitter.im/p4tin/GoAws.svg)](https://gitter.im/p4tin/GoAws?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)  
+# GoAws
 [![Build Status](https://travis-ci.org/p4tin/goaws.svg?branch=master)](https://travis-ci.org/p4tin/goaws)
 
  
 Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS ans SNS in a local environment so developers can test their interfaces without having to connect the the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
 
 
-## Current SQS APIs implemented:
+## SNS/SQS Api status:
 
+All SNS/SQS APIs have been implemented except:
+ - The full capabilities for Get and Set QueueAttributes.  At the moment you can only Get ALL the attributes.
+
+Here is a list of the APIs:
  - [x] ListQueues
  - [x] CreateQueue
  - [x] GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
@@ -27,16 +31,16 @@ Written in Go this is a clone of the AWS SQS/SNS systems.  This system is design
  - [x] DeleteTopic
  - [x] Subscribe
  - [x] Unsubscribe
- - [ ] ListSubscriptionsByTopic
+ - [X] ListSubscriptionsByTopic
  
 ## Yaml Configuration Implemented
 
  - [x] Read config file 
- - [x] Implement flag to chose configuration type
- - [x] Process Queue Creations
- - [x] Process Topic Creations
- - [x] Process Create Subscriptions
- 
+ - [x] -config flag to read a specific configuration file (e.g.: -config=myconfig.yaml)
+ - [x] a command line argument to determine the environment to use in the config file (e.e.: Dev)
+ - [x] IN the config file to can create Queues, Topic and Subscription see the example config file in the conf directory
+
+## Debug logging can be turned on via a command line flag (e.g.: -debug)
 
 ## Note:  The system does not authenticate or presently use https
 

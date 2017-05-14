@@ -5,11 +5,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -86,7 +87,6 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 	respStruct.Result.Topics.Member = make([]app.TopicArnResult, 0, 0)
 	log.Println("Listing Topics")
 	for _, topic := range SyncTopics.Topics {
-		fmt.Println(topic)
 		ta := app.TopicArnResult{TopicArn: topic.Arn}
 		respStruct.Result.Topics.Member = append(respStruct.Result.Topics.Member, ta)
 	}
@@ -200,7 +200,6 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 		for _, sub := range topic.Subscriptions {
 			if sub.SubscriptionArn == subsArn {
 				if Attribute == "RawMessageDelivery" {
-					log.Println("Before - Subs:", sub.EndPoint, "Raw:", sub.Raw)
 					SyncTopics.Lock()
 					if Value == "true" {
 						sub.Raw = true
@@ -208,7 +207,6 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 						sub.Raw = false
 					}
 					SyncTopics.Unlock()
-					log.Println("After - Subs:", sub.EndPoint, "Raw:", sub.Raw)
 					//Good Response == return
 					uuid, _ := common.NewUUID()
 					respStruct := app.SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
@@ -228,7 +226,6 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 	log.Println("Unsubcribing:", subArn)
 	for _, topic := range SyncTopics.Topics {
 		for i, sub := range topic.Subscriptions {
-			log.Println(subArn, sub.SubscriptionArn)
 			if sub.SubscriptionArn == subArn {
 				SyncTopics.Lock()
 
@@ -255,7 +252,7 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 
-	log.Println("Delete Topic - TopicArn:", topicArn, ", topicName:", topicName)
+	log.Println("Delete Topic - TopicName:", topicName)
 
 	_, ok := SyncTopics.Topics[topicName]
 	if ok {
@@ -393,7 +390,7 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		fmt.Printf("error: %v\n", err)
+		log.Printf("error: %v\n", err)
 	}
 }
 
@@ -407,13 +404,13 @@ func SendResponseBack(w http.ResponseWriter, req *http.Request, respStruct inter
 	if content == "JSON" {
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Printf("error: %v\n", err)
 		}
 	} else {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Printf("error: %v\n", err)
 		}
 	}
 }

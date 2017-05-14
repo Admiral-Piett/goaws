@@ -2,8 +2,9 @@ package conf
 
 import (
 	"io/ioutil"
-	"log"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ghodss/yaml"
 	"github.com/p4tin/goaws/app/common"
@@ -41,9 +42,11 @@ var envs map[string]Environment
 
 func LoadYamlConfig(filename string, env string) []string {
 	ports := []string{"4100"}
+
 	if filename == "" {
 		filename, _ = filepath.Abs("./conf/goaws.yaml")
 	}
+	log.Warnf("Loading config file: %s", filename)
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return ports
@@ -112,4 +115,8 @@ func LoadYamlConfig(filename string, env string) []string {
 	sns.SyncTopics.Unlock()
 
 	return ports
+}
+
+func GetLogFileName(env string) (string, bool) {
+	return envs[env].LogFile, envs[env].LogMessages
 }
