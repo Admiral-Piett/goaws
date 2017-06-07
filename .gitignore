@@ -1,6 +1,7 @@
 .idea
 
 vendor/github.com/
+vendor/golang.org/
 
 goaws
 goaws_linux_amd64
