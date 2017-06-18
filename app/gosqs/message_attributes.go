@@ -9,6 +9,8 @@ import (
 	"hash"
 	"net/http"
 	"sort"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type MessageAttributeValue struct {
@@ -27,6 +29,10 @@ func extractMessageAttributes(req *http.Request) map[string]MessageAttributeValu
 		}
 		
 		dataType := req.FormValue(fmt.Sprintf("MessageAttribute.%d.Value.DataType", i))
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
 
 		// StringListValue and BinaryListValue is currently not implemented
 		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
@@ -34,6 +40,10 @@ func extractMessageAttributes(req *http.Request) map[string]MessageAttributeValu
 			if value != "" {
 				attributes[name] = MessageAttributeValue{dataType, value, valueKey}
 			}
+		}
+
+		if _, ok := attributes[name]; !ok {
+			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
 		}
 	}
 
