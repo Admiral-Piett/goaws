@@ -40,10 +40,28 @@ func TestNewIntegration(t *testing.T) {
 			Name:     "Some messages OK",
 			Expected: []string{"hello world"},
 			QueueFunc: func(svc sqsiface.SQSAPI, queueURL *string) error {
-				_, err := svc.SendMessage(&sqs.SendMessageInput{
+				attributes := make(map[string]*sqs.MessageAttributeValue)
+				attributes["some string"] = &sqs.MessageAttributeValue{
+					StringValue: aws.String("string value with a special character \u2318"),
+					DataType: aws.String("String"),
+				}
+				attributes["some number"] = &sqs.MessageAttributeValue{
+					StringValue: aws.String("123"),
+					DataType: aws.String("Number"),
+				}
+				attributes["some binary"] = &sqs.MessageAttributeValue{
+					BinaryValue: []byte{1,2,3},
+					DataType: aws.String("Binary"),
+				}
+
+				response, err := svc.SendMessage(&sqs.SendMessageInput{
 					MessageBody: aws.String("hello world"),
+					MessageAttributes: attributes,
 					QueueUrl:    queueURL,
 				})
+
+				assert.Equal(t, "5eb63bbbe01eeed093cb22bb8f5acdc3", *response.MD5OfMessageBody)
+				assert.Equal(t, "7820c7a3712c7c359cf80485f67aa34d", *response.MD5OfMessageAttributes)
 				return err
 			},
 		},
