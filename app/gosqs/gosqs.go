@@ -108,6 +108,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
+	messageAttributes := extractMessageAttributes(req)
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
 
@@ -128,7 +129,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Putting Message in Queue:", queueName)
 	msg := Message{MessageBody: []byte(messageBody)}
-	msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
+	msg.MD5OfMessageAttributes = hashAttributes(messageAttributes)
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 	msg.Uuid, _ = common.NewUUID()
 	SyncQueues.Lock()
