@@ -46,13 +46,13 @@ Here is a list of the APIs:
 
 # Installation
 
-    go get github.com/p4tin/goaws
+    go get github.com/p4tin/goaws/...
 
 ## Build and Run (Standalone)
 
     Build
         cd to GoAws directory
-        go build . 
+        go build -o goaws app/cmd/goaws.go  (The goaws executable should be in the currect directory, move it somewhere in your $PATH)
         
     Run
         ./goaws  (by default goaws listens on port 4100 but you can change it in the goaws.yaml file to another port of your choice)
