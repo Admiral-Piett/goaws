@@ -15,6 +15,10 @@ import (
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
 	sqs "github.com/p4tin/goaws/app/gosqs"
+	"github.com/aws/aws-sdk-go/aws"
+	"net"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type SnsErrorType struct {
@@ -47,6 +51,7 @@ type (
 
 const (
 	ProtocolSQS     Protocol = "sqs"
+	ProtocolLambda  Protocol = "lambda"
 	ProtocolDefault Protocol = "default"
 )
 
@@ -283,38 +288,85 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	if ok {
 		log.Println("Publish to Topic:", topicName)
 		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
-			if Protocol(subs.Protocol) == ProtocolSQS {
-				queueUrl := subs.EndPoint
-				uriSegments := strings.Split(queueUrl, "/")
-				queueName := uriSegments[len(uriSegments)-1]
-				if _, ok := sqs.SyncQueues.Queues[queueName]; ok {
-					parts := strings.Split(queueName, ":")
-					if len(parts) > 0 {
-						queueName = parts[len(parts)-1]
-					}
-
-					msg := sqs.Message{}
-					if subs.Raw == false {
-						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
-						if err != nil {
-							createErrorResponse(w, req, err.Error())
-							return
+			switch Protocol(subs.Protocol) {
+				case ProtocolSQS:
+					queueUrl := subs.EndPoint
+					uriSegments := strings.Split(queueUrl, "/")
+					queueName := uriSegments[len(uriSegments)-1]
+					if _, ok := sqs.SyncQueues.Queues[queueName]; ok {
+						parts := strings.Split(queueName, ":")
+						if len(parts) > 0 {
+							queueName = parts[len(parts)-1]
 						}
 
-						msg.MessageBody = m
+						msg := sqs.Message{}
+						if subs.Raw == false {
+							m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
+							if err != nil {
+								createErrorResponse(w, req, err.Error())
+								return
+							}
+
+							msg.MessageBody = m
+						} else {
+							msg.MessageBody = []byte(messageBody)
+						}
+						msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
+						msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
+						msg.Uuid, _ = common.NewUUID()
+						sqs.SyncQueues.Lock()
+						sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
+						sqs.SyncQueues.Unlock()
+						common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 					} else {
-						msg.MessageBody = []byte(messageBody)
+						common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
 					}
-					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
-					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-					msg.Uuid, _ = common.NewUUID()
-					sqs.SyncQueues.Lock()
-					sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
-					sqs.SyncQueues.Unlock()
-					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
-				} else {
-					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
-				}
+				case ProtocolLambda:
+					// create client elswhere
+					awsConfig := &aws.Config{HTTPClient: &http.Client{
+						Transport: &http.Transport{
+							Proxy: http.ProxyFromEnvironment,
+							DialContext: (&net.Dialer{
+								Timeout:   30 * time.Second,
+								KeepAlive: 30 * time.Second,
+							}).DialContext,
+							MaxIdleConns:          100,
+							IdleConnTimeout:       90 * time.Second,
+							ExpectContinueTimeout: 1 * time.Second,
+
+							// go 1.7 has some problems with keep-alive
+							// the following lines prevent sns failing to publish msgs
+							MaxIdleConnsPerHost: 100,
+							TLSHandshakeTimeout: 3 * time.Second,
+						},
+					}}
+
+					awsConfig.WithEndpoint("http://this-has-to-come-from-config")
+
+					// Parse subs.EndPoint -> lambda arn
+					// arn:aws:lambda:eu-west-1:xxxxxxxxxxxxx:function:xxxxxxxxxxxxx
+					fncName := "xxxxxxxxxxxx"
+					lambdaClient := lambda.New(session.New(awsConfig))
+
+					m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
+					if err != nil {
+						createErrorResponse(w, req, err.Error())
+						return
+					}
+
+					input := &lambda.InvokeInput{
+						FunctionName: fncName,
+						Payload: m,
+					}
+
+					output, err := lambdaClient.Invoke(input)
+					if err != nil {
+						createErrorResponse(w, req, err.Error())
+						return
+					}
+					common.LogMessage(fmt.Sprintf("Result: %s", output.String()))
+			default:
+				common.LogMessage(fmt.Sprintf("Protocol %s not supported", subs.Protocol))
 			}
 		}
 	} else {
