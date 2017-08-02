@@ -54,7 +54,7 @@ func init() {
 	SyncQueues.Queues = make(map[string]*Queue)
 
 	SqsErrors = make(map[string]SqsErrorType)
-	err1 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified ueue does not exist for this wsdl version."}
+	err1 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version."}
 	SqsErrors["QueueNotFound"] = err1
 	err2 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue already exists."}
 	SqsErrors["QueueExists"] = err2
