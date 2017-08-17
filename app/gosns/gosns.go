@@ -133,7 +133,17 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 
 	if SyncTopics.Topics[topicName] != nil {
 		SyncTopics.Lock()
-		SyncTopics.Topics[topicName].Subscriptions = append(SyncTopics.Topics[topicName].Subscriptions, subscription)
+		isDuplicate := false
+		// Duplicate check
+		for _, subscription := range SyncTopics.Topics[topicName].Subscriptions {
+			if subscription.EndPoint == endpoint && subscription.TopicArn == topicArn {
+				isDuplicate = true
+				subArn = subscription.SubscriptionArn
+			}
+		}
+		if !isDuplicate {
+			SyncTopics.Topics[topicName].Subscriptions = append(SyncTopics.Topics[topicName].Subscriptions, subscription)
+		}
 		SyncTopics.Unlock()
 
 		//Create the response
