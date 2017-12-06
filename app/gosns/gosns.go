@@ -15,6 +15,7 @@ import (
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
 	sqs "github.com/p4tin/goaws/app/gosqs"
+	"github.com/p4tin/goaws/app/models"
 )
 
 type SnsErrorType struct {
@@ -303,7 +304,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 						queueName = parts[len(parts)-1]
 					}
 
-					msg := sqs.Message{}
+					msg := models.Message{}
 					if subs.Raw == false {
 						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
 						if err != nil {

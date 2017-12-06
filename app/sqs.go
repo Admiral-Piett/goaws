@@ -36,6 +36,12 @@ type SendMessageResponse struct {
 	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
 }
 
+/*** Change Message Visibility ***/
+type ChangeMessageVisibilityResult struct {
+	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+}
+
 /*** Receive Message Response */
 
 type ResultMessage struct {

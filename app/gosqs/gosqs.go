@@ -15,32 +15,15 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
+	"github.com/p4tin/goaws/app/models"
 )
-
-type SqsErrorType struct {
-	HttpError int
-	Type      string
-	Code      string
-	Message   string
-}
-
-var SqsErrors map[string]SqsErrorType
-
-type Message struct {
-	MessageBody            []byte
-	Uuid                   string
-	MD5OfMessageAttributes string
-	MD5OfMessageBody       string
-	ReceiptHandle          string
-	ReceiptTime            time.Time
-}
 
 type Queue struct {
 	Name        string
 	URL         string
 	Arn         string
 	TimeoutSecs int
-	Messages    []Message
+	Messages    []models.Message
 }
 
 var SyncQueues = struct {
@@ -48,20 +31,50 @@ var SyncQueues = struct {
 	Queues map[string]*Queue
 }{Queues: make(map[string]*Queue)}
 
-//var Queues map[string]*Queue
+func periodicTasks() {
+	ticker := time.NewTicker(1 * time.Second)
+	quit := make(chan struct{})
+	for {
+		select {
+		case <-ticker.C:
+			SyncQueues.Lock()
+			for _, queue := range SyncQueues.Queues {
+				for _, msg := range queue.Messages {
+					if msg.ReceiptHandle != "" {
+						if val, ok := models.ReceiptInfos.Receipts[msg.ReceiptHandle]; ok {
+							models.ReceiptInfos.Lock()
+							if val.Timeout.Before(time.Now()) {
+								delete(models.ReceiptInfos.Receipts, msg.ReceiptHandle)
+							}
+							models.ReceiptInfos.Unlock()
+						}
+					}
+				}
+			}
+			SyncQueues.Unlock()
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
+}
 
 func init() {
+	models.ReceiptInfos.Receipts = make(map[string]*models.ReceiptInfo)
 	SyncQueues.Queues = make(map[string]*Queue)
 
-	SqsErrors = make(map[string]SqsErrorType)
-	err1 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version."}
-	SqsErrors["QueueNotFound"] = err1
-	err2 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue already exists."}
-	SqsErrors["QueueExists"] = err2
-	err3 := SqsErrorType{HttpError: http.StatusNotFound, Type: "Not Found", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue does not contain the message specified."}
-	SqsErrors["MessageDoesNotExist"] = err3
-	err4 := SqsErrorType{HttpError: http.StatusBadRequest, Type: "GeneralError", Code: "AWS.SimpleQueueService.GeneralError", Message: "General Error."}
-	SqsErrors["GeneralError"] = err4
+	app.SqsErrors = make(map[string]app.SqsErrorType)
+	app.SqsErrors = make(map[string]app.SqsErrorType)
+	err1 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version."}
+	app.SqsErrors["QueueNotFound"] = err1
+	err2 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue already exists."}
+	app.SqsErrors["QueueExists"] = err2
+	err3 := app.SqsErrorType{HttpError: http.StatusNotFound, Type: "Not Found", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue does not contain the message specified."}
+	app.SqsErrors["MessageDoesNotExist"] = err3
+	err4 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "GeneralError", Code: "AWS.SimpleQueueService.GeneralError", Message: "General Error."}
+	app.SqsErrors["GeneralError"] = err4
+
+	go periodicTasks()
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -92,9 +105,9 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	if _, ok := SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
-		SyncQueues.RLock()
+		SyncQueues.Lock()
 		SyncQueues.Queues[queueName] = queue
-		SyncQueues.RUnlock()
+		SyncQueues.Unlock()
 	}
 
 	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
@@ -108,7 +121,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
-	messageAttributes := extractMessageAttributes(req)
+	messageAttributes := models.ExtractMessageAttributes(req)
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
 
@@ -128,12 +141,9 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Putting Message in Queue:", queueName)
-	msg := Message{MessageBody: []byte(messageBody)}
-	msg.MD5OfMessageAttributes = hashAttributes(messageAttributes)
-	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-	msg.Uuid, _ = common.NewUUID()
+	msg := models.CreateMessage(messageBody, messageAttributes)
 	SyncQueues.Lock()
-	SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages, msg)
+	SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages, *msg)
 	SyncQueues.Unlock()
 	common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
 
@@ -194,19 +204,29 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 			timeout := time.Now().Add(time.Duration(-SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
-			if (SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
+			handle := SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
+			if (handle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
 			} else {
 				SyncQueues.Lock() // Lock the Queues
+				handle := SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
 				uuid, _ := common.NewUUID()
-				SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
-				SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
+				handle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
+				SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = handle
+				SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now().Add(time.Second * time.Duration(SyncQueues.Queues[queueName].TimeoutSecs))
 				message = append(message, &app.ResultMessage{})
 				message[numMsg].MessageId = SyncQueues.Queues[queueName].Messages[i].Uuid
 				message[numMsg].Body = SyncQueues.Queues[queueName].Messages[i].MessageBody
-				message[numMsg].ReceiptHandle = SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
+				message[numMsg].ReceiptHandle = handle
 				message[numMsg].MD5OfBody = common.GetMD5Hash(string(message[numMsg].Body))
 				SyncQueues.Unlock() // Unlock the Queues
+				ri := &models.ReceiptInfo{
+					Timeout: timeout,
+					Message: &SyncQueues.Queues[queueName].Messages[i],
+				}
+				models.ReceiptInfos.Lock()
+				models.ReceiptInfos.Receipts[handle] = ri
+				models.ReceiptInfos.Unlock()
 				numMsg++
 			}
 		}
@@ -224,6 +244,55 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	req.ParseForm()
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+	receiptHandle := vars["ReceiptHandle"]
+	visibilityTimeout, err := strconv.Atoi(vars["VisibilityTimeout"])
+	if err != nil {
+		createErrorResponse(w, req, "Error")
+		return
+	}
+	if visibilityTimeout/60/60 > 12 {
+		createErrorResponse(w, req, "Visibility Timeout too big")
+		return
+	}
+
+	SyncQueues.Lock()
+	if _, ok := SyncQueues.Queues[queueName]; ok {
+		for _, msg := range SyncQueues.Queues[queueName].Messages {
+			if msg.ReceiptHandle == receiptHandle {
+				msg.ChangeMessageVisiblity(visibilityTimeout)
+			}
+		}
+		SyncQueues.Unlock()
+		createErrorResponse(w, req, "Message not in flight")
+		return
+	}
+
+	respStruct := app.ChangeMessageVisibilityResult{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "ChangeMessageVisibility - Could not encode response")
+		return
+	}
+}
+
 func numberOfHiddenMessagesInQueue(queue Queue) int {
 	num := 0
 	for i := range queue.Messages {
@@ -236,10 +305,10 @@ func numberOfHiddenMessagesInQueue(queue Queue) int {
 }
 
 type DeleteEntry struct {
-	Id string
+	Id            string
 	ReceiptHandle string
-	Error string
-	Deleted bool
+	Error         string
+	Deleted       bool
 }
 
 func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
@@ -306,9 +375,9 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	for _, deleteEntry := range deleteEntries {
 		if deleteEntry.Deleted == false {
 			notFoundEntries = append(notFoundEntries, app.BatchResultErrorEntry{
-				Code: "1",
-				Id: deleteEntry.Id,
-				Message: "Message not found",
+				Code:        "1",
+				Id:          deleteEntry.Id,
+				Message:     "Message not found",
 				SenderFault: true})
 		}
 	}
@@ -361,6 +430,9 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 				if err := enc.Encode(respStruct); err != nil {
 					log.Printf("error: %v\n", err)
 				}
+				models.ReceiptInfos.Lock()
+				delete(models.ReceiptInfos.Receipts, receiptHandle)
+				models.ReceiptInfos.Unlock()
 				return
 			}
 		}
@@ -530,7 +602,7 @@ func getQueueFromPath(formVal string, theUrl string) string {
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := SqsErrors[err]
+	er := app.SqsErrors[err]
 	respStruct := app.ErrorResponse{app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
 
 	w.WriteHeader(er.HttpError)

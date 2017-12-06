@@ -98,8 +98,9 @@ func LoadYamlConfig(filename string, env string) []string {
 		for _, subs := range topic.Subscriptions {
 			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
-				sqs.SyncQueues.Lock()
 				queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + subs.QueueName
+
+				sqs.SyncQueues.Lock()
 				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 				sqs.SyncQueues.Unlock()
 			}
