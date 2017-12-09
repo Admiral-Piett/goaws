@@ -30,6 +30,7 @@ var routingTable = map[string]http.HandlerFunc{
 	"SendMessage":        sqs.SendMessage,
 	"ReceiveMessage":     sqs.ReceiveMessage,
 	"DeleteMessage":      sqs.DeleteMessage,
+	"DeleteMessageBatch": sqs.DeleteMessageBatch,
 	"GetQueueUrl":        sqs.GetQueueUrl,
 	"PurgeQueue":         sqs.PurgeQueue,
 	"DeleteQueue":        sqs.DeleteQueue,
