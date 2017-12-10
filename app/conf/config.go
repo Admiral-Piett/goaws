@@ -9,7 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/p4tin/goaws/app/common"
 	sns "github.com/p4tin/goaws/app/gosns"
-	sqs "github.com/p4tin/goaws/app/gosqs"
+	"github.com/p4tin/goaws/app/models"
 )
 
 type EnvSubsciption struct {
@@ -82,12 +82,12 @@ func LoadYamlConfig(filename string, env string) []string {
 		}
 	}
 
-	sqs.SyncQueues.Lock()
+	models.SyncQueues.Lock()
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + queue.Name
-		sqs.SyncQueues.Queues[queue.Name] = &sqs.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
+		models.SyncQueues.Queues[queue.Name] = &models.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
 	}
-	sqs.SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 	sns.SyncTopics.Lock()
 	for _, topic := range envs[env].Topics {
 		topicArn := "arn:aws:sns:" + region + ":000000000000:" + topic.Name
@@ -96,15 +96,15 @@ func LoadYamlConfig(filename string, env string) []string {
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
 
 		for _, subs := range topic.Subscriptions {
-			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
+			if _, ok := models.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
 				queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + subs.QueueName
 
-				sqs.SyncQueues.Lock()
-				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
-				sqs.SyncQueues.Unlock()
+				models.SyncQueues.Lock()
+				models.SyncQueues.Queues[subs.QueueName] = &models.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
+				models.SyncQueues.Unlock()
 			}
-			qUrl := sqs.SyncQueues.Queues[subs.QueueName].URL
+			qUrl := models.SyncQueues.Queues[subs.QueueName].URL
 			newSub := &sns.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
 			subArn, _ := common.NewUUID()
 			subArn = topicArn + ":" + subArn

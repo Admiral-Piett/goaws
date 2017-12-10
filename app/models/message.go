@@ -20,14 +20,13 @@ type Message struct {
 }
 
 type ReceiptInfo struct {
-	Timeout time.Time
-	Message *Message
+	sync.RWMutex
+	Timeout      time.Time
+	MessageIndex int
+	Message      *Message
 }
 
-var ReceiptInfos = struct {
-	sync.RWMutex
-	Receipts map[string]*ReceiptInfo
-}{Receipts: make(map[string]*ReceiptInfo)}
+var ReceiptInfos map[string]*ReceiptInfo
 
 // CreateMessage creates a SQS message
 func CreateMessage(body string, messageAttributes map[string]MessageAttributeValue) *Message {
@@ -44,10 +43,10 @@ func CreateMessage(body string, messageAttributes map[string]MessageAttributeVal
 // ChangeMessageVisiblity changes the visiblity timeout on the message
 func (msg Message) ChangeMessageVisiblity(d int) error {
 	if msg.ReceiptHandle != "" {
-		ReceiptInfos.Lock()
-		t := ReceiptInfos.Receipts[msg.ReceiptHandle].Timeout
-		ReceiptInfos.Receipts[msg.ReceiptHandle].Timeout = t.Add(time.Second * time.Duration(d))
-		ReceiptInfos.Unlock()
+		ReceiptInfos[msg.ReceiptHandle].Lock()
+		t := ReceiptInfos[msg.ReceiptHandle].Timeout
+		ReceiptInfos[msg.ReceiptHandle].Timeout = t.Add(time.Second * time.Duration(d))
+		ReceiptInfos[msg.ReceiptHandle].Unlock()
 		return nil
 	}
 	return errors.New("Message is not in flight")

@@ -2,12 +2,10 @@ package gosqs
 
 import (
 	"encoding/xml"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -18,40 +16,27 @@ import (
 	"github.com/p4tin/goaws/app/models"
 )
 
-type Queue struct {
-	Name        string
-	URL         string
-	Arn         string
-	TimeoutSecs int
-	Messages    []models.Message
-}
-
-var SyncQueues = struct {
-	sync.RWMutex
-	Queues map[string]*Queue
-}{Queues: make(map[string]*Queue)}
-
 func periodicTasks() {
 	ticker := time.NewTicker(1 * time.Second)
 	quit := make(chan struct{})
 	for {
 		select {
 		case <-ticker.C:
-			SyncQueues.Lock()
-			for _, queue := range SyncQueues.Queues {
+			for _, queue := range models.SyncQueues.Queues {
 				for _, msg := range queue.Messages {
 					if msg.ReceiptHandle != "" {
-						if val, ok := models.ReceiptInfos.Receipts[msg.ReceiptHandle]; ok {
-							models.ReceiptInfos.Lock()
+						if val, ok := models.ReceiptInfos[msg.ReceiptHandle]; ok {
 							if val.Timeout.Before(time.Now()) {
-								delete(models.ReceiptInfos.Receipts, msg.ReceiptHandle)
+								log.Debugf("Making message visible again %s", msg.ReceiptHandle)
+								delete(models.ReceiptInfos, msg.ReceiptHandle)
 							}
-							models.ReceiptInfos.Unlock()
 						}
+						models.SyncQueues.Lock()
+						msg.ReceiptHandle = ""
+						models.SyncQueues.Unlock()
 					}
 				}
 			}
-			SyncQueues.Unlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -60,8 +45,8 @@ func periodicTasks() {
 }
 
 func init() {
-	models.ReceiptInfos.Receipts = make(map[string]*models.ReceiptInfo)
-	SyncQueues.Queues = make(map[string]*Queue)
+	models.ReceiptInfos = make(map[string]*models.ReceiptInfo)
+	models.SyncQueues.Queues = make(map[string]*models.Queue)
 
 	app.SqsErrors = make(map[string]app.SqsErrorType)
 	app.SqsErrors = make(map[string]app.SqsErrorType)
@@ -85,10 +70,10 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	respStruct.Result.QueueUrl = make([]string, 0)
 
 	log.Println("Listing Queues")
-	for _, queue := range SyncQueues.Queues {
-		SyncQueues.Lock()
+	for _, queue := range models.SyncQueues.Queues {
+		models.SyncQueues.Lock()
 		respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
-		SyncQueues.Unlock()
+		models.SyncQueues.Unlock()
 	}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
@@ -100,17 +85,10 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
-	queueUrl := "http://" + req.Host + "/queue/" + queueName
 
-	if _, ok := SyncQueues.Queues[queueName]; !ok {
-		log.Println("Creating Queue:", queueName)
-		queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
-		SyncQueues.Lock()
-		SyncQueues.Queues[queueName] = queue
-		SyncQueues.Unlock()
-	}
+	q := models.CreateQueue(req.Host, queueName, 30)
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: q.URL}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -134,18 +112,11 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := SyncQueues.Queues[queueName]; !ok {
-		// Queue does not exists
+	msg, err := models.AddMessageToQueue(queueName, messageAttributes, messageBody)
+	if err != nil && err.Error() == "QueueNotFound" {
 		createErrorResponse(w, req, "QueueNotFound")
 		return
 	}
-
-	log.Println("Putting Message in Queue:", queueName)
-	msg := models.CreateMessage(messageBody, messageAttributes)
-	SyncQueues.Lock()
-	SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages, *msg)
-	SyncQueues.Unlock()
-	common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
 
 	respStruct := app.SendMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.SendMessageResult{MD5OfMessageAttributes: msg.MD5OfMessageAttributes, MD5OfMessageBody: msg.MD5OfMessageBody, MessageId: msg.Uuid}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	enc := xml.NewEncoder(w)
@@ -180,7 +151,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		createErrorResponse(w, req, "QueueNotFound")
 		return
 	}
@@ -190,43 +161,41 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	respStruct := app.ReceiveMessageResponse{}
 
 	loops := waitTimeSeconds * 10
-	for len(SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*SyncQueues.Queues[queueName]) == 0 && loops > 0 {
+	for len(models.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*models.SyncQueues.Queues[queueName]) == 0 && loops > 0 {
 		time.Sleep(100 * time.Millisecond)
 		loops--
 	}
 	log.Println("Getting Message from Queue:", queueName)
 
-	if len(SyncQueues.Queues[queueName].Messages) > 0 {
+	if len(models.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		message = make([]*app.ResultMessage, 0)
-		for i := range SyncQueues.Queues[queueName].Messages {
+		for i := range models.SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
 			}
-			timeout := time.Now().Add(time.Duration(-SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
-			handle := SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
-			if (handle != "") && (timeout.Before(SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
+			timeout := time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			handle := models.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
+			if (handle != "") && (timeout.Before(models.SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
 			} else {
-				SyncQueues.Lock() // Lock the Queues
-				handle := SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
+				models.SyncQueues.Lock() // Lock the Queues
 				uuid, _ := common.NewUUID()
-				handle = SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
-				SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = handle
-				SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now().Add(time.Second * time.Duration(SyncQueues.Queues[queueName].TimeoutSecs))
+				handle = models.SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
+				models.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = handle
+				models.SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now().Add(time.Second * time.Duration(models.SyncQueues.Queues[queueName].TimeoutSecs))
 				message = append(message, &app.ResultMessage{})
-				message[numMsg].MessageId = SyncQueues.Queues[queueName].Messages[i].Uuid
-				message[numMsg].Body = SyncQueues.Queues[queueName].Messages[i].MessageBody
+				message[numMsg].MessageId = models.SyncQueues.Queues[queueName].Messages[i].Uuid
+				message[numMsg].Body = models.SyncQueues.Queues[queueName].Messages[i].MessageBody
 				message[numMsg].ReceiptHandle = handle
 				message[numMsg].MD5OfBody = common.GetMD5Hash(string(message[numMsg].Body))
-				SyncQueues.Unlock() // Unlock the Queues
+				models.SyncQueues.Unlock() // Unlock the Queues
 				ri := &models.ReceiptInfo{
-					Timeout: timeout,
-					Message: &SyncQueues.Queues[queueName].Messages[i],
+					Timeout:      timeout,
+					MessageIndex: i,
+					Message:      &models.SyncQueues.Queues[queueName].Messages[i],
 				}
-				models.ReceiptInfos.Lock()
-				models.ReceiptInfos.Receipts[handle] = ri
-				models.ReceiptInfos.Unlock()
+				models.ReceiptInfos[handle] = ri
 				numMsg++
 			}
 		}
@@ -268,14 +237,14 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	SyncQueues.Lock()
-	if _, ok := SyncQueues.Queues[queueName]; ok {
-		for _, msg := range SyncQueues.Queues[queueName].Messages {
+	models.SyncQueues.Lock()
+	if _, ok := models.SyncQueues.Queues[queueName]; ok {
+		for _, msg := range models.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				msg.ChangeMessageVisiblity(visibilityTimeout)
 			}
 		}
-		SyncQueues.Unlock()
+		models.SyncQueues.Unlock()
 		createErrorResponse(w, req, "Message not in flight")
 		return
 	}
@@ -293,7 +262,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func numberOfHiddenMessagesInQueue(queue Queue) int {
+func numberOfHiddenMessagesInQueue(queue models.Queue) int {
 	num := 0
 	for i := range queue.Messages {
 		timeout := time.Now().Add(time.Duration(-queue.TimeoutSecs) * time.Second)
@@ -355,12 +324,12 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	deletedEntries := make([]app.DeleteMessageBatchResultEntry, 0)
 
-	SyncQueues.Lock()
-	if _, ok := SyncQueues.Queues[queueName]; ok {
-		for i, msg := range SyncQueues.Queues[queueName].Messages {
+	models.SyncQueues.Lock()
+	if _, ok := models.SyncQueues.Queues[queueName]; ok {
+		for i, msg := range models.SyncQueues.Queues[queueName].Messages {
 			for _, deleteEntry := range deleteEntries {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
-					SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages[:i], SyncQueues.Queues[queueName].Messages[i+1:]...)
+					models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages[:i], models.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
 					deleteEntry.Deleted = true
 					deletedEntry := app.DeleteMessageBatchResultEntry{Id: deleteEntry.Id}
@@ -369,7 +338,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 
 	notFoundEntries := make([]app.BatchResultErrorEntry, 0)
 	for _, deleteEntry := range deleteEntries {
@@ -414,35 +383,48 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Deleting Message, Queue:", queueName, ", ReceiptHandle:", receiptHandle)
 
-	// Find queue/message with the receipt handle and delete
-	SyncQueues.Lock()
-	if _, ok := SyncQueues.Queues[queueName]; ok {
-		for i, msg := range SyncQueues.Queues[queueName].Messages {
-			if msg.ReceiptHandle == receiptHandle {
-				//Delete message from Q
-				SyncQueues.Queues[queueName].Messages = append(SyncQueues.Queues[queueName].Messages[:i], SyncQueues.Queues[queueName].Messages[i+1:]...)
-
-				SyncQueues.Unlock()
-				// Create, encode/xml and send response
-				respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
-				enc := xml.NewEncoder(w)
-				enc.Indent("  ", "    ")
-				if err := enc.Encode(respStruct); err != nil {
-					log.Printf("error: %v\n", err)
-				}
-				models.ReceiptInfos.Lock()
-				delete(models.ReceiptInfos.Receipts, receiptHandle)
-				models.ReceiptInfos.Unlock()
-				return
-			}
-		}
-		log.Println("Receipt Handle not found")
-	} else {
-		log.Println("Queue not found")
+	err := models.RemoveMessageFromQueue(queueName, receiptHandle)
+	if err != nil {
+		createErrorResponse(w, req, "MessageDoesNotExist")
+		return
 	}
-	SyncQueues.Unlock()
 
-	createErrorResponse(w, req, "MessageDoesNotExist")
+	//Create, encode/xml and send response
+	respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+	}
+
+	//// Find queue/message with the receipt handle and delete
+	//models.SyncQueues.Lock()
+	//if _, ok := models.SyncQueues.Queues[queueName]; ok {
+	//	for i, msg := range models.SyncQueues.Queues[queueName].Messages {
+	//		if msg.ReceiptHandle == receiptHandle {
+	//			//Delete message from Q
+	//			models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages[:i], models.SyncQueues.Queues[queueName].Messages[i+1:]...)
+	//
+	//			models.SyncQueues.Unlock()
+	//			// Create, encode/xml and send response
+	//			respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+	//			enc := xml.NewEncoder(w)
+	//			enc.Indent("  ", "    ")
+	//			if err := enc.Encode(respStruct); err != nil {
+	//				log.Printf("error: %v\n", err)
+	//			}
+	//			models.ReceiptInfos.Lock()
+	//			delete(models.ReceiptInfos.Receipts, receiptHandle)
+	//			models.ReceiptInfos.Unlock()
+	//			return
+	//		}
+	//	}
+	//	log.Println("Receipt Handle not found")
+	//} else {
+	//	log.Println("Queue not found")
+	//}
+	//models.SyncQueues.Unlock()
+
 }
 
 func DeleteQueue(w http.ResponseWriter, req *http.Request) {
@@ -461,9 +443,9 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Deleting Queue:", queueName)
-	SyncQueues.Lock()
-	delete(SyncQueues.Queues, queueName)
-	SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	delete(models.SyncQueues.Queues, queueName)
+	models.SyncQueues.Unlock()
 
 	// Create, encode/xml and send response
 	respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
@@ -486,9 +468,9 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Purging Queue:", queueName)
 
-	SyncQueues.Lock()
-	if _, ok := SyncQueues.Queues[queueName]; ok {
-		SyncQueues.Queues[queueName].Messages = nil
+	models.SyncQueues.Lock()
+	if _, ok := models.SyncQueues.Queues[queueName]; ok {
+		models.SyncQueues.Queues[queueName].Messages = nil
 		respStruct := app.PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
@@ -500,7 +482,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 		log.Println("Purge Queue:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
-	SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 }
 
 func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
@@ -509,8 +491,8 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	//
 	//// Retrieve FormValues required
 	queueName := req.FormValue("QueueName")
-	SyncQueues.RLock()
-	if queue, ok := SyncQueues.Queues[queueName]; ok {
+	models.SyncQueues.RLock()
+	if queue, ok := models.SyncQueues.Queues[queueName]; ok {
 		url := queue.URL
 		log.Println("Get Queue URL:", queueName)
 		// Create, encode/xml and send response
@@ -525,7 +507,7 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
-	SyncQueues.RUnlock()
+	models.SyncQueues.RUnlock()
 }
 
 func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
@@ -544,8 +526,8 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Get Queue Attributes:", queueName)
-	if queue, ok := SyncQueues.Queues[queueName]; ok {
-		SyncQueues.RLock()
+	if queue, ok := models.SyncQueues.Queues[queueName]; ok {
+		models.SyncQueues.RLock()
 		// Create, encode/xml and send response
 		attribs := make([]app.Attribute, 0, 0)
 		attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.TimeoutSecs)}
@@ -564,7 +546,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "QueueArn", Value: queue.Arn}
 		attribs = append(attribs, attr)
-		SyncQueues.RUnlock()
+		models.SyncQueues.RUnlock()
 
 		result := app.GetQueueAttributesResult{Attrs: attribs}
 		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}

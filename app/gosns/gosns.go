@@ -14,7 +14,6 @@ import (
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
-	sqs "github.com/p4tin/goaws/app/gosqs"
 	"github.com/p4tin/goaws/app/models"
 )
 
@@ -298,7 +297,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 				queueUrl := subs.EndPoint
 				uriSegments := strings.Split(queueUrl, "/")
 				queueName := uriSegments[len(uriSegments)-1]
-				if _, ok := sqs.SyncQueues.Queues[queueName]; ok {
+				if _, ok := models.SyncQueues.Queues[queueName]; ok {
 					parts := strings.Split(queueName, ":")
 					if len(parts) > 0 {
 						queueName = parts[len(parts)-1]
@@ -319,9 +318,9 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 					msg.Uuid, _ = common.NewUUID()
-					sqs.SyncQueues.Lock()
-					sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
-					sqs.SyncQueues.Unlock()
+					models.SyncQueues.Lock()
+					models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages, msg)
+					models.SyncQueues.Unlock()
 					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 				} else {
 					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
