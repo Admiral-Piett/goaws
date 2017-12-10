@@ -16,3 +16,12 @@ type ErrorResult struct {
 type ErrorResponse struct {
 	Result ErrorResult `xml:"Error"`
 }
+
+type SqsErrorType struct {
+	HttpError int
+	Type      string
+	Code      string
+	Message   string
+}
+
+var SqsErrors map[string]SqsErrorType

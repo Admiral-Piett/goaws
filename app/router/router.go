@@ -23,17 +23,18 @@ func New() http.Handler {
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"ListQueues":         sqs.ListQueues,
-	"CreateQueue":        sqs.CreateQueue,
-	"GetQueueAttributes": sqs.GetQueueAttributes,
-	"SetQueueAttributes": sqs.SetQueueAttributes,
-	"SendMessage":        sqs.SendMessage,
-	"ReceiveMessage":     sqs.ReceiveMessage,
-	"DeleteMessage":      sqs.DeleteMessage,
-	"DeleteMessageBatch": sqs.DeleteMessageBatch,
-	"GetQueueUrl":        sqs.GetQueueUrl,
-	"PurgeQueue":         sqs.PurgeQueue,
-	"DeleteQueue":        sqs.DeleteQueue,
+	"ListQueues":         		sqs.ListQueues,
+	"CreateQueue":        		sqs.CreateQueue,
+	"GetQueueAttributes": 		sqs.GetQueueAttributes,
+	"SetQueueAttributes": 		sqs.SetQueueAttributes,
+	"SendMessage":        		sqs.SendMessage,
+	"ReceiveMessage":     		sqs.ReceiveMessage,
+	"ChangeMessageVisibility":	sqs.ChangeMessageVisibility,
+	"DeleteMessage":      		sqs.DeleteMessage,
+	"DeleteMessageBatch": 		sqs.DeleteMessageBatch,
+	"GetQueueUrl":        		sqs.GetQueueUrl,
+	"PurgeQueue":         		sqs.PurgeQueue,
+	"DeleteQueue":        		sqs.DeleteQueue,
 
 	// SNS
 	"ListTopics":                sns.ListTopics,
