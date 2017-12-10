@@ -92,9 +92,9 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	if _, ok := SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &Queue{Name: queueName, URL: queueUrl, Arn: queueUrl, TimeoutSecs: 30}
-		SyncQueues.RLock()
+		SyncQueues.Lock()
 		SyncQueues.Queues[queueName] = queue
-		SyncQueues.RUnlock()
+		SyncQueues.Unlock()
 	}
 
 	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
@@ -437,7 +437,6 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	//
 	//// Retrieve FormValues required
 	queueName := req.FormValue("QueueName")
-	SyncQueues.RLock()
 	if queue, ok := SyncQueues.Queues[queueName]; ok {
 		url := queue.URL
 		log.Println("Get Queue URL:", queueName)
@@ -453,7 +452,6 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
-	SyncQueues.RUnlock()
 }
 
 func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
@@ -473,7 +471,6 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Get Queue Attributes:", queueName)
 	if queue, ok := SyncQueues.Queues[queueName]; ok {
-		SyncQueues.RLock()
 		// Create, encode/xml and send response
 		attribs := make([]app.Attribute, 0, 0)
 		attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.TimeoutSecs)}
@@ -492,7 +489,6 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "QueueArn", Value: queue.Arn}
 		attribs = append(attribs, attr)
-		SyncQueues.RUnlock()
 
 		result := app.GetQueueAttributesResult{Attrs: attribs}
 		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}

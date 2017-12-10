@@ -106,9 +106,9 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 		log.Println("Creating Topic:", topicName)
 		topic := &Topic{Name: topicName, Arn: topicArn}
 		topic.Subscriptions = make([]*Subscription, 0, 0)
-		SyncTopics.RLock()
+		SyncTopics.Lock()
 		SyncTopics.Topics[topicName] = topic
-		SyncTopics.RUnlock()
+		SyncTopics.Unlock()
 	}
 	uuid, _ := common.NewUUID()
 	respStruct := app.CreateTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateTopicResult{TopicArn: topicArn}, app.ResponseMetadata{RequestId: uuid}}
