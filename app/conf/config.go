@@ -14,6 +14,7 @@ import (
 
 type EnvSubsciption struct {
 	QueueName string
+	LambdaArn string
 	Raw       bool
 }
 
@@ -96,17 +97,25 @@ func LoadYamlConfig(filename string, env string) []string {
 		newTopic.Subscriptions = make([]*sns.Subscription, 0, 0)
 
 		for _, subs := range topic.Subscriptions {
-			if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
-				//Queue does not exist yet, create it.
-				queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + subs.QueueName
-				sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
+			if subs.QueueName != "" {
+				if _, ok := sqs.SyncQueues.Queues[subs.QueueName]; !ok {
+					//Queue does not exist yet, create it.
+					queueUrl := "http://" + envs[env].Host + ":" + ports[0] + "/queue/" + subs.QueueName
+					sqs.SyncQueues.Queues[subs.QueueName] = &sqs.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueUrl, URL: queueUrl}
+				}
+				qUrl := sqs.SyncQueues.Queues[subs.QueueName].URL
+				newSub := &sns.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
+				subArn, _ := common.NewUUID()
+				subArn = topicArn + ":" + subArn
+				newSub.SubscriptionArn = subArn
+				newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
+			} else if subs.LambdaArn != "" {
+				newSub := &sns.Subscription{EndPoint: subs.LambdaArn, Protocol: "lambda", TopicArn: topicArn, Raw: subs.Raw}
+				subArn, _ := common.NewUUID()
+				subArn = topicArn + ":" + subArn
+				newSub.SubscriptionArn = subArn
+				newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 			}
-			qUrl := sqs.SyncQueues.Queues[subs.QueueName].URL
-			newSub := &sns.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
-			subArn, _ := common.NewUUID()
-			subArn = topicArn + ":" + subArn
-			newSub.SubscriptionArn = subArn
-			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
 		sns.SyncTopics.Topics[topic.Name] = newTopic
 	}
