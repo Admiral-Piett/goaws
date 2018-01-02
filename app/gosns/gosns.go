@@ -15,6 +15,9 @@ import (
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
 	sqs "github.com/p4tin/goaws/app/gosqs"
+	"github.com/p4tin/goaws/app/golambda"
+	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 type SnsErrorType struct {
@@ -48,6 +51,7 @@ type (
 const (
 	ProtocolSQS     Protocol = "sqs"
 	ProtocolDefault Protocol = "default"
+	ProtocolLambda  Protocol = "lambda"
 )
 
 const (
@@ -324,6 +328,53 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 				} else {
 					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
+				}
+			} else if Protocol(subs.Protocol) == ProtocolLambda {
+				m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
+
+				if err != nil {
+					createErrorResponse(w, req, err.Error())
+					return
+				}
+
+				msg := golambda.Message{
+					Records: []golambda.Record{
+						{
+							EventVersion: "1.0",
+							EventSubscriptionArn: subs.SubscriptionArn,
+							EventSource: "aws:sns",
+							Sns: json.RawMessage(m),
+						},
+					},
+				}
+
+				payload, err := json.Marshal(msg)
+
+				log.Printf("Payload generated for lambda: %s", payload)
+
+				input := &lambda.InvokeInput{
+					FunctionName:   aws.String("MyFunction"),
+					InvocationType: aws.String("Event"),
+					Payload:        payload,
+				}
+
+				// use arn as hostname
+				endpointParts := strings.Split(subs.EndPoint, ":")
+
+				svc, err := golambda.NewLambda("http://"+endpointParts[len(endpointParts)-1])
+
+				if err != nil {
+					log.Warnf("Error creating lambda service: %s", err.Error())
+					createErrorResponse(w, req, err.Error())
+					return
+				}
+
+				_, err = svc.Invoke(input)
+
+				if err != nil {
+					log.Warnf("Error invoking lambda: %s", err.Error())
+					createErrorResponse(w, req, err.Error())
+					return
 				}
 			}
 		}
