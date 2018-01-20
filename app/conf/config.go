@@ -17,7 +17,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	ports := []string{"4100"}
 
 	if filename == "" {
-		filename, _ = filepath.Abs("./app/conf/goaws.yaml")
+		filename, _ = filepath.Abs("./conf/goaws.yaml")
 	}
 	log.Warnf("Loading config file: %s", filename)
 	yamlFile, err := ioutil.ReadFile(filename)
@@ -34,9 +34,8 @@ func LoadYamlConfig(filename string, env string) []string {
 		env = "Local"
 	}
 
-	region := "local"
-	if envs[env].Region != "" {
-		region = envs[env].Region
+	if envs[env].Region == "" {
+		app.CurrentEnvironment.Region = "local"
 	}
 
 	if envs[env].Port != "" {
@@ -62,12 +61,12 @@ func LoadYamlConfig(filename string, env string) []string {
 	app.SyncTopics.Lock()
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queue.Name
-		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Host + ":000000000000:" + queue.Name
+		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queue.Name
 		app.SyncQueues.Queues[queue.Name] = &app.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueArn, URL: queueUrl}
 	}
 
 	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:" + region + ":000000000000:" + topic.Name
+		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topic.Name
 
 		newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
@@ -76,7 +75,7 @@ func LoadYamlConfig(filename string, env string) []string {
 			if _, ok := app.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
 				queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + subs.QueueName
-				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Host + ":000000000000:" + subs.QueueName
+				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueArn, URL: queueUrl}
 			}
 			qUrl := app.SyncQueues.Queues[subs.QueueName].URL

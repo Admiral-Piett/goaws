@@ -55,7 +55,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	queueName := req.FormValue("QueueName")
 	host := app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port
 	queueUrl := "http://" + host + "/queue/" + queueName
-	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Host + ":000000000000:" + queueName
+	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
