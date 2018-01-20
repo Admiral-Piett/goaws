@@ -6,3 +6,7 @@ goaws
 goaws_linux_amd64
 
 *.log
+
+setenv.sh
+
+
