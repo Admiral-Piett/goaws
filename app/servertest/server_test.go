@@ -43,21 +43,21 @@ func TestNewIntegration(t *testing.T) {
 				attributes := make(map[string]*sqs.MessageAttributeValue)
 				attributes["some string"] = &sqs.MessageAttributeValue{
 					StringValue: aws.String("string value with a special character \u2318"),
-					DataType: aws.String("String"),
+					DataType:    aws.String("String"),
 				}
 				attributes["some number"] = &sqs.MessageAttributeValue{
 					StringValue: aws.String("123"),
-					DataType: aws.String("Number"),
+					DataType:    aws.String("Number"),
 				}
 				attributes["some binary"] = &sqs.MessageAttributeValue{
-					BinaryValue: []byte{1,2,3},
-					DataType: aws.String("Binary"),
+					BinaryValue: []byte{1, 2, 3},
+					DataType:    aws.String("Binary"),
 				}
 
 				response, err := svc.SendMessage(&sqs.SendMessageInput{
-					MessageBody: aws.String("hello world"),
+					MessageBody:       aws.String("hello world"),
 					MessageAttributes: attributes,
-					QueueUrl:    queueURL,
+					QueueUrl:          queueURL,
 				})
 
 				assert.Equal(t, "5eb63bbbe01eeed093cb22bb8f5acdc3", *response.MD5OfMessageBody)

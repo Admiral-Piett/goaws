@@ -1,11 +1,11 @@
 package gosqs
 
 import (
-	"fmt"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"hash"
 	"net/http"
 	"sort"
@@ -15,19 +15,19 @@ import (
 
 type MessageAttributeValue struct {
 	dataType string
-	value string
+	value    string
 	valueKey string
 }
 
 func extractMessageAttributes(req *http.Request) map[string]MessageAttributeValue {
 	attributes := make(map[string]MessageAttributeValue)
 
-	for i := 1; true; i++ {		
+	for i := 1; true; i++ {
 		name := req.FormValue(fmt.Sprintf("MessageAttribute.%d.Name", i))
 		if name == "" {
 			break
 		}
-		
+
 		dataType := req.FormValue(fmt.Sprintf("MessageAttribute.%d.Value.DataType", i))
 		if dataType == "" {
 			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
