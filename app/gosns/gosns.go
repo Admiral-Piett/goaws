@@ -52,7 +52,7 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncTopics.Topics[topicName]; ok {
 		topicArn = app.SyncTopics.Topics[topicName].Arn
 	} else {
-		topicArn = "arn:aws:sns:local:000000000000:" + topicName
+		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
 
 		log.Println("Creating Topic:", topicName)
 		topic := &app.Topic{Name: topicName, Arn: topicArn}

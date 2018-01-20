@@ -1,8 +1,8 @@
 version: '2'
 services:
-  yopa:
+  goaws:
     container_name: goaws
-    image: pafortin/goaws
+    image: pafortin/goaws:1.0.0
     ports:
       - 4100:4100
     volumes:
