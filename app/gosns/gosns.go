@@ -7,73 +7,24 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
-	sqs "github.com/p4tin/goaws/app/gosqs"
 )
-
-type SnsErrorType struct {
-	HttpError int
-	Type      string
-	Code      string
-	Message   string
-}
-
-var SnsErrors map[string]SnsErrorType
-
-type Subscription struct {
-	TopicArn        string
-	Protocol        string
-	SubscriptionArn string
-	EndPoint        string
-	Raw             bool
-}
-
-type Topic struct {
-	Name          string
-	Arn           string
-	Subscriptions []*Subscription
-}
-
-type (
-	Protocol         string
-	MessageStructure string
-)
-
-const (
-	ProtocolSQS     Protocol = "sqs"
-	ProtocolDefault Protocol = "default"
-)
-
-const (
-	MessageStructureJSON MessageStructure = "json"
-)
-
-// Predefined errors
-const (
-	ErrNoDefaultElementInJSON = "Invalid parameter: Message Structure - No default entry in JSON message body"
-)
-
-var SyncTopics = struct {
-	sync.RWMutex
-	Topics map[string]*Topic
-}{Topics: make(map[string]*Topic)}
 
 func init() {
-	SyncTopics.Topics = make(map[string]*Topic)
+	app.SyncTopics.Topics = make(map[string]*app.Topic)
 
-	SnsErrors = make(map[string]SnsErrorType)
-	err1 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."}
-	SnsErrors["TopicNotFound"] = err1
-	err2 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."}
-	SnsErrors["SubscriptionNotFound"] = err2
-	err3 := SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."}
-	SnsErrors["TopicExists"] = err3
+	app.SnsErrors = make(map[string]app.SnsErrorType)
+	err1 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."}
+	app.SnsErrors["TopicNotFound"] = err1
+	err2 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."}
+	app.SnsErrors["SubscriptionNotFound"] = err2
+	err3 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."}
+	app.SnsErrors["TopicExists"] = err3
 }
 
 func ListTopics(w http.ResponseWriter, req *http.Request) {
@@ -86,7 +37,7 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 
 	respStruct.Result.Topics.Member = make([]app.TopicArnResult, 0, 0)
 	log.Println("Listing Topics")
-	for _, topic := range SyncTopics.Topics {
+	for _, topic := range app.SyncTopics.Topics {
 		ta := app.TopicArnResult{TopicArn: topic.Arn}
 		respStruct.Result.Topics.Member = append(respStruct.Result.Topics.Member, ta)
 	}
@@ -98,17 +49,17 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicName := req.FormValue("Name")
 	topicArn := ""
-	if _, ok := SyncTopics.Topics[topicName]; ok {
-		topicArn = SyncTopics.Topics[topicName].Arn
+	if _, ok := app.SyncTopics.Topics[topicName]; ok {
+		topicArn = app.SyncTopics.Topics[topicName].Arn
 	} else {
 		topicArn = "arn:aws:sns:local:000000000000:" + topicName
 
 		log.Println("Creating Topic:", topicName)
-		topic := &Topic{Name: topicName, Arn: topicArn}
-		topic.Subscriptions = make([]*Subscription, 0, 0)
-		SyncTopics.Lock()
-		SyncTopics.Topics[topicName] = topic
-		SyncTopics.Unlock()
+		topic := &app.Topic{Name: topicName, Arn: topicArn}
+		topic.Subscriptions = make([]*app.Subscription, 0, 0)
+		app.SyncTopics.Lock()
+		app.SyncTopics.Topics[topicName] = topic
+		app.SyncTopics.Unlock()
 	}
 	uuid, _ := common.NewUUID()
 	respStruct := app.CreateTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateTopicResult{TopicArn: topicArn}, app.ResponseMetadata{RequestId: uuid}}
@@ -126,25 +77,25 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicName := uriSegments[len(uriSegments)-1]
 
 	log.Println("Creating Subscription from", topicName, "to", endpoint, "using protocol", protocol)
-	subscription := &Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
+	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
 
-	if SyncTopics.Topics[topicName] != nil {
-		SyncTopics.Lock()
+	if app.SyncTopics.Topics[topicName] != nil {
+		app.SyncTopics.Lock()
 		isDuplicate := false
 		// Duplicate check
-		for _, subscription := range SyncTopics.Topics[topicName].Subscriptions {
+		for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
 			if subscription.EndPoint == endpoint && subscription.TopicArn == topicArn {
 				isDuplicate = true
 				subArn = subscription.SubscriptionArn
 			}
 		}
 		if !isDuplicate {
-			SyncTopics.Topics[topicName].Subscriptions = append(SyncTopics.Topics[topicName].Subscriptions, subscription)
+			app.SyncTopics.Topics[topicName].Subscriptions = append(app.SyncTopics.Topics[topicName].Subscriptions, subscription)
 		}
-		SyncTopics.Unlock()
+		app.SyncTopics.Unlock()
 
 		//Create the response
 		uuid, _ := common.NewUUID()
@@ -164,7 +115,7 @@ func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
 	respStruct.Metadata.RequestId = uuid
 	respStruct.Result.Subscriptions.Member = make([]app.TopicMemberResult, 0, 0)
 
-	for _, topic := range SyncTopics.Topics {
+	for _, topic := range app.SyncTopics.Topics {
 		for _, sub := range topic.Subscriptions {
 			tar := app.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
 				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint}
@@ -182,7 +133,7 @@ func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 
-	if topic, ok := SyncTopics.Topics[topicName]; ok {
+	if topic, ok := app.SyncTopics.Topics[topicName]; ok {
 		uuid, _ := common.NewUUID()
 		respStruct := app.ListSubscriptionsByTopicResponse{}
 		respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
@@ -206,17 +157,17 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	Attribute := req.FormValue("AttributeName")
 	Value := req.FormValue("AttributeValue")
 
-	for _, topic := range SyncTopics.Topics {
+	for _, topic := range app.SyncTopics.Topics {
 		for _, sub := range topic.Subscriptions {
 			if sub.SubscriptionArn == subsArn {
 				if Attribute == "RawMessageDelivery" {
-					SyncTopics.Lock()
+					app.SyncTopics.Lock()
 					if Value == "true" {
 						sub.Raw = true
 					} else {
 						sub.Raw = false
 					}
-					SyncTopics.Unlock()
+					app.SyncTopics.Unlock()
 					//Good Response == return
 					uuid, _ := common.NewUUID()
 					respStruct := app.SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
@@ -234,16 +185,16 @@ func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 	subArn := req.FormValue("SubscriptionArn")
 
 	log.Println("Unsubcribing:", subArn)
-	for _, topic := range SyncTopics.Topics {
+	for _, topic := range app.SyncTopics.Topics {
 		for i, sub := range topic.Subscriptions {
 			if sub.SubscriptionArn == subArn {
-				SyncTopics.Lock()
+				app.SyncTopics.Lock()
 
 				copy(topic.Subscriptions[i:], topic.Subscriptions[i+1:])
 				topic.Subscriptions[len(topic.Subscriptions)-1] = nil
 				topic.Subscriptions = topic.Subscriptions[:len(topic.Subscriptions)-1]
 
-				SyncTopics.Unlock()
+				app.SyncTopics.Unlock()
 
 				uuid, _ := common.NewUUID()
 				respStruct := app.UnsubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
@@ -264,11 +215,11 @@ func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Delete Topic - TopicName:", topicName)
 
-	_, ok := SyncTopics.Topics[topicName]
+	_, ok := app.SyncTopics.Topics[topicName]
 	if ok {
-		SyncTopics.Lock()
-		delete(SyncTopics.Topics, topicName)
-		SyncTopics.Unlock()
+		app.SyncTopics.Lock()
+		delete(app.SyncTopics.Topics, topicName)
+		app.SyncTopics.Unlock()
 		uuid, _ := common.NewUUID()
 		respStruct := app.DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
 		SendResponseBack(w, req, respStruct, content)
@@ -289,21 +240,21 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 
-	_, ok := SyncTopics.Topics[topicName]
+	_, ok := app.SyncTopics.Topics[topicName]
 	if ok {
 		log.Println("Publish to Topic:", topicName)
-		for _, subs := range SyncTopics.Topics[topicName].Subscriptions {
-			if Protocol(subs.Protocol) == ProtocolSQS {
+		for _, subs := range app.SyncTopics.Topics[topicName].Subscriptions {
+			if app.Protocol(subs.Protocol) == app.ProtocolSQS {
 				queueUrl := subs.EndPoint
 				uriSegments := strings.Split(queueUrl, "/")
 				queueName := uriSegments[len(uriSegments)-1]
-				if _, ok := sqs.SyncQueues.Queues[queueName]; ok {
+				if _, ok := app.SyncQueues.Queues[queueName]; ok {
 					parts := strings.Split(queueName, ":")
 					if len(parts) > 0 {
 						queueName = parts[len(parts)-1]
 					}
 
-					msg := sqs.Message{}
+					msg := app.Message{}
 					if subs.Raw == false {
 						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
 						if err != nil {
@@ -318,9 +269,9 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 					msg.Uuid, _ = common.NewUUID()
-					sqs.SyncQueues.Lock()
-					sqs.SyncQueues.Queues[queueName].Messages = append(sqs.SyncQueues.Queues[queueName].Messages, msg)
-					sqs.SyncQueues.Unlock()
+					app.SyncQueues.Lock()
+					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+					app.SyncQueues.Unlock()
 					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 				} else {
 					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
@@ -355,7 +306,7 @@ func CreateMessageBody(msg string, subject string, topicArn string, protocol str
 	message.Type = "Notification"
 	message.Subject = subject
 
-	if MessageStructure(messageStructure) == MessageStructureJSON {
+	if app.MessageStructure(messageStructure) == app.MessageStructureJSON {
 		m, err := extractMessageFromJSON(msg, protocol)
 		if err != nil {
 			return nil, err
@@ -380,9 +331,9 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 		return "", err
 	}
 
-	defaultMsg, ok := msgWithProtocols[string(ProtocolDefault)]
+	defaultMsg, ok := msgWithProtocols[string(app.ProtocolDefault)]
 	if !ok {
-		return "", errors.New(ErrNoDefaultElementInJSON)
+		return "", errors.New(app.ErrNoDefaultElementInJSON)
 	}
 
 	if m, ok := msgWithProtocols[protocol]; ok {
@@ -393,7 +344,7 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := SnsErrors[err]
+	er := app.SnsErrors[err]
 	respStruct := app.ErrorResponse{app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
 
 	w.WriteHeader(er.HttpError)

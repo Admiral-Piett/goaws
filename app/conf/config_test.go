@@ -1,9 +1,9 @@
 package conf
 
 import (
-	"github.com/p4tin/goaws/app/gosns"
-	"github.com/p4tin/goaws/app/gosqs"
 	"testing"
+
+	"github.com/p4tin/goaws/app"
 )
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
@@ -17,7 +17,7 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	if numQueues != 0 {
 		t.Errorf("Expected zero queues to be in the environment but got %s\n", numQueues)
 	}
-	numQueues = len(gosqs.SyncQueues.Queues)
+	numQueues = len(app.SyncQueues.Queues)
 	if numQueues != 0 {
 		t.Errorf("Expected zero queues to be in the sqs topics but got %s\n", numQueues)
 	}
@@ -26,7 +26,7 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	if numTopics != 0 {
 		t.Errorf("Expected zero topics to be in the environment but got %s\n", numTopics)
 	}
-	numTopics = len(gosns.SyncTopics.Topics)
+	numTopics = len(app.SyncTopics.Topics)
 	if numTopics != 0 {
 		t.Errorf("Expected zero topics to be in the sns topics but got %s\n", numTopics)
 	}
@@ -43,7 +43,7 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	if numQueues != 3 {
 		t.Errorf("Expected three queues to be in the environment but got %s\n", numQueues)
 	}
-	numQueues = len(gosqs.SyncQueues.Queues)
+	numQueues = len(app.SyncQueues.Queues)
 	if numQueues != 5 {
 		t.Errorf("Expected five queues to be in the sqs topics but got %s\n", numQueues)
 	}
@@ -52,7 +52,7 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	if numTopics != 2 {
 		t.Errorf("Expected two topics to be in the environment but got %s\n", numTopics)
 	}
-	numTopics = len(gosns.SyncTopics.Topics)
+	numTopics = len(app.SyncTopics.Topics)
 	if numTopics != 2 {
 		t.Errorf("Expected two topics to be in the sns topics but got %s\n", numTopics)
 	}
