@@ -19,7 +19,7 @@ git-release:
 	curl --data $(APIJSON) https://api.github.com/repos/p4tin/goaws/releases?access_token=$(GITHUB_API_KEY)
 
 linux:
-	GOOS=linux GOARCH=arm GOARM=5 go build -o goaws_linux_amd64  app/cmd/goaws.go
+	GOOS=linux GOARCH=amd64 go build -o goaws_linux_amd64  app/cmd/goaws.go
 
 docker-release: linux
 	docker build -t pafortin/goaws .
