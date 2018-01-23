@@ -6,3 +6,4 @@ go:
   - 1.7
   - 1.9.2
   
+script: go test -v ./app/...
