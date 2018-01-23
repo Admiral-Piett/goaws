@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := run
+.DEFAULT_GOAL := test
 VERSION=1.0.2
 GITHUB_API_KEY = ${GITHUBB_API_KEY}
 APIJSON='{"tag_name": "$(VERSION)","target_commitish": "master","name": "$(VERSION)","body": "Release of version  $(VERSION)","draft": true,"prerelease": true}'
@@ -10,7 +10,7 @@ fmt:
 	go fmt ./app/...
 
 test:
-	go test ./app/...
+	go test -v ./app/...
 
 run: dep fmt test
 	go run app/cmd/goaws.go
