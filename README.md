@@ -3,7 +3,7 @@
 
 You are always welcome to [tweet me](https://twitter.com/gocodecloud) or [buy me a coffee](https://www.paypal.me/p4tin)
  
-Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS ans SNS in a local environment so developers can test their interfaces without having to connect the the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
+Written in Go this is a clone of the AWS SQS/SNS systems. This system is designed to emulate SQS and SNS in a local environment so developers can test their interfaces without having to connect the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github. As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
 
 
 ## SNS/SQS Api status:
