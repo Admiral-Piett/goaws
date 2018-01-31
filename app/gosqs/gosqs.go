@@ -185,7 +185,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				msg := app.SyncQueues.Queues[queueName].Messages[i]
 				msg.ReceiptHandle = msg.Uuid + "#" + uuid
 				msg.ReceiptTime = time.Now()
-				message = append(message, msg.GetResult())
+				message = append(message, getMessageResult(&msg))
 
 				app.SyncQueues.Unlock() // Unlock the Queues
 				numMsg++
@@ -500,6 +500,22 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 		createErrorResponse(w, req, "GeneralError")
+	}
+}
+
+func getMessageResult(m *app.Message) *app.ResultMessage {
+	attrs := []*app.ResultMessageAttribute{}
+	for _, attr := range m.MessageAttributes {
+		attrs = append(attrs, getMessageAttributeResult(&attr))
+	}
+
+	return &app.ResultMessage{
+		MessageId:              m.Uuid,
+		Body:                   m.MessageBody,
+		ReceiptHandle:          m.ReceiptHandle,
+		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
+		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
+		MessageAttributes:      attrs,
 	}
 }
 

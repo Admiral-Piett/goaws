@@ -45,6 +45,24 @@ func extractMessageAttributes(req *http.Request) map[string]app.MessageAttribute
 	return attributes
 }
 
+func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageAttribute {
+	v := &app.ResultMessageAttributeValue{
+		DataType: a.DataType,
+	}
+
+	switch a.DataType {
+	case "Binary":
+		v.BinaryValue = a.Value
+	case "String":
+		v.StringValue = a.Value
+	}
+
+	return &app.ResultMessageAttribute{
+		Name:  a.Name,
+		Value: v,
+	}
+}
+
 func hashAttributes(attributes map[string]app.MessageAttributeValue) string {
 	hasher := md5.New()
 

@@ -3,8 +3,6 @@ package app
 import (
 	"sync"
 	"time"
-
-	"github.com/p4tin/goaws/app/common"
 )
 
 type SqsErrorType struct {
@@ -26,45 +24,11 @@ type Message struct {
 	MessageAttributes      map[string]MessageAttributeValue
 }
 
-func (m *Message) GetResult() *ResultMessage {
-	attrs := []*ResultMessageAttribute{}
-	for _, attr := range m.MessageAttributes {
-		attrs = append(attrs, attr.GetResult())
-	}
-
-	return &ResultMessage{
-		MessageId:              m.Uuid,
-		Body:                   m.MessageBody,
-		ReceiptHandle:          m.ReceiptHandle,
-		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
-		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
-		MessageAttributes:      attrs,
-	}
-}
-
 type MessageAttributeValue struct {
 	Name     string
 	DataType string
 	Value    string
 	ValueKey string
-}
-
-func (a *MessageAttributeValue) GetResult() *ResultMessageAttribute {
-	v := &ResultMessageAttributeValue{
-		DataType: a.DataType,
-	}
-
-	switch a.DataType {
-	case "Binary":
-		v.BinaryValue = a.Value
-	case "String":
-		v.StringValue = a.Value
-	}
-
-	return &ResultMessageAttribute{
-		Name:  a.Name,
-		Value: v,
-	}
 }
 
 type Queue struct {
