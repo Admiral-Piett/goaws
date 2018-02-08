@@ -40,6 +40,55 @@ func TestListQueues_POST_NoQueues(t *testing.T) {
 	}
 }
 
+func TestListQueues_POST_Success(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(ListQueues)
+
+	app.SyncQueues.Queues["foo"] = &app.Queue{Name: "foo", URL: "http://:/queue/foo"}
+	app.SyncQueues.Queues["bar"] = &app.Queue{Name: "bar", URL: "http://:/queue/bar"}
+	app.SyncQueues.Queues["foobar"] = &app.Queue{Name: "foobar", URL: "http://:/queue/foobar"}
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := "<QueueUrl>http://:/queue/bar</QueueUrl>"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+
+	// Filter lists by the given QueueNamePrefix
+	form := url.Values{}
+	form.Add("QueueNamePrefix", "fo")
+	req, _ = http.NewRequest("POST", "/", nil)
+	req.PostForm = form
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	unexpected := "<QueueUrl>http://:/queue/bar</QueueUrl>"
+	if strings.Contains(rr.Body.String(), unexpected) {
+		t.Errorf("handler returned unexpected body: got %v",
+			rr.Body.String())
+	}
+
+}
+
 func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.

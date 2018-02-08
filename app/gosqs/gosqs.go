@@ -42,11 +42,14 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
 	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
 	respStruct.Result.QueueUrl = make([]string, 0)
+	queueNamePrefix := req.FormValue("QueueNamePrefix")
 
 	log.Println("Listing Queues")
 	for _, queue := range app.SyncQueues.Queues {
 		app.SyncQueues.Lock()
-		respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
+		if strings.HasPrefix(queue.Name, queueNamePrefix) {
+			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
+		}
 		app.SyncQueues.Unlock()
 	}
 	enc := xml.NewEncoder(w)
