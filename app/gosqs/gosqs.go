@@ -155,6 +155,11 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
 	sendEntries := []SendEntry{}
 
 	for k, v := range req.Form {
