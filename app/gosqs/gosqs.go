@@ -305,10 +305,10 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				app.SyncQueues.Lock() // Lock the Queues
 				uuid, _ := common.NewUUID()
 
-				msg := app.SyncQueues.Queues[queueName].Messages[i]
+				msg := &app.SyncQueues.Queues[queueName].Messages[i]
 				msg.ReceiptHandle = msg.Uuid + "#" + uuid
 				msg.ReceiptTime = time.Now()
-				message = append(message, getMessageResult(&msg))
+				message = append(message, getMessageResult(msg))
 
 				app.SyncQueues.Unlock() // Unlock the Queues
 				numMsg++
