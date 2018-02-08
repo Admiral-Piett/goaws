@@ -21,6 +21,14 @@ type Message struct {
 	MD5OfMessageBody       string
 	ReceiptHandle          string
 	ReceiptTime            time.Time
+	MessageAttributes      map[string]MessageAttributeValue
+}
+
+type MessageAttributeValue struct {
+	Name     string
+	DataType string
+	Value    string
+	ValueKey string
 }
 
 type Queue struct {
