@@ -165,6 +165,10 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	for k, v := range req.Form {
 		keySegments := strings.Split(k, ".")
 		if keySegments[0] == "SendMessageBatchRequestEntry" {
+			if len(keySegments) < 3 {
+				createErrorResponse(w, req, "EmptyBatchRequest")
+				return
+			}
 			keyIndex, err := strconv.Atoi(keySegments[1])
 
 			if err != nil {
