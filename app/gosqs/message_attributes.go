@@ -10,17 +10,12 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/p4tin/goaws/app"
 	log "github.com/sirupsen/logrus"
 )
 
-type MessageAttributeValue struct {
-	dataType string
-	value    string
-	valueKey string
-}
-
-func extractMessageAttributes(req *http.Request, prefix string) map[string]MessageAttributeValue {
-	attributes := make(map[string]MessageAttributeValue)
+func extractMessageAttributes(req *http.Request, prefix string) map[string]app.MessageAttributeValue {
+	attributes := make(map[string]app.MessageAttributeValue)
 	if prefix != "" {
 		prefix += "."
 	}
@@ -41,7 +36,7 @@ func extractMessageAttributes(req *http.Request, prefix string) map[string]Messa
 		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
 			value := req.FormValue(fmt.Sprintf("%sMessageAttribute.%d.Value.%s", prefix, i, valueKey))
 			if value != "" {
-				attributes[name] = MessageAttributeValue{dataType, value, valueKey}
+				attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
 			}
 		}
 
@@ -53,7 +48,25 @@ func extractMessageAttributes(req *http.Request, prefix string) map[string]Messa
 	return attributes
 }
 
-func hashAttributes(attributes map[string]MessageAttributeValue) string {
+func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageAttribute {
+	v := &app.ResultMessageAttributeValue{
+		DataType: a.DataType,
+	}
+
+	switch a.DataType {
+	case "Binary":
+		v.BinaryValue = a.Value
+	case "String":
+		v.StringValue = a.Value
+	}
+
+	return &app.ResultMessageAttribute{
+		Name:  a.Name,
+		Value: v,
+	}
+}
+
+func hashAttributes(attributes map[string]app.MessageAttributeValue) string {
 	hasher := md5.New()
 
 	keys := sortedKeys(attributes)
@@ -61,13 +74,13 @@ func hashAttributes(attributes map[string]MessageAttributeValue) string {
 		attributeValue := attributes[key]
 
 		addStringToHash(hasher, key)
-		addStringToHash(hasher, attributeValue.dataType)
-		if attributeValue.valueKey == "StringValue" {
+		addStringToHash(hasher, attributeValue.DataType)
+		if attributeValue.ValueKey == "StringValue" {
 			hasher.Write([]byte{1})
-			addStringToHash(hasher, attributeValue.value)
-		} else if attributeValue.valueKey == "BinaryValue" {
+			addStringToHash(hasher, attributeValue.Value)
+		} else if attributeValue.ValueKey == "BinaryValue" {
 			hasher.Write([]byte{2})
-			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.value)
+			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.Value)
 			addBytesToHash(hasher, bytes)
 		}
 	}
@@ -75,7 +88,7 @@ func hashAttributes(attributes map[string]MessageAttributeValue) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func sortedKeys(attributes map[string]MessageAttributeValue) []string {
+func sortedKeys(attributes map[string]app.MessageAttributeValue) []string {
 	var keys []string
 	for key, _ := range attributes {
 		keys = append(keys, key)

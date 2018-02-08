@@ -105,13 +105,26 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	msg.MD5OfMessageAttributes = hashAttributes(messageAttributes)
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
+	msg.MessageAttributes = messageAttributes
 	msg.Uuid, _ = common.NewUUID()
+
 	app.SyncQueues.Lock()
 	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 	app.SyncQueues.Unlock()
 	common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
 
-	respStruct := app.SendMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.SendMessageResult{MD5OfMessageAttributes: msg.MD5OfMessageAttributes, MD5OfMessageBody: msg.MD5OfMessageBody, MessageId: msg.Uuid}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct := app.SendMessageResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.SendMessageResult{
+			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
+			MD5OfMessageBody:       msg.MD5OfMessageBody,
+			MessageId:              msg.Uuid,
+		},
+		app.ResponseMetadata{
+			RequestId: "00000000-0000-0000-0000-000000000000",
+		},
+	}
+
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -122,7 +135,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 type SendEntry struct {
 	Id                string
 	MessageBody       string
-	MessageAttributes map[string]MessageAttributeValue
+	MessageAttributes map[string]app.MessageAttributeValue
 }
 
 func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
@@ -194,6 +207,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	for _, sendEntry := range sendEntries {
 		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
+			msg.MessageAttributes = sendEntry.MessageAttributes
 			msg.MD5OfMessageAttributes = hashAttributes(sendEntry.MessageAttributes)
 		}
 		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
@@ -271,26 +285,34 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			if numMsg >= maxNumberOfMessages {
 				break
 			}
+
 			timeout := time.Now().Add(time.Duration(-app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 			if (app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(app.SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
 				continue
 			} else {
 				app.SyncQueues.Lock() // Lock the Queues
 				uuid, _ := common.NewUUID()
-				app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle = app.SyncQueues.Queues[queueName].Messages[i].Uuid + "#" + uuid
-				app.SyncQueues.Queues[queueName].Messages[i].ReceiptTime = time.Now()
-				message = append(message, &app.ResultMessage{})
-				message[numMsg].MessageId = app.SyncQueues.Queues[queueName].Messages[i].Uuid
-				message[numMsg].Body = app.SyncQueues.Queues[queueName].Messages[i].MessageBody
-				message[numMsg].ReceiptHandle = app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle
-				message[numMsg].MD5OfBody = common.GetMD5Hash(string(message[numMsg].Body))
+
+				msg := app.SyncQueues.Queues[queueName].Messages[i]
+				msg.ReceiptHandle = msg.Uuid + "#" + uuid
+				msg.ReceiptTime = time.Now()
+				message = append(message, getMessageResult(&msg))
+
 				app.SyncQueues.Unlock() // Unlock the Queues
 				numMsg++
 			}
 		}
 
 		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
-		respStruct = app.ReceiveMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ReceiveMessageResult{Message: message}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct = app.ReceiveMessageResponse{
+			"http://queue.amazonaws.com/doc/2012-11-05/",
+			app.ReceiveMessageResult{
+				Message: message,
+			},
+			app.ResponseMetadata{
+				RequestId: "00000000-0000-0000-0000-000000000000",
+			},
+		}
 	} else {
 		log.Println("No messages in Queue:", queueName)
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
@@ -589,6 +611,22 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 		createErrorResponse(w, req, "GeneralError")
+	}
+}
+
+func getMessageResult(m *app.Message) *app.ResultMessage {
+	attrs := []*app.ResultMessageAttribute{}
+	for _, attr := range m.MessageAttributes {
+		attrs = append(attrs, getMessageAttributeResult(&attr))
+	}
+
+	return &app.ResultMessage{
+		MessageId:              m.Uuid,
+		Body:                   m.MessageBody,
+		ReceiptHandle:          m.ReceiptHandle,
+		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
+		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
+		MessageAttributes:      attrs,
 	}
 }
 

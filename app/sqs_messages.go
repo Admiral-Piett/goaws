@@ -39,11 +39,23 @@ type SendMessageResponse struct {
 /*** Receive Message Response */
 
 type ResultMessage struct {
-	MessageId              string `xml:"MessageId,omitempty"`
-	ReceiptHandle          string `xml:"ReceiptHandle,omitempty"`
-	MD5OfBody              string `xml:"MD5OfBody,omitempty"`
-	Body                   []byte `xml:"Body,omitempty"`
-	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes,omitempty"`
+	MessageId              string                    `xml:"MessageId,omitempty"`
+	ReceiptHandle          string                    `xml:"ReceiptHandle,omitempty"`
+	MD5OfBody              string                    `xml:"MD5OfBody,omitempty"`
+	Body                   []byte                    `xml:"Body,omitempty"`
+	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty"`
+	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
+}
+
+type ResultMessageAttributeValue struct {
+	DataType    string `xml:"DataType,omitempty"`
+	StringValue string `xml:"StringValue,omitempty"`
+	BinaryValue string `xml:"BinaryValue,omitempty"`
+}
+
+type ResultMessageAttribute struct {
+	Name  string                       `xml:"Name,omitempty"`
+	Value *ResultMessageAttributeValue `xml:"Value,omitempty"`
 }
 
 type ReceiveMessageResult struct {
