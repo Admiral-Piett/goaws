@@ -28,6 +28,12 @@ func init() {
 	app.SqsErrors["MessageDoesNotExist"] = err3
 	err4 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "GeneralError", Code: "AWS.SimpleQueueService.GeneralError", Message: "General Error."}
 	app.SqsErrors["GeneralError"] = err4
+	err5 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "TooManyEntriesInBatchRequest", Code: "AWS.SimpleQueueService.TooManyEntriesInBatchRequest", Message: "Maximum number of entries per request are 10."}
+	app.SqsErrors["TooManyEntriesInBatchRequest"] = err5
+	err6 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "BatchEntryIdsNotDistinct", Code: "AWS.SimpleQueueService.BatchEntryIdsNotDistinct", Message: "Two or more batch entries in the request have the same Id."}
+	app.SqsErrors["BatchEntryIdsNotDistinct"] = err6
+	err7 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleQueueService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."}
+	app.SqsErrors["EmptyBatchRequest"] = err7
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -36,11 +42,14 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
 	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
 	respStruct.Result.QueueUrl = make([]string, 0)
+	queueNamePrefix := req.FormValue("QueueNamePrefix")
 
 	log.Println("Listing Queues")
 	for _, queue := range app.SyncQueues.Queues {
 		app.SyncQueues.Lock()
-		respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
+		if strings.HasPrefix(queue.Name, queueNamePrefix) {
+			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
+		}
 		app.SyncQueues.Unlock()
 	}
 	enc := xml.NewEncoder(w)
@@ -76,7 +85,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
-	messageAttributes := extractMessageAttributes(req)
+	messageAttributes := extractMessageAttributes(req, "")
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
 
@@ -90,7 +99,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		// Queue does not exists
+		// Queue does not exist
 		createErrorResponse(w, req, "QueueNotFound")
 		return
 	}
@@ -121,6 +130,111 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+	}
+}
+
+type SendEntry struct {
+	Id                string
+	MessageBody       string
+	MessageAttributes map[string]app.MessageAttributeValue
+}
+
+func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	req.ParseForm()
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		vars := mux.Vars(req)
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+
+	sendEntries := []SendEntry{}
+
+	for k, v := range req.Form {
+		keySegments := strings.Split(k, ".")
+		if keySegments[0] == "SendMessageBatchRequestEntry" {
+			keyIndex, err := strconv.Atoi(keySegments[1])
+
+			if err != nil {
+				createErrorResponse(w, req, "Error")
+				return
+			}
+
+			if len(sendEntries) < keyIndex {
+				newSendEntries := make([]SendEntry, keyIndex)
+				copy(newSendEntries, sendEntries)
+				sendEntries = newSendEntries
+			}
+
+			if keySegments[2] == "Id" {
+				sendEntries[keyIndex-1].Id = v[0]
+			}
+
+			if keySegments[2] == "MessageBody" {
+				sendEntries[keyIndex-1].MessageBody = v[0]
+			}
+
+			if keySegments[2] == "MessageAttribute" {
+				sendEntries[keyIndex-1].MessageAttributes = extractMessageAttributes(req, strings.Join(keySegments[0:2], "."))
+			}
+		}
+	}
+
+	if len(sendEntries) == 0 {
+		createErrorResponse(w, req, "EmptyBatchRequest")
+		return
+	}
+
+	if len(sendEntries) > 10 {
+		createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
+		return
+	}
+	ids := map[string]struct{}{}
+	for _, v := range sendEntries {
+		if _, ok := ids[v.Id]; ok {
+			createErrorResponse(w, req, "BatchEntryIdsNotDistinct")
+			return
+		}
+		ids[v.Id] = struct{}{}
+	}
+
+	sentEntries := make([]app.SendMessageBatchResultEntry, 0)
+	log.Println("Putting Message in Queue:", queueName)
+	for _, sendEntry := range sendEntries {
+		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
+		if len(sendEntry.MessageAttributes) > 0 {
+			msg.MessageAttributes = sendEntry.MessageAttributes
+			msg.MD5OfMessageAttributes = hashAttributes(sendEntry.MessageAttributes)
+		}
+		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
+		msg.Uuid, _ = common.NewUUID()
+		app.SyncQueues.Lock()
+		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+		app.SyncQueues.Unlock()
+		se := app.SendMessageBatchResultEntry{
+			Id:                     sendEntry.Id,
+			MessageId:              msg.Uuid,
+			MD5OfMessageBody:       msg.MD5OfMessageBody,
+			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
+		}
+		sentEntries = append(sentEntries, se)
+		common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
+	}
+
+	respStruct := app.SendMessageBatchResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.SendMessageBatchResult{Entry: sentEntries},
+		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 	}
