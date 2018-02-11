@@ -34,6 +34,8 @@ func init() {
 	app.SqsErrors["BatchEntryIdsNotDistinct"] = err6
 	err7 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleQueueService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."}
 	app.SqsErrors["EmptyBatchRequest"] = err7
+	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidVisibilityTimeout", Code: "AWS.SimpleQueueService.InvalidVisibilityTimeout", Message: "The visibility timeout is incorrect"}
+	app.SqsErrors["Error"] = err8
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -345,6 +347,69 @@ func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 		}
 	}
 	return num
+}
+
+func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+	receiptHandle := req.FormValue("ReceiptHandle")
+	visibilityTimeout, err := strconv.Atoi(req.FormValue("VisibilityTimeout"))
+	if err != nil {
+		createErrorResponse(w, req, "Error")
+		return
+	}
+	if visibilityTimeout/60/60 > 12 {
+		createErrorResponse(w, req, "Visibility Timeout too big")
+		return
+	}
+
+	app.SyncQueues.Lock()
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	messageFound := false
+	for i, _ := range app.SyncQueues.Queues[queueName].Messages {
+		msgs := app.SyncQueues.Queues[queueName].Messages
+		if msgs[i].ReceiptHandle == receiptHandle {
+			// TODO need a mechanism to set the visibility timeout
+			if visibilityTimeout == 0 {
+				msgs[i].ReceiptTime = time.Time{}
+				msgs[i].ReceiptHandle = ""
+			} else {
+				msgs[i].ReceiptTime = time.Now()
+			}
+			messageFound = true
+			break
+		}
+	}
+	app.SyncQueues.Unlock()
+	if !messageFound {
+		createErrorResponse(w, req, "Message not in flight")
+		return
+	}
+
+	respStruct := app.ChangeMessageVisibilityResult{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "ChangeMessageVisibility - Could not encode response")
+		return
+	}
 }
 
 type DeleteEntry struct {

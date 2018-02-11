@@ -68,6 +68,11 @@ type ReceiveMessageResponse struct {
 	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
 }
 
+type ChangeMessageVisibilityResult struct {
+	Xmlns    string           `xml:"xmlns,attr"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+}
+
 /*** Delete Message Response */
 type DeleteMessageResponse struct {
 	Xmlns    string           `xml:"xmlns,attr,omitempty"`
