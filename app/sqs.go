@@ -21,6 +21,8 @@ type Message struct {
 	MD5OfMessageBody       string
 	ReceiptHandle          string
 	ReceiptTime            time.Time
+	VisibilityTimeout      time.Time
+	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 }
 

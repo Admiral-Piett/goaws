@@ -34,8 +34,38 @@ func init() {
 	app.SqsErrors["BatchEntryIdsNotDistinct"] = err6
 	err7 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleQueueService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."}
 	app.SqsErrors["EmptyBatchRequest"] = err7
-	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidVisibilityTimeout", Code: "AWS.SimpleQueueService.InvalidVisibilityTimeout", Message: "The visibility timeout is incorrect"}
-	app.SqsErrors["Error"] = err8
+	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "ValidationError", Code: "AWS.SimpleQueueService.ValidationError", Message: "The visibility timeout is incorrect"}
+	app.SqsErrors["InvalidVisibilityTimeout"] = err8
+	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
+	app.SqsErrors["MessageNotInFLight"] = err9
+}
+
+func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
+	ticker := time.NewTicker(d)
+	for {
+		select {
+		case <-ticker.C:
+			for _, queue := range app.SyncQueues.Queues {
+				for i := range queue.Messages {
+					msg := &queue.Messages[i]
+					if msg.ReceiptHandle != "" {
+						app.SyncQueues.Lock()
+						if msg.VisibilityTimeout.Before(time.Now()) {
+							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
+							msg.ReceiptHandle = ""
+							msg.ReceiptTime = time.Time{}
+							msg.Retry++
+							// TODO if retry exceeds the limit send it to deadletter exchange
+						}
+						app.SyncQueues.Unlock()
+					}
+				}
+			}
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -70,7 +100,13 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
-		queue := &app.Queue{Name: queueName, URL: queueUrl, Arn: queueArn, TimeoutSecs: 30}
+		queue := &app.Queue{
+			Name:        queueName,
+			URL:         queueUrl,
+			Arn:         queueArn,
+			TimeoutSecs: 30,
+		}
+		applyQueueAttributes(queue, req.Form)
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue
 		app.SyncQueues.Unlock()
@@ -300,21 +336,21 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 
-			timeout := time.Now().Add(time.Duration(-app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
-			if (app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(app.SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
+			if app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
 				continue
-			} else {
-				app.SyncQueues.Lock() // Lock the Queues
-				uuid, _ := common.NewUUID()
-
-				msg := &app.SyncQueues.Queues[queueName].Messages[i]
-				msg.ReceiptHandle = msg.Uuid + "#" + uuid
-				msg.ReceiptTime = time.Now()
-				message = append(message, getMessageResult(msg))
-
-				app.SyncQueues.Unlock() // Unlock the Queues
-				numMsg++
 			}
+
+			app.SyncQueues.Lock() // Lock the Queues
+			uuid, _ := common.NewUUID()
+
+			msg := &app.SyncQueues.Queues[queueName].Messages[i]
+			msg.ReceiptHandle = msg.Uuid + "#" + uuid
+			msg.ReceiptTime = time.Now()
+			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			message = append(message, getMessageResult(msg))
+
+			app.SyncQueues.Unlock() // Unlock the Queues
+			numMsg++
 		}
 
 		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
@@ -364,11 +400,11 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	receiptHandle := req.FormValue("ReceiptHandle")
 	visibilityTimeout, err := strconv.Atoi(req.FormValue("VisibilityTimeout"))
 	if err != nil {
-		createErrorResponse(w, req, "Error")
+		createErrorResponse(w, req, "ValidationError")
 		return
 	}
-	if visibilityTimeout/60/60 > 12 {
-		createErrorResponse(w, req, "Visibility Timeout too big")
+	if visibilityTimeout > 43200 {
+		createErrorResponse(w, req, "ValidationError")
 		return
 	}
 
@@ -379,15 +415,17 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	}
 
 	messageFound := false
-	for i, _ := range app.SyncQueues.Queues[queueName].Messages {
+	for i := range app.SyncQueues.Queues[queueName].Messages {
 		msgs := app.SyncQueues.Queues[queueName].Messages
 		if msgs[i].ReceiptHandle == receiptHandle {
-			// TODO need a mechanism to set the visibility timeout
+			timeout := app.SyncQueues.Queues[queueName].TimeoutSecs
 			if visibilityTimeout == 0 {
 				msgs[i].ReceiptTime = time.Time{}
 				msgs[i].ReceiptHandle = ""
+				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(timeout) * time.Second)
+				msgs[i].Retry++
 			} else {
-				msgs[i].ReceiptTime = time.Now()
+				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(visibilityTimeout) * time.Second)
 			}
 			messageFound = true
 			break
@@ -395,7 +433,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	}
 	app.SyncQueues.Unlock()
 	if !messageFound {
-		createErrorResponse(w, req, "Message not in flight")
+		createErrorResponse(w, req, "MessageNotInFlight")
 		return
 	}
 
@@ -407,7 +445,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	enc.Indent(" ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
-		createErrorResponse(w, req, "ChangeMessageVisibility - Could not encode response")
+		createErrorResponse(w, req, "GeneralError")
 		return
 	}
 }

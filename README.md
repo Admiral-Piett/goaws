@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/p4tin/goaws.svg?branch=master)](https://travis-ci.org/p4tin/goaws)
 
 You are always welcome to [tweet me](https://twitter.com/gocodecloud) or [buy me a coffee](https://www.paypal.me/p4tin)
- 
+
 Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS and SNS in a local environment so developers can test their interfaces without having to connect to the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
 
 
@@ -17,10 +17,20 @@ Here is a list of the APIs:
  - [x] GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
  - [x] GetQueueUrl
  - [x] SendMessage
+ - [x] SendMessageBatch
  - [x] ReceiveMessage
  - [x] DeleteMessage
+ - [x] DeleteMessageBatch
  - [x] PurgeQueue
  - [x] Delete Queue
+ - [x] ChangeMessageVisibility
+ - [ ] ChangeMessageVisibilityBatch
+ - [ ] ListDeadLetterSourceQueues
+ - [ ] ListQueueTags
+ - [ ] RemovePermission
+ - [ ] SetQueueAttributes
+ - [ ] TagQueue
+ - [ ] UntagQueue
 
 ## Current SNS APIs implemented:
 
@@ -33,10 +43,10 @@ Here is a list of the APIs:
  - [x] Subscribe
  - [x] Unsubscribe
  - [X] ListSubscriptionsByTopic
- 
+
 ## Yaml Configuration Implemented
 
- - [x] Read config file 
+ - [x] Read config file
  - [x] -config flag to read a specific configuration file (e.g.: -config=myconfig.yaml)
  - [x] a command line argument to determine the environment to use in the config file (e.e.: Dev)
  - [x] IN the config file to can create Queues, Topic and Subscription see the example config file in the conf directory
@@ -54,16 +64,16 @@ Here is a list of the APIs:
     Build
         cd to GoAws directory
         go build -o goaws app/cmd/goaws.go  (The goaws executable should be in the currect directory, move it somewhere in your $PATH)
-        
+
     Run
         ./goaws  (by default goaws listens on port 4100 but you can change it in the goaws.yaml file to another port of your choice)
-        
+
 
 ## Run (Docker Version)
 
     Get it
         docker pull pafortin/goaws
-        
+
     run
         docker run -d --name goaws -p 4100:4100 pafortin/goaws
 
@@ -77,13 +87,13 @@ You can test that your installation is working correctly in one of two ways:
 
  2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 
-* aws --endpoint-url http://localhost:4100 sqs create-queue --queue-name test1  
+* aws --endpoint-url http://localhost:4100 sqs create-queue --queue-name test1
 ```
     {
         "QueueUrl": "http://localhost:4100/test1"
     }
 ```
-* aws --endpoint-url http://localhost:4100 sqs list-queues  
+* aws --endpoint-url http://localhost:4100 sqs list-queues
 ```
     {
         "QueueUrls": [
@@ -94,30 +104,30 @@ You can test that your installation is working correctly in one of two ways:
 * aws --endpoint-url http://localhost:4100 sqs send-message --queue-url http://localhost:4100/test1 --message-body "this is a test of the GoAws Queue messaging"
 ```
     {
-        "MD5OfMessageBody": "9d3f5eaac3b1b4dd509f39e71e25f954", 
-        "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337", 
+        "MD5OfMessageBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
+        "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
         "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
     }
 ```
-* aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1  
+* aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1
 ```
     {
         "Messages": [
             {
-                "Body": "this is a test of the GoAws Queue messaging", 
-                "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337", 
-                "ReceiptHandle": "66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461", 
-                "MD5OfBody": "9d3f5eaac3b1b4dd509f39e71e25f954", 
+                "Body": "this is a test of the GoAws Queue messaging",
+                "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
+                "ReceiptHandle": "66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461",
+                "MD5OfBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
                 "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
             }
         ]
     }
 ```
-* aws --endpoint-url http://localhost:4100 sqs delete-message --queue-url http://localhost:4100/test1 --receipt-handle 66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461  
+* aws --endpoint-url http://localhost:4100 sqs delete-message --queue-url http://localhost:4100/test1 --receipt-handle 66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461
 ```
     No output
 ```
-* aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1  
+* aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1
 ```
     No output (No messages in Q)
 ```
@@ -136,7 +146,7 @@ You can test that your installation is working correctly in one of two ways:
         "Topics": [
             {
                 "TopicArn": "arn:aws:sns:local:000000000000:topic1"
-            }, 
+            },
             {
                 "TopicArn": "arn:aws:sns:local:000000000000:topic2"
             }
