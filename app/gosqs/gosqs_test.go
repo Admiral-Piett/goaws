@@ -540,7 +540,7 @@ func TestRequeueing_VisibilityTimeoutExpires(t *testing.T) {
 	if ok := strings.Contains(rr.Body.String(), "<Message>"); ok {
 		t.Fatal("handler should not return a message")
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// message needs to be requeued
 	req, err = http.NewRequest("POST", "/", nil)

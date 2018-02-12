@@ -37,7 +37,7 @@ func init() {
 	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "ValidationError", Code: "AWS.SimpleQueueService.ValidationError", Message: "The visibility timeout is incorrect"}
 	app.SqsErrors["InvalidVisibilityTimeout"] = err8
 	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
-	app.SqsErrors["MessageNotInFLight"] = err9
+	app.SqsErrors["MessageNotInFlight"] = err9
 }
 
 func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
@@ -45,11 +45,11 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
+			app.SyncQueues.Lock()
 			for _, queue := range app.SyncQueues.Queues {
 				for i := range queue.Messages {
 					msg := &queue.Messages[i]
 					if msg.ReceiptHandle != "" {
-						app.SyncQueues.Lock()
 						if msg.VisibilityTimeout.Before(time.Now()) {
 							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
 							msg.ReceiptHandle = ""
@@ -57,10 +57,10 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 							msg.Retry++
 							// TODO if retry exceeds the limit send it to deadletter exchange
 						}
-						app.SyncQueues.Unlock()
 					}
 				}
 			}
+			app.SyncQueues.Unlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -331,6 +331,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		message = make([]*app.ResultMessage, 0)
+		app.SyncQueues.Lock() // Lock the Queues
 		for i := range app.SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
@@ -340,7 +341,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				continue
 			}
 
-			app.SyncQueues.Lock() // Lock the Queues
 			uuid, _ := common.NewUUID()
 
 			msg := &app.SyncQueues.Queues[queueName].Messages[i]
@@ -349,9 +349,9 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 			message = append(message, getMessageResult(msg))
 
-			app.SyncQueues.Unlock() // Unlock the Queues
 			numMsg++
 		}
+		app.SyncQueues.Unlock() // Unlock the Queues
 
 		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
 		respStruct = app.ReceiveMessageResponse{
@@ -376,12 +376,13 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 	num := 0
+	app.SyncQueues.Lock()
 	for i := range queue.Messages {
-		timeout := time.Now().Add(time.Duration(-queue.TimeoutSecs) * time.Second)
-		if (queue.Messages[i].ReceiptHandle != "") && (timeout.Before(queue.Messages[i].ReceiptTime)) {
+		if queue.Messages[i].ReceiptHandle != "" {
 			num++
 		}
 	}
+	app.SyncQueues.Unlock()
 	return num
 }
 
