@@ -38,6 +38,8 @@ func init() {
 	app.SqsErrors["InvalidVisibilityTimeout"] = err8
 	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
 	app.SqsErrors["MessageNotInFlight"] = err9
+	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
+	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
 }
 
 func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
@@ -45,9 +47,10 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			app.SyncQueues.Lock()
-			for _, queue := range app.SyncQueues.Queues {
-				for i := range queue.Messages {
+			app.SyncQueues.RLock()
+			for j := range app.SyncQueues.Queues {
+				queue := app.SyncQueues.Queues[j]
+				for i := 0; i < len(queue.Messages); i++ {
 					msg := &queue.Messages[i]
 					if msg.ReceiptHandle != "" {
 						if msg.VisibilityTimeout.Before(time.Now()) {
@@ -55,12 +58,18 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 							msg.ReceiptHandle = ""
 							msg.ReceiptTime = time.Time{}
 							msg.Retry++
-							// TODO if retry exceeds the limit send it to deadletter exchange
+							if queue.MaxReceiveCount > 0 &&
+								queue.DeadLetterQueue != nil &&
+								msg.Retry > queue.MaxReceiveCount {
+								queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, *msg)
+								queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
+								i++
+							}
 						}
 					}
 				}
 			}
-			app.SyncQueues.Unlock()
+			app.SyncQueues.RUnlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -106,7 +115,10 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			Arn:         queueArn,
 			TimeoutSecs: 30,
 		}
-		applyQueueAttributes(queue, req.Form)
+		if err := validateQueueAttributes(queue, req.Form); err != nil {
+			createErrorResponse(w, req, err.Error())
+			return
+		}
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue
 		app.SyncQueues.Unlock()
@@ -322,16 +334,24 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	respStruct := app.ReceiveMessageResponse{}
 
 	loops := waitTimeSeconds * 10
-	for len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) == 0 && loops > 0 {
-		time.Sleep(100 * time.Millisecond)
-		loops--
+	for loops > 0 {
+		app.SyncQueues.Lock()
+		found := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
+		app.SyncQueues.Unlock()
+		if !found {
+			time.Sleep(100 * time.Millisecond)
+			loops--
+		} else {
+			break
+		}
+
 	}
 	log.Println("Getting Message from Queue:", queueName)
 
+	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		message = make([]*app.ResultMessage, 0)
-		app.SyncQueues.Lock() // Lock the Queues
 		for i := range app.SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
@@ -351,7 +371,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 			numMsg++
 		}
-		app.SyncQueues.Unlock() // Unlock the Queues
 
 		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
 		respStruct = app.ReceiveMessageResponse{
@@ -367,6 +386,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		log.Println("No messages in Queue:", queueName)
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
+	app.SyncQueues.Unlock() // Unlock the Queues
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -416,8 +436,9 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	}
 
 	messageFound := false
-	for i := range app.SyncQueues.Queues[queueName].Messages {
-		msgs := app.SyncQueues.Queues[queueName].Messages
+	for i := 0; i < len(app.SyncQueues.Queues[queueName].Messages); i++ {
+		queue := app.SyncQueues.Queues[queueName]
+		msgs := queue.Messages
 		if msgs[i].ReceiptHandle == receiptHandle {
 			timeout := app.SyncQueues.Queues[queueName].TimeoutSecs
 			if visibilityTimeout == 0 {
@@ -425,6 +446,13 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 				msgs[i].ReceiptHandle = ""
 				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(timeout) * time.Second)
 				msgs[i].Retry++
+				if queue.MaxReceiveCount > 0 &&
+					queue.DeadLetterQueue != nil &&
+					msgs[i].Retry > queue.MaxReceiveCount {
+					queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, msgs[i])
+					queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
+					i++
+				}
 			} else {
 				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(visibilityTimeout) * time.Second)
 			}

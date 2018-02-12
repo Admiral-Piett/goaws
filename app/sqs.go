@@ -12,6 +12,10 @@ type SqsErrorType struct {
 	Message   string
 }
 
+func (s *SqsErrorType) Error() string {
+	return s.Type
+}
+
 var SqsErrors map[string]SqsErrorType
 
 type Message struct {
@@ -34,11 +38,13 @@ type MessageAttributeValue struct {
 }
 
 type Queue struct {
-	Name        string
-	URL         string
-	Arn         string
-	TimeoutSecs int
-	Messages    []Message
+	Name            string
+	URL             string
+	Arn             string
+	TimeoutSecs     int
+	Messages        []Message
+	DeadLetterQueue *Queue
+	MaxReceiveCount int
 }
 
 var SyncQueues = struct {
