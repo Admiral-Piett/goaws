@@ -155,11 +155,20 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
 	sendEntries := []SendEntry{}
 
 	for k, v := range req.Form {
 		keySegments := strings.Split(k, ".")
 		if keySegments[0] == "SendMessageBatchRequestEntry" {
+			if len(keySegments) < 3 {
+				createErrorResponse(w, req, "EmptyBatchRequest")
+				return
+			}
 			keyIndex, err := strconv.Atoi(keySegments[1])
 
 			if err != nil {
@@ -296,10 +305,10 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				app.SyncQueues.Lock() // Lock the Queues
 				uuid, _ := common.NewUUID()
 
-				msg := app.SyncQueues.Queues[queueName].Messages[i]
+				msg := &app.SyncQueues.Queues[queueName].Messages[i]
 				msg.ReceiptHandle = msg.Uuid + "#" + uuid
 				msg.ReceiptTime = time.Now()
-				message = append(message, getMessageResult(&msg))
+				message = append(message, getMessageResult(msg))
 
 				app.SyncQueues.Unlock() // Unlock the Queues
 				numMsg++
