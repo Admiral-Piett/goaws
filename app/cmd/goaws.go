@@ -4,10 +4,12 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/p4tin/goaws/app/conf"
+	"github.com/p4tin/goaws/app/gosqs"
 	"github.com/p4tin/goaws/app/router"
 )
 
@@ -34,6 +36,9 @@ func main() {
 	portNumbers := conf.LoadYamlConfig(filename, env)
 
 	r := router.New()
+
+	quit := make(chan struct{}, 0)
+	go gosqs.PeriodicTasks(1*time.Second, quit)
 
 	if len(portNumbers) == 1 {
 		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])

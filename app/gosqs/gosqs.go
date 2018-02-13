@@ -34,6 +34,47 @@ func init() {
 	app.SqsErrors["BatchEntryIdsNotDistinct"] = err6
 	err7 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleQueueService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."}
 	app.SqsErrors["EmptyBatchRequest"] = err7
+	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "ValidationError", Code: "AWS.SimpleQueueService.ValidationError", Message: "The visibility timeout is incorrect"}
+	app.SqsErrors["InvalidVisibilityTimeout"] = err8
+	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
+	app.SqsErrors["MessageNotInFlight"] = err9
+	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
+	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
+}
+
+func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
+	ticker := time.NewTicker(d)
+	for {
+		select {
+		case <-ticker.C:
+			app.SyncQueues.RLock()
+			for j := range app.SyncQueues.Queues {
+				queue := app.SyncQueues.Queues[j]
+				for i := 0; i < len(queue.Messages); i++ {
+					msg := &queue.Messages[i]
+					if msg.ReceiptHandle != "" {
+						if msg.VisibilityTimeout.Before(time.Now()) {
+							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
+							msg.ReceiptHandle = ""
+							msg.ReceiptTime = time.Time{}
+							msg.Retry++
+							if queue.MaxReceiveCount > 0 &&
+								queue.DeadLetterQueue != nil &&
+								msg.Retry > queue.MaxReceiveCount {
+								queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, *msg)
+								queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
+								i++
+							}
+						}
+					}
+				}
+			}
+			app.SyncQueues.RUnlock()
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
@@ -68,7 +109,16 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
-		queue := &app.Queue{Name: queueName, URL: queueUrl, Arn: queueArn, TimeoutSecs: 30}
+		queue := &app.Queue{
+			Name:        queueName,
+			URL:         queueUrl,
+			Arn:         queueArn,
+			TimeoutSecs: 30,
+		}
+		if err := validateQueueAttributes(queue, req.Form); err != nil {
+			createErrorResponse(w, req, err.Error())
+			return
+		}
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue
 		app.SyncQueues.Unlock()
@@ -284,12 +334,21 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	respStruct := app.ReceiveMessageResponse{}
 
 	loops := waitTimeSeconds * 10
-	for len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) == 0 && loops > 0 {
-		time.Sleep(100 * time.Millisecond)
-		loops--
+	for loops > 0 {
+		app.SyncQueues.Lock()
+		found := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
+		app.SyncQueues.Unlock()
+		if !found {
+			time.Sleep(100 * time.Millisecond)
+			loops--
+		} else {
+			break
+		}
+
 	}
 	log.Println("Getting Message from Queue:", queueName)
 
+	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		message = make([]*app.ResultMessage, 0)
@@ -298,21 +357,19 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 
-			timeout := time.Now().Add(time.Duration(-app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
-			if (app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "") && (timeout.Before(app.SyncQueues.Queues[queueName].Messages[i].ReceiptTime)) {
+			if app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
 				continue
-			} else {
-				app.SyncQueues.Lock() // Lock the Queues
-				uuid, _ := common.NewUUID()
-
-				msg := &app.SyncQueues.Queues[queueName].Messages[i]
-				msg.ReceiptHandle = msg.Uuid + "#" + uuid
-				msg.ReceiptTime = time.Now()
-				message = append(message, getMessageResult(msg))
-
-				app.SyncQueues.Unlock() // Unlock the Queues
-				numMsg++
 			}
+
+			uuid, _ := common.NewUUID()
+
+			msg := &app.SyncQueues.Queues[queueName].Messages[i]
+			msg.ReceiptHandle = msg.Uuid + "#" + uuid
+			msg.ReceiptTime = time.Now()
+			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			message = append(message, getMessageResult(msg))
+
+			numMsg++
 		}
 
 		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
@@ -329,6 +386,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		log.Println("No messages in Queue:", queueName)
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
+	app.SyncQueues.Unlock() // Unlock the Queues
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -338,13 +396,87 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 	num := 0
+	app.SyncQueues.Lock()
 	for i := range queue.Messages {
-		timeout := time.Now().Add(time.Duration(-queue.TimeoutSecs) * time.Second)
-		if (queue.Messages[i].ReceiptHandle != "") && (timeout.Before(queue.Messages[i].ReceiptTime)) {
+		if queue.Messages[i].ReceiptHandle != "" {
 			num++
 		}
 	}
+	app.SyncQueues.Unlock()
 	return num
+}
+
+func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+	receiptHandle := req.FormValue("ReceiptHandle")
+	visibilityTimeout, err := strconv.Atoi(req.FormValue("VisibilityTimeout"))
+	if err != nil {
+		createErrorResponse(w, req, "ValidationError")
+		return
+	}
+	if visibilityTimeout > 43200 {
+		createErrorResponse(w, req, "ValidationError")
+		return
+	}
+
+	app.SyncQueues.Lock()
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	messageFound := false
+	for i := 0; i < len(app.SyncQueues.Queues[queueName].Messages); i++ {
+		queue := app.SyncQueues.Queues[queueName]
+		msgs := queue.Messages
+		if msgs[i].ReceiptHandle == receiptHandle {
+			timeout := app.SyncQueues.Queues[queueName].TimeoutSecs
+			if visibilityTimeout == 0 {
+				msgs[i].ReceiptTime = time.Time{}
+				msgs[i].ReceiptHandle = ""
+				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(timeout) * time.Second)
+				msgs[i].Retry++
+				if queue.MaxReceiveCount > 0 &&
+					queue.DeadLetterQueue != nil &&
+					msgs[i].Retry > queue.MaxReceiveCount {
+					queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, msgs[i])
+					queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
+					i++
+				}
+			} else {
+				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(visibilityTimeout) * time.Second)
+			}
+			messageFound = true
+			break
+		}
+	}
+	app.SyncQueues.Unlock()
+	if !messageFound {
+		createErrorResponse(w, req, "MessageNotInFlight")
+		return
+	}
+
+	respStruct := app.ChangeMessageVisibilityResult{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "GeneralError")
+		return
+	}
 }
 
 type DeleteEntry struct {
