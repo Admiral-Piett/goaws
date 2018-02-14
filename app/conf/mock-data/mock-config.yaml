@@ -3,11 +3,12 @@ Local:                              # Environment name that can be passed on the
   Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
   Port: 4100                        # port to listen on.
   LogMessages: true                 # Log messages (true/false)
-  LogFile: ./goaws_messages.log  # Log filename (for message logging
+  LogFile: ./goaws_messages.log     # Log filename (for message logging
   Queues:                           # List of queues to create at startup
-    - Name: local-queue1            # Queue name
-    - Name: local-queue2            # Queue name
-    - Name: local-queue3            # Queue name
+    - Name: local-queue1                # Queue name
+    - Name: local-queue2                # Queue name
+      ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
+    - Name: local-queue3                # Queue name
   Topics:                           # List of topic to create at startup
     - Name: local-topic1            # Topic name - with some Subscriptions
       Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)

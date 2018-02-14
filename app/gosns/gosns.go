@@ -237,24 +237,24 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
 
-	uriSegments := strings.Split(topicArn, ":")
-	topicName := uriSegments[len(uriSegments)-1]
+	arnSegments := strings.Split(topicArn, ":")
+	topicName := arnSegments[len(arnSegments)-1]
 
 	_, ok := app.SyncTopics.Topics[topicName]
 	if ok {
 		log.Println("Publish to Topic:", topicName)
 		for _, subs := range app.SyncTopics.Topics[topicName].Subscriptions {
 			if app.Protocol(subs.Protocol) == app.ProtocolSQS {
-				queueUrl := subs.EndPoint
-				uriSegments := strings.Split(queueUrl, "/")
-				queueName := uriSegments[len(uriSegments)-1]
-				if _, ok := app.SyncQueues.Queues[queueName]; ok {
-					parts := strings.Split(queueName, ":")
-					if len(parts) > 0 {
-						queueName = parts[len(parts)-1]
-					}
 
+				endPoint := subs.EndPoint
+				uriSegments := strings.Split(endPoint, "/")
+				queueName := uriSegments[len(uriSegments)-1]
+				arnSegments := strings.Split(queueName, ":")
+				queueName = arnSegments[len(arnSegments)-1]
+
+				if _, ok := app.SyncQueues.Queues[queueName]; ok {
 					msg := app.Message{}
+
 					if subs.Raw == false {
 						m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
 						if err != nil {
@@ -266,15 +266,17 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 					} else {
 						msg.MessageBody = []byte(messageBody)
 					}
+
 					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 					msg.Uuid, _ = common.NewUUID()
 					app.SyncQueues.Lock()
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 					app.SyncQueues.Unlock()
+
 					common.LogMessage(fmt.Sprintf("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody))
 				} else {
-					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exits, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
+					common.LogMessage(fmt.Sprintf("%s: Queue %s does not exist, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName))
 				}
 			}
 		}
