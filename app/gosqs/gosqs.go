@@ -336,8 +336,9 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	loops := waitTimeSeconds * 10
 	for loops > 0 {
 		app.SyncQueues.Lock()
-		found := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
+		foundMessages := len(app.SyncQueues.Queues[queueName].Messages)
 		app.SyncQueues.Unlock()
+		found := foundMessages-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
 		if !found {
 			time.Sleep(100 * time.Millisecond)
 			loops--
