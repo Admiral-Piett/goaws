@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/archa347/goaws/app"
 )
 
 var (

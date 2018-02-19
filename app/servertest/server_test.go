@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/p4tin/goaws/app/servertest"
+	"github.com/archa347/goaws/app/servertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

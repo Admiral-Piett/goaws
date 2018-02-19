@@ -3,7 +3,7 @@ package conf
 import (
 	"testing"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/archa347/goaws/app"
 )
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
