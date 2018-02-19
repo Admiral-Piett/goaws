@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/archa347/goaws/app"
 )
 
 func TestApplyQueueAttributes(t *testing.T) {

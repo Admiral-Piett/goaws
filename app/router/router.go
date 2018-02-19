@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
-	sns "github.com/p4tin/goaws/app/gosns"
-	sqs "github.com/p4tin/goaws/app/gosqs"
+	sns "github.com/archa347/goaws/app/gosns"
+	sqs "github.com/archa347/goaws/app/gosqs"
 )
 
 // New returns a new router

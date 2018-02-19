@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
-	"github.com/p4tin/goaws/app"
-	"github.com/p4tin/goaws/app/common"
+	"github.com/archa347/goaws/app"
+	"github.com/archa347/goaws/app/common"
 )
 
 func init() {
