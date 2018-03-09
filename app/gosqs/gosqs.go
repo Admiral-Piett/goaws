@@ -432,6 +432,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		createErrorResponse(w, req, "QueueNotFound")
+		app.SyncQueues.Unlock()
 		return
 	}
 
