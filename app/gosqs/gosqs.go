@@ -335,9 +335,9 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 	loops := waitTimeSeconds * 10
 	for loops > 0 {
-		app.SyncQueues.Lock()
+		app.SyncQueues.RLock()
 		found := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
-		app.SyncQueues.Unlock()
+		app.SyncQueues.RUnlock()
 		if !found {
 			time.Sleep(100 * time.Millisecond)
 			loops--
@@ -396,13 +396,11 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 	num := 0
-	app.SyncQueues.Lock()
 	for i := range queue.Messages {
 		if queue.Messages[i].ReceiptHandle != "" {
 			num++
 		}
 	}
-	app.SyncQueues.Unlock()
 	return num
 }
 
@@ -725,7 +723,9 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
 		attribs = append(attribs, attr)
+		app.SyncQueues.RLock()
 		attr = app.Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
+		app.SyncQueues.RUnlock()
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
 		attribs = append(attribs, attr)
