@@ -429,13 +429,12 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		createErrorResponse(w, req, "QueueNotFound")
-		app.SyncQueues.Unlock()
 		return
 	}
 
+	app.SyncQueues.Lock()
 	messageFound := false
 	for i := 0; i < len(app.SyncQueues.Queues[queueName].Messages); i++ {
 		queue := app.SyncQueues.Queues[queueName]
