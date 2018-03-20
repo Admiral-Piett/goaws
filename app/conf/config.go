@@ -68,8 +68,7 @@ func LoadYamlConfig(filename string, env string) []string {
 			Arn:                 queueArn,
 			URL:                 queueUrl,
 			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds
-			IsFIFO:              app.HasFIFOQueueName(queue.Name),
-			FIFOSequenceNumbers: make(map[string]int),
+			IsFIFO:           app.HasFIFOQueueName(queue.Name),
 		}
 	}
 
@@ -85,12 +84,11 @@ func LoadYamlConfig(filename string, env string) []string {
 				queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + subs.QueueName
 				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{
-					Name:                subs.QueueName,
-					TimeoutSecs:         30,
-					Arn:                 queueArn,
-					URL:                 queueUrl,
-					IsFIFO:              app.HasFIFOQueueName(subs.QueueName),
-					FIFOSequenceNumbers: make(map[string]int),
+					Name:        subs.QueueName,
+					TimeoutSecs: 30,
+					Arn:         queueArn,
+					URL:         queueUrl,
+					IsFIFO:      app.HasFIFOQueueName(subs.QueueName),
 				}
 			}
 			qArn := app.SyncQueues.Queues[subs.QueueName].Arn

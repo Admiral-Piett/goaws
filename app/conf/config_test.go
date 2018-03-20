@@ -15,20 +15,20 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 
 	numQueues := len(envs[env].Queues)
 	if numQueues != 0 {
-		t.Errorf("Expected zero queues to be in the environment but got %s\n", numQueues)
+		t.Errorf("Expected zero queues to be in the environment but got %d\n", numQueues)
 	}
 	numQueues = len(app.SyncQueues.Queues)
 	if numQueues != 0 {
-		t.Errorf("Expected zero queues to be in the sqs topics but got %s\n", numQueues)
+		t.Errorf("Expected zero queues to be in the sqs topics but got %d\n", numQueues)
 	}
 
 	numTopics := len(envs[env].Topics)
 	if numTopics != 0 {
-		t.Errorf("Expected zero topics to be in the environment but got %s\n", numTopics)
+		t.Errorf("Expected zero topics to be in the environment but got %d\n", numTopics)
 	}
 	numTopics = len(app.SyncTopics.Topics)
 	if numTopics != 0 {
-		t.Errorf("Expected zero topics to be in the sns topics but got %s\n", numTopics)
+		t.Errorf("Expected zero topics to be in the sns topics but got %d\n", numTopics)
 	}
 }
 
@@ -41,25 +41,25 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 
 	numQueues := len(envs[env].Queues)
 	if numQueues != 3 {
-		t.Errorf("Expected three queues to be in the environment but got %s\n", numQueues)
+		t.Errorf("Expected three queues to be in the environment but got %d\n", numQueues)
 	}
 	numQueues = len(app.SyncQueues.Queues)
 	if numQueues != 5 {
-		t.Errorf("Expected five queues to be in the sqs topics but got %s\n", numQueues)
+		t.Errorf("Expected five queues to be in the sqs topics but got %d\n", numQueues)
 	}
 
 	numTopics := len(envs[env].Topics)
 	if numTopics != 2 {
-		t.Errorf("Expected two topics to be in the environment but got %s\n", numTopics)
+		t.Errorf("Expected two topics to be in the environment but got %d\n", numTopics)
 	}
 	numTopics = len(app.SyncTopics.Topics)
 	if numTopics != 2 {
-		t.Errorf("Expected two topics to be in the sns topics but got %s\n", numTopics)
+		t.Errorf("Expected two topics to be in the sns topics but got %d\n", numTopics)
 	}
 
 	numSubscriptions := 2
 	if numSubscriptions != 2 {
-		t.Errorf("Expected two Subscriptions to be in the environment but got %s\n", numTopics)
+		t.Errorf("Expected two Subscriptions to be in the environment but got %d\n", numTopics)
 	}
 
 	receiveWaitTime := app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs

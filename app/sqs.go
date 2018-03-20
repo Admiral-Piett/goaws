@@ -71,3 +71,22 @@ func (q *Queue) NextSequenceNumber(groupId string) string {
 	q.FIFOSequenceNumbers[groupId]++
 	return strconv.Itoa(q.FIFOSequenceNumbers[groupId])
 }
+
+func (q *Queue) IsLocked(groupId string) bool {
+	_, ok := q.FIFOMessages[groupId]
+	return ok
+}
+
+func (q *Queue) LockGroup(groupId string) {
+	if _, ok := q.FIFOMessages[groupId]; !ok {
+		q.FIFOMessages = map[string]int{
+			groupId: 0,
+		}
+	}
+}
+
+func (q *Queue) UnlockGroup(groupId string) {
+	if _, ok := q.FIFOMessages[groupId]; ok {
+		delete(q.FIFOMessages, groupId)
+	}
+}

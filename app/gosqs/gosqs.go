@@ -110,12 +110,11 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &app.Queue{
-			Name:                queueName,
-			URL:                 queueUrl,
-			Arn:                 queueArn,
-			TimeoutSecs:         30,
-			IsFIFO:              app.HasFIFOQueueName(queueName),
-			FIFOSequenceNumbers: make(map[string]int),
+			Name:        queueName,
+			URL:         queueUrl,
+			Arn:         queueArn,
+			TimeoutSecs: 30,
+			IsFIFO:      app.HasFIFOQueueName(queueName),
 		}
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
@@ -395,12 +394,12 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			msg.ReceiptTime = time.Now()
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 
-			// If we got message here it means we have not processed message yet so get next
-			if _, ok := app.SyncQueues.Queues[queueName].FIFOMessages[msg.GroupID]; ok {
+			// If we got message here it means we have not processed it yet, so get next
+			if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
 				continue
 			}
 			// Otherwise lock message for group ID
-			app.SyncQueues.Queues[queueName].FIFOMessages[msg.GroupID] = 0
+			app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 
 			message = append(message, getMessageResult(msg))
 
@@ -569,7 +568,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 			for _, deleteEntry := range deleteEntries {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
 					// Unlock messages for the group
-					delete(app.SyncQueues.Queues[queueName].FIFOMessages, msg.GroupID)
+					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
 					deleteEntry.Deleted = true
@@ -630,7 +629,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				// Unlock messages for the group
-				delete(app.SyncQueues.Queues[queueName].FIFOMessages, msg.GroupID)
+				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
