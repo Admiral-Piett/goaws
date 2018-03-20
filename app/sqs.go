@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,6 +30,7 @@ type Message struct {
 	VisibilityTimeout      time.Time
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
+	GroupID                string
 }
 
 type MessageAttributeValue struct {
@@ -46,9 +49,25 @@ type Queue struct {
 	Messages            []Message
 	DeadLetterQueue     *Queue
 	MaxReceiveCount     int
+	IsFIFO              bool
+	FIFOMessages        map[string]Message
+	FIFOSequenceNumbers map[string]int
 }
 
 var SyncQueues = struct {
 	sync.RWMutex
 	Queues map[string]*Queue
 }{Queues: make(map[string]*Queue)}
+
+func HasFIFOQueueName(queueName string) bool {
+	return strings.HasSuffix(queueName, ".fifo")
+}
+
+func (q *Queue) NextSequenceNumber(groupId string) string {
+	if _, ok := q.FIFOSequenceNumbers[groupId]; !ok {
+		q.FIFOSequenceNumbers[groupId] = 0
+	}
+
+	q.FIFOSequenceNumbers[groupId]++
+	return strconv.Itoa(q.FIFOSequenceNumbers[groupId])
+}
