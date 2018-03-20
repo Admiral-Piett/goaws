@@ -400,7 +400,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				continue
 			}
 			// Otherwise lock message for group ID
-			app.SyncQueues.Queues[queueName].FIFOMessages[msg.GroupID] = *msg
+			app.SyncQueues.Queues[queueName].FIFOMessages[msg.GroupID] = 0
 
 			message = append(message, getMessageResult(msg))
 

@@ -50,7 +50,7 @@ type Queue struct {
 	DeadLetterQueue     *Queue
 	MaxReceiveCount     int
 	IsFIFO              bool
-	FIFOMessages        map[string]Message
+	FIFOMessages        map[string]int
 	FIFOSequenceNumbers map[string]int
 }
 
