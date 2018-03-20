@@ -65,7 +65,9 @@ func HasFIFOQueueName(queueName string) bool {
 
 func (q *Queue) NextSequenceNumber(groupId string) string {
 	if _, ok := q.FIFOSequenceNumbers[groupId]; !ok {
-		q.FIFOSequenceNumbers[groupId] = 0
+		q.FIFOSequenceNumbers = map[string]int{
+			groupId: 0,
+		}
 	}
 
 	q.FIFOSequenceNumbers[groupId]++
