@@ -394,12 +394,14 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			msg.ReceiptTime = time.Now()
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 
-			// If we got message here it means we have not processed it yet, so get next
-			if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
-				continue
+			if app.SyncQueues.Queues[queueName].IsFIFO {
+				// If we got message here it means we have not processed it yet, so get next
+				if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
+					continue
+				}
+				// Otherwise lock message for group ID
+				app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 			}
-			// Otherwise lock message for group ID
-			app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 
 			message = append(message, getMessageResult(msg))
 
