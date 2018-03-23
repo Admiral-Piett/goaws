@@ -47,14 +47,17 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			app.SyncQueues.RLock()
+			app.SyncQueues.Lock()
 			for j := range app.SyncQueues.Queues {
 				queue := app.SyncQueues.Queues[j]
+
+				log.Debugf("Queue [%s] length [%d]", queue.Name, len(queue.Messages))
 				for i := 0; i < len(queue.Messages); i++ {
 					msg := &queue.Messages[i]
 					if msg.ReceiptHandle != "" {
 						if msg.VisibilityTimeout.Before(time.Now()) {
 							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
+							queue.UnlockGroup(msg.GroupID)
 							msg.ReceiptHandle = ""
 							msg.ReceiptTime = time.Time{}
 							msg.Retry++
@@ -69,7 +72,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 					}
 				}
 			}
-			app.SyncQueues.RUnlock()
+			app.SyncQueues.Unlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -570,6 +573,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 			for _, deleteEntry := range deleteEntries {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
 					// Unlock messages for the group
+					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
 					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
@@ -631,6 +635,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				// Unlock messages for the group
+				log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
 				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
