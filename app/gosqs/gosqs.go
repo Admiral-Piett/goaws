@@ -730,7 +730,9 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
 		attribs = append(attribs, attr)
+		app.SyncQueues.RLock()
 		attr = app.Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
+		app.SyncQueues.RUnlock()
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
 		attribs = append(attribs, attr)
