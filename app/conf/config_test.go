@@ -61,4 +61,9 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	if numSubscriptions != 2 {
 		t.Errorf("Expected two Subscriptions to be in the environment but got %s\n", numTopics)
 	}
+
+	receiveWaitTime := app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs
+	if receiveWaitTime != 20 {
+		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %s\n", receiveWaitTime)
+	}
 }

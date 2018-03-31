@@ -10,8 +10,9 @@ Local:                              # Environment name that can be passed on the
   LogMessages: true                 # Log messages (true/false)
   LogFile: ./goaws_messages.log  # Log filename (for message logging
   Queues:                           # List of queues to create at startup
-    - Name: local-queue1            # Queue name
-    - Name: local-queue2            # Queue name
+    - Name: local-queue1                # Queue name
+    - Name: local-queue2                # Queue name
+      ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
   Topics:                           # List of topic to create at startup
     - Name: local-topic1            # Topic name - with some Subscriptions
       Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)

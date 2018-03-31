@@ -14,7 +14,7 @@ All SNS/SQS APIs have been implemented except:
 Here is a list of the APIs:
  - [x] ListQueues
  - [x] CreateQueue
- - [x] GetQueueAttributes (Always returns all attributes - depth and arn are set correctly others are mocked)
+ - [x] GetQueueAttributes (Always returns all attributes - unsupporterd arttributes are mocked)
  - [x] GetQueueUrl
  - [x] SendMessage
  - [x] SendMessageBatch
@@ -28,9 +28,15 @@ Here is a list of the APIs:
  - [ ] ListDeadLetterSourceQueues
  - [ ] ListQueueTags
  - [ ] RemovePermission
- - [ ] SetQueueAttributes
+ - [x] SetQueueAttributes (Only supported attributes are set - see Supported Queue Attributes)
  - [ ] TagQueue
  - [ ] UntagQueue
+
+## Supported Queue Attributes
+
+ - [x] VisibilityTimeout
+ - [x] ReceiveMessageWaitTimeSeconds
+ - [x] RedrivePolicy
 
 ## Current SNS APIs implemented:
 
@@ -49,7 +55,7 @@ Here is a list of the APIs:
  - [x] Read config file
  - [x] -config flag to read a specific configuration file (e.g.: -config=myconfig.yaml)
  - [x] a command line argument to determine the environment to use in the config file (e.e.: Dev)
- - [x] IN the config file to can create Queues, Topic and Subscription see the example config file in the conf directory
+ - [x] IN the config file you can create Queues, Topic and Subscription see the example config file in the conf directory
 
 ## Debug logging can be turned on via a command line flag (e.g.: -debug)
 
