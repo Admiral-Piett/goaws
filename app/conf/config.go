@@ -62,7 +62,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queue.Name
 		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queue.Name
-		app.SyncQueues.Queues[queue.Name] = &app.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueArn, URL: queueUrl}
+		app.SyncQueues.Queues[queue.Name] = &app.Queue{Name: queue.Name, TimeoutSecs: 30, Arn: queueArn, URL: queueUrl, ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds}
 	}
 
 	for _, topic := range envs[env].Topics {
@@ -78,8 +78,8 @@ func LoadYamlConfig(filename string, env string) []string {
 				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{Name: subs.QueueName, TimeoutSecs: 30, Arn: queueArn, URL: queueUrl}
 			}
-			qUrl := app.SyncQueues.Queues[subs.QueueName].URL
-			newSub := &app.Subscription{EndPoint: qUrl, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
+			qArn := app.SyncQueues.Queues[subs.QueueName].Arn
+			newSub := &app.Subscription{EndPoint: qArn, Protocol: "sqs", TopicArn: topicArn, Raw: subs.Raw}
 			subArn, _ := common.NewUUID()
 			subArn = topicArn + ":" + subArn
 			newSub.SubscriptionArn = subArn

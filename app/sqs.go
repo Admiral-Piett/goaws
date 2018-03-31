@@ -38,13 +38,14 @@ type MessageAttributeValue struct {
 }
 
 type Queue struct {
-	Name            string
-	URL             string
-	Arn             string
-	TimeoutSecs     int
-	Messages        []Message
-	DeadLetterQueue *Queue
-	MaxReceiveCount int
+	Name                string
+	URL                 string
+	Arn                 string
+	TimeoutSecs         int
+	ReceiveWaitTimeSecs int
+	Messages            []Message
+	DeadLetterQueue     *Queue
+	MaxReceiveCount     int
 }
 
 var SyncQueues = struct {
