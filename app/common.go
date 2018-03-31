@@ -12,7 +12,8 @@ type EnvTopic struct {
 }
 
 type EnvQueue struct {
-	Name string
+	Name                          string
+	ReceiveMessageWaitTimeSeconds int
 }
 
 type Environment struct {
