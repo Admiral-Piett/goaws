@@ -115,7 +115,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			Arn:         queueArn,
 			TimeoutSecs: 30,
 		}
-		if err := validateQueueAttributes(queue, req.Form); err != nil {
+		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
 			return
 		}
@@ -332,6 +332,12 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	var message []*app.ResultMessage
 	//	respMsg := ResultMessage{}
 	respStruct := app.ReceiveMessageResponse{}
+
+	if waitTimeSeconds == 0 {
+		app.SyncQueues.RLock()
+		waitTimeSeconds = app.SyncQueues.Queues[queueName].ReceiveWaitTimeSecs
+		app.SyncQueues.RUnlock()
+	}
 
 	loops := waitTimeSeconds * 10
 	for loops > 0 {
@@ -712,6 +718,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Get Queue Attributes:", queueName)
+	app.SyncQueues.RLock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		// Create, encode/xml and send response
 		attribs := make([]app.Attribute, 0, 0)
@@ -719,7 +726,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "DelaySeconds", Value: "0"}
 		attribs = append(attribs, attr)
-		attr = app.Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: "0"}
+		attr = app.Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: strconv.Itoa(queue.ReceiveWaitTimeSecs)}
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
 		attribs = append(attribs, attr)
@@ -734,6 +741,13 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attr = app.Attribute{Name: "QueueArn", Value: queue.Arn}
 		attribs = append(attribs, attr)
 
+		deadLetterTargetArn := ""
+		if queue.DeadLetterQueue != nil {
+			deadLetterTargetArn = queue.DeadLetterQueue.Name
+		}
+		attr = app.Attribute{Name: "RedrivePolicy", Value: fmt.Sprintf(`{"maxReceiveCount": "%d", "deadLetterTargetArn":"%s"}`, queue.MaxReceiveCount, deadLetterTargetArn)}
+		attribs = append(attribs, attr)
+
 		result := app.GetQueueAttributesResult{Attrs: attribs}
 		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 		enc := xml.NewEncoder(w)
@@ -745,17 +759,44 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
+	app.SyncQueues.RUnlock()
 }
 
 func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
-	log.Println("setQueueAttributes was called but it's not implemented")
-	respStruct := app.SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-		createErrorResponse(w, req, "GeneralError")
+	// Sent response type
+	w.Header().Set("Content-Type", "application/xml")
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+
+	queueName := ""
+	if queueUrl == "" {
+		vars := mux.Vars(req)
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
 	}
+
+	log.Println("Set Queue Attributes:", queueName)
+	app.SyncQueues.Lock()
+	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
+		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+			createErrorResponse(w, req, err.Error())
+			app.SyncQueues.Unlock()
+			return
+		}
+
+		respStruct := app.SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			log.Printf("error: %v\n", err)
+		}
+	} else {
+		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		createErrorResponse(w, req, "QueueNotFound")
+	}
+	app.SyncQueues.Unlock()
 }
 
 func getMessageResult(m *app.Message) *app.ResultMessage {

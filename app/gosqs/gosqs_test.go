@@ -838,3 +838,139 @@ func TestDeadLetterQueue(t *testing.T) {
 	}
 
 }
+
+func TestReceiveMessageWaitTimeEnforced(t *testing.T) {
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "waiting-queue")
+	form.Add("Attribute.1.Name", "ReceiveMessageWaitTimeSeconds")
+	form.Add("Attribute.1.Value", "2")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// receive message ensure delay
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/waiting-queue")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+
+	start := time.Now()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+	elapsed := time.Since(start)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); ok {
+		t.Fatal("handler should not return a message")
+	}
+	if elapsed < 2*time.Second {
+		t.Fatal("handler didn't wait ReceiveMessageWaitTimeSeconds")
+	}
+
+	// send a message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/waiting-queue")
+	form.Add("MessageBody", "1")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// receive message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/waiting-queue")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+
+	start = time.Now()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+	elapsed = time.Since(start)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+		t.Fatal("handler should return a message")
+	}
+	if elapsed > 1*time.Second {
+		t.Fatal("handler waited when message was available, expected not to wait")
+	}
+}
+
+func TestSetQueueAttributes_POST_QueueNotFound(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "SetQueueAttributes")
+	form.Add("QueueUrl", "http://localhost:4100/queue/not-existing")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SetQueueAttributes)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	// Check the response body is what we expect.
+	expected := "NonExistentQueue"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
