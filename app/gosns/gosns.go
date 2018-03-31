@@ -321,7 +321,7 @@ func CreateMessageBody(msg string, subject string, topicArn string, protocol str
 	message.MessageId = msgId
 	message.TopicArn = topicArn
 	t := time.Now()
-	message.Timestamp = fmt.Sprintln(t.Format("2006-01-02T15:04:05.001Z"))
+	message.Timestamp = fmt.Sprint(t.Format("2006-01-02T15:04:05.001Z"))
 
 	byteMsg, _ := json.Marshal(message)
 	return byteMsg, nil
