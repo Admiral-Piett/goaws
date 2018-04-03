@@ -67,8 +67,8 @@ func LoadYamlConfig(filename string, env string) []string {
 			TimeoutSecs:         30,
 			Arn:                 queueArn,
 			URL:                 queueUrl,
-			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds
-			IsFIFO:           app.HasFIFOQueueName(queue.Name),
+			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
+			IsFIFO:              app.HasFIFOQueueName(queue.Name),
 		}
 	}
 
