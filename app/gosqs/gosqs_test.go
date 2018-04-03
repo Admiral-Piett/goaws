@@ -140,6 +140,53 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 }
 
+func TestCreateFIFOQueuehandler_POST_CreateQueue(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	queueName := "UnitTestQueue1.fifo"
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "UnitTestQueue1.fifo")
+	form.Add("Attribute.1.Name", "VisibilityTimeout")
+	form.Add("Attribute.1.Value", "60")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(CreateQueue)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := queueName
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+	expectedQueue := &app.Queue{
+		Name:        queueName,
+		URL:         "http://:/queue/" + queueName,
+		Arn:         "arn:aws:sqs::000000000000:" + queueName,
+		TimeoutSecs: 60,
+		IsFIFO:      true,
+	}
+	actualQueue := app.SyncQueues.Queues[queueName]
+	if !reflect.DeepEqual(expectedQueue, actualQueue) {
+		t.Fatalf("expected %+v, got %+v", expectedQueue, actualQueue)
+	}
+}
+
 func TestSendQueue_POST_NonExistant(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -377,6 +424,54 @@ func TestSendMessageBatch_POST_Success(t *testing.T) {
 	form.Add("SendMessageBatchRequestEntry.1.Id", "test_msg_001")
 	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "test%20message%20body%201")
 	form.Add("SendMessageBatchRequestEntry.2.Id", "test_msg_002")
+	form.Add("SendMessageBatchRequestEntry.2.MessageBody", "test%20message%20body%202")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Name", "test_attribute_name_1")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.StringValue", "test_attribute_value_1")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.DataType", "String")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SendMessageBatch)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := "<MD5OfMessageBody>1c538b76fce1a234bce865025c02b042</MD5OfMessageBody>"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestSendMessageBatchToFIFOQueue_POST_Success(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["testing.fifo"] = &app.Queue{
+		Name:   "testing.fifo",
+		IsFIFO: true,
+	}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessageBatch")
+	form.Add("QueueUrl", "http://localhost:4100/queue/testing.fifo")
+	form.Add("SendMessageBatchRequestEntry.1.Id", "test_msg_001")
+	form.Add("SendMessageBatchRequestEntry.1.MessageGroupId", "GROUP-X")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "test%20message%20body%201")
+	form.Add("SendMessageBatchRequestEntry.2.Id", "test_msg_002")
+	form.Add("SendMessageBatchRequestEntry.2.MessageGroupId", "GROUP-X")
 	form.Add("SendMessageBatchRequestEntry.2.MessageBody", "test%20message%20body%202")
 	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Name", "test_attribute_name_1")
 	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.StringValue", "test_attribute_value_1")
@@ -973,4 +1068,201 @@ func TestSetQueueAttributes_POST_QueueNotFound(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
+}
+
+func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "requeue-reset.fifo")
+	form.Add("Attribute.1.Name", "VisibilityTimeout")
+	form.Add("Attribute.1.Value", "2")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// send a message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+	form.Add("MessageBody", "1")
+	form.Add("MessageGroupId", "GROUP-X")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// send a message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+	form.Add("MessageBody", "2")
+	form.Add("MessageGroupId", "GROUP-X")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// receive message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+		t.Fatal("handler should return a message")
+	}
+
+	resp := app.ReceiveMessageResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+	receiptHandleFirst := resp.Result.Message[0].ReceiptHandle
+	if string(resp.Result.Message[0].Body) != "1" {
+		t.Fatalf("should have received body 1: %s", err)
+	}
+
+	// try to receive another message and we should get none
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); ok {
+		t.Fatal("handler should not return a message")
+	}
+
+	if len(app.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages) != 1 {
+		t.Fatal("there should be only 1 group locked")
+	}
+
+	if app.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages["GROUP-X"] != 0 {
+		t.Fatal("there should be GROUP-X locked")
+	}
+
+	// remove message
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "DeleteMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+	form.Add("ReceiptHandle", receiptHandleFirst)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(DeleteMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["requeue-reset.fifo"].Messages) != 1 {
+		t.Fatal("there should be only 1 message in queue")
+	}
+
+	// receive message - loop until visibility timeouts
+	for {
+		req, err = http.NewRequest("POST", "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		form = url.Values{}
+		form.Add("Action", "ReceiveMessage")
+		form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset.fifo")
+		form.Add("Version", "2012-11-05")
+		req.PostForm = form
+
+		rr = httptest.NewRecorder()
+		http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got \n%v want %v",
+				status, http.StatusOK)
+		}
+		if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+			continue
+		}
+
+		resp = app.ReceiveMessageResponse{}
+		err = xml.Unmarshal(rr.Body.Bytes(), &resp)
+		if err != nil {
+			t.Fatalf("unexpected unmarshal error: %s", err)
+		}
+		if string(resp.Result.Message[0].Body) != "2" {
+			t.Fatalf("should have received body 2: %s", err)
+		}
+		break
+	}
+
+	done <- struct{}{}
 }

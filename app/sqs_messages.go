@@ -28,6 +28,7 @@ type SendMessageResult struct {
 	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
 	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
 	MessageId              string `xml:"MessageId"`
+	SequenceNumber         string `xml:"SequenceNumber"`
 }
 
 type SendMessageResponse struct {
@@ -88,6 +89,7 @@ type SendMessageBatchResultEntry struct {
 	MessageId              string `xml:"MessageId"`
 	MD5OfMessageBody       string `xml:"MD5OfMessageBody,omitempty"`
 	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes,omitempty"`
+	SequenceNumber         string `xml:"SequenceNumber"`
 }
 
 type BatchResultErrorEntry struct {

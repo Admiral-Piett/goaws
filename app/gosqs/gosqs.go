@@ -47,14 +47,17 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			app.SyncQueues.RLock()
+			app.SyncQueues.Lock()
 			for j := range app.SyncQueues.Queues {
 				queue := app.SyncQueues.Queues[j]
+
+				log.Debugf("Queue [%s] length [%d]", queue.Name, len(queue.Messages))
 				for i := 0; i < len(queue.Messages); i++ {
 					msg := &queue.Messages[i]
 					if msg.ReceiptHandle != "" {
 						if msg.VisibilityTimeout.Before(time.Now()) {
 							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
+							queue.UnlockGroup(msg.GroupID)
 							msg.ReceiptHandle = ""
 							msg.ReceiptTime = time.Time{}
 							msg.Retry++
@@ -69,7 +72,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 					}
 				}
 			}
-			app.SyncQueues.RUnlock()
+			app.SyncQueues.Unlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -114,6 +117,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			URL:         queueUrl,
 			Arn:         queueArn,
 			TimeoutSecs: 30,
+			IsFIFO:      app.HasFIFOQueueName(queueName),
 		}
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
@@ -135,6 +139,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
+	messageGroupID := req.FormValue("MessageGroupId")
 	messageAttributes := extractMessageAttributes(req, "")
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
@@ -160,20 +165,26 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 	msg.MessageAttributes = messageAttributes
 	msg.Uuid, _ = common.NewUUID()
+	msg.GroupID = messageGroupID
 
 	app.SyncQueues.Lock()
+	fifoSeqNumber := ""
+	if app.SyncQueues.Queues[queueName].IsFIFO {
+		fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(messageGroupID)
+	}
 	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 	app.SyncQueues.Unlock()
 	common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
 
 	respStruct := app.SendMessageResponse{
-		"http://queue.amazonaws.com/doc/2012-11-05/",
-		app.SendMessageResult{
+		Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result: app.SendMessageResult{
 			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
 			MD5OfMessageBody:       msg.MD5OfMessageBody,
 			MessageId:              msg.Uuid,
+			SequenceNumber:         fifoSeqNumber,
 		},
-		app.ResponseMetadata{
+		Metadata: app.ResponseMetadata{
 			RequestId: "00000000-0000-0000-0000-000000000000",
 		},
 	}
@@ -186,9 +197,11 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 }
 
 type SendEntry struct {
-	Id                string
-	MessageBody       string
-	MessageAttributes map[string]app.MessageAttributeValue
+	Id                     string
+	MessageBody            string
+	MessageAttributes      map[string]app.MessageAttributeValue
+	MessageGroupId         string
+	MessageDeduplicationId string
 }
 
 func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
@@ -240,6 +253,10 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 				sendEntries[keyIndex-1].MessageBody = v[0]
 			}
 
+			if keySegments[2] == "MessageGroupId" {
+				sendEntries[keyIndex-1].MessageGroupId = v[0]
+			}
+
 			if keySegments[2] == "MessageAttribute" {
 				sendEntries[keyIndex-1].MessageAttributes = extractMessageAttributes(req, strings.Join(keySegments[0:2], "."))
 			}
@@ -273,8 +290,13 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 			msg.MD5OfMessageAttributes = hashAttributes(sendEntry.MessageAttributes)
 		}
 		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
+		msg.GroupID = sendEntry.MessageGroupId
 		msg.Uuid, _ = common.NewUUID()
 		app.SyncQueues.Lock()
+		fifoSeqNumber := ""
+		if app.SyncQueues.Queues[queueName].IsFIFO {
+			fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(sendEntry.MessageGroupId)
+		}
 		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 		app.SyncQueues.Unlock()
 		se := app.SendMessageBatchResultEntry{
@@ -282,6 +304,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 			MessageId:              msg.Uuid,
 			MD5OfMessageBody:       msg.MD5OfMessageBody,
 			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
+			SequenceNumber:         fifoSeqNumber,
 		}
 		sentEntries = append(sentEntries, se)
 		common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
@@ -373,6 +396,16 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			msg.ReceiptHandle = msg.Uuid + "#" + uuid
 			msg.ReceiptTime = time.Now()
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+
+			if app.SyncQueues.Queues[queueName].IsFIFO {
+				// If we got message here it means we have not processed it yet, so get next
+				if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
+					continue
+				}
+				// Otherwise lock message for group ID
+				app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
+			}
+
 			message = append(message, getMessageResult(msg))
 
 			numMsg++
@@ -539,6 +572,9 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			for _, deleteEntry := range deleteEntries {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
+					// Unlock messages for the group
+					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
+					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
 					deleteEntry.Deleted = true
@@ -598,6 +634,9 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
+				// Unlock messages for the group
+				log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
+				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
