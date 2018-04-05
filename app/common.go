@@ -16,16 +16,22 @@ type EnvQueue struct {
 	ReceiveMessageWaitTimeSeconds int
 }
 
+type EnvQueueAttributes struct {
+	VisibilityTimeout             int
+	ReceiveMessageWaitTimeSeconds int
+}
+
 type Environment struct {
-	Host        string
-	Port        string
-	SqsPort     string
-	SnsPort     string
-	Region      string
-	LogMessages bool
-	LogFile     string
-	Topics      []EnvTopic
-	Queues      []EnvQueue
+	Host                   string
+	Port                   string
+	SqsPort                string
+	SnsPort                string
+	Region                 string
+	LogMessages            bool
+	LogFile                string
+	Topics                 []EnvTopic
+	Queues                 []EnvQueue
+	QueueAttributeDefaults EnvQueueAttributes
 }
 
 var CurrentEnvironment Environment
