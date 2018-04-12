@@ -113,11 +113,12 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &app.Queue{
-			Name:        queueName,
-			URL:         queueUrl,
-			Arn:         queueArn,
-			TimeoutSecs: 30,
-			IsFIFO:      app.HasFIFOQueueName(queueName),
+			Name:                queueName,
+			URL:                 queueUrl,
+			Arn:                 queueArn,
+			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			IsFIFO:              app.HasFIFOQueueName(queueName),
 		}
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
