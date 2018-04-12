@@ -17,7 +17,11 @@ type Subscription struct {
 	SubscriptionArn string
 	EndPoint        string
 	Raw             bool
+	FilterPolicy    *FilterPolicy
 }
+
+// only simple "ExactMatch" string policy is supported at the moment
+type FilterPolicy map[string][]string
 
 type Topic struct {
 	Name          string
