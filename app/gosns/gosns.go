@@ -295,6 +295,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	subject := req.FormValue("Subject")
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
+	messageAttributes := getMessageAttributesFromRequest(req)
 
 	arnSegments := strings.Split(topicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
@@ -304,6 +305,10 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 		log.Println("Publish to Topic:", topicName)
 		for _, subs := range app.SyncTopics.Topics[topicName].Subscriptions {
 			if app.Protocol(subs.Protocol) == app.ProtocolSQS {
+
+				if subs.FilterPolicy != nil && !subs.FilterPolicy.IsSatisfiedBy(messageAttributes) {
+					continue
+				}
 
 				endPoint := subs.EndPoint
 				uriSegments := strings.Split(endPoint, "/")
@@ -349,6 +354,20 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uuid, _ := common.NewUUID()
 	respStruct := app.PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.PublishResult{MessageId: msgId}, app.ResponseMetadata{RequestId: uuid}}
 	SendResponseBack(w, req, respStruct, content)
+}
+
+func getMessageAttributesFromRequest(req *http.Request) *app.TopicMessageAttributes {
+	messageAttributes := &app.TopicMessageAttributes{}
+	for i := 1; i <= 10; i++ {
+		messageAttributeName := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Name", i))
+		if messageAttributeName == "" {
+			break
+		}
+
+		(*messageAttributes)[messageAttributeName] = req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
+	}
+
+	return messageAttributes
 }
 
 type TopicMessage struct {
