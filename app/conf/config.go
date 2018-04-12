@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"encoding/json"
 	"github.com/ghodss/yaml"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -27,7 +28,7 @@ func LoadYamlConfig(filename string, env string) []string {
 
 	err = yaml.Unmarshal(yamlFile, &envs)
 	if err != nil {
-		log.Printf("err: %v\n", err)
+		log.Errorf("err: %v\n", err)
 		return ports
 	}
 	if env == "" {
@@ -96,6 +97,17 @@ func LoadYamlConfig(filename string, env string) []string {
 			subArn, _ := common.NewUUID()
 			subArn = topicArn + ":" + subArn
 			newSub.SubscriptionArn = subArn
+
+			if subs.FilterPolicy != "" {
+				filterPolicy := &app.FilterPolicy{}
+				err = json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return ports
+				}
+				newSub.FilterPolicy = filterPolicy
+			}
+
 			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
 		app.SyncTopics.Topics[topic.Name] = newTopic
