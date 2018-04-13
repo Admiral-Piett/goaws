@@ -49,6 +49,14 @@ Here is a list of the APIs:
  - [x] Subscribe
  - [x] Unsubscribe
  - [X] ListSubscriptionsByTopic
+ - [x] GetSubscriptionAttributes
+ - [x] SetSubscriptionAttributes (Only supported attributes are set - see Supported Subscription Attributes)
+
+## Supported Subscription Attributes
+
+  - [x] RawMessageDelivery
+  - [x] FilterPolicy (Only supported simplest "exact match" filter policy)
+
 
 ## Yaml Configuration Implemented
 
