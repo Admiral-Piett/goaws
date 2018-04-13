@@ -25,6 +25,7 @@ type Subscription struct {
 // only simple "ExactMatch" string policy is supported at the moment
 type FilterPolicy map[string][]string
 
+// Function checks if MessageAttributes passed to Topic satisfy FilterPolicy set by subscription
 func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs *TopicMessageAttributes) bool {
 	for policyAttrName, policyAttrValues := range *fp {
 		attrValue, ok := (*msgAttrs)[policyAttrName]
