@@ -58,14 +58,23 @@ func LoadYamlConfig(filename string, env string) []string {
 		}
 	}
 
+	if app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout == 0 {
+		app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
+	}
+
 	app.SyncQueues.Lock()
 	app.SyncTopics.Lock()
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queue.Name
 		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queue.Name
+
+		if queue.ReceiveMessageWaitTimeSeconds == 0 {
+			queue.ReceiveMessageWaitTimeSeconds = app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
+		}
+
 		app.SyncQueues.Queues[queue.Name] = &app.Queue{
 			Name:                queue.Name,
-			TimeoutSecs:         30,
+			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
 			Arn:                 queueArn,
 			URL:                 queueUrl,
 			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
@@ -85,11 +94,12 @@ func LoadYamlConfig(filename string, env string) []string {
 				queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + subs.QueueName
 				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{
-					Name:        subs.QueueName,
-					TimeoutSecs: 30,
-					Arn:         queueArn,
-					URL:         queueUrl,
-					IsFIFO:      app.HasFIFOQueueName(subs.QueueName),
+					Name:                subs.QueueName,
+					TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+					Arn:                 queueArn,
+					URL:                 queueUrl,
+					ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+					IsFIFO:              app.HasFIFOQueueName(subs.QueueName),
 				}
 			}
 			qArn := app.SyncQueues.Queues[subs.QueueName].Arn

@@ -4,6 +4,9 @@ Local:                              # Environment name that can be passed on the
   Port: 4100                        # port to listen on.
   LogMessages: true                 # Log messages (true/false)
   LogFile: ./goaws_messages.log     # Log filename (for message logging
+  QueueAttributeDefaults:           # default attributes for all queues
+    VisibilityTimeout: 10              # message visibility timeout
+    ReceiveMessageWaitTimeSeconds: 10  # receive message max wait time
   Queues:                           # List of queues to create at startup
     - Name: local-queue1                # Queue name
     - Name: local-queue2                # Queue name
@@ -26,3 +29,13 @@ NoQueuesOrTopics:                                # Another environment
   LogFile: ./goaws_messages.log
   Region: eu-west-1
 
+NoQueueAttributeDefaults:
+  Host: localhost
+  Port: 4100
+  LogMessages: true
+  LogFile: ./goaws_messages.log
+  Region: eu-west-1
+  Queues:
+    - Name: local-queue1
+    - Name: local-queue2
+      ReceiveMessageWaitTimeSeconds: 20
