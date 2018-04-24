@@ -236,9 +236,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	subject := req.FormValue("Subject")
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
-	fmt.Printf("\n\n%+v\n", req.Form)
 	attributes := extractMessageAttributes(req)
-	fmt.Printf("\n\n%+v\n", attributes)
 
 	arnSegments := strings.Split(topicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
