@@ -236,6 +236,9 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	subject := req.FormValue("Subject")
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
+	fmt.Printf("\n\n%+v\n", req.Form)
+	attributes := extractMessageAttributes(req)
+	fmt.Printf("\n\n%+v\n", attributes)
 
 	arnSegments := strings.Split(topicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
@@ -264,6 +267,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 						msg.MessageBody = m
 					} else {
+						msg.MessageAttributes = attributes
 						msg.MessageBody = []byte(messageBody)
 					}
 
@@ -290,6 +294,37 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uuid, _ := common.NewUUID()
 	respStruct := app.PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.PublishResult{MessageId: msgId}, app.ResponseMetadata{RequestId: uuid}}
 	SendResponseBack(w, req, respStruct, content)
+}
+
+func extractMessageAttributes(req *http.Request) map[string]app.MessageAttributeValue {
+	attributes := make(map[string]app.MessageAttributeValue)
+
+	for i := 1; true; i++ {
+		name := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Name", i))
+		if name == "" {
+			break
+		}
+
+		dataType := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.DataType", i))
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
+
+		// StringListValue and BinaryListValue is currently not implemented
+		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
+			value := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.%s", i, valueKey))
+			if value != "" {
+				attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+			}
+		}
+
+		if _, ok := attributes[name]; !ok {
+			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+		}
+	}
+
+	return attributes
 }
 
 type TopicMessage struct {
