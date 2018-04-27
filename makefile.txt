@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := run
-VERSION=1.0.2
+VERSION=1.0.3
 GITHUB_API_KEY = ${GITHUBB_API_KEY}
 APIJSON='{"tag_name": "$(VERSION)","target_commitish": "master","name": "$(VERSION)","body": "Release of version  $(VERSION)","draft": true,"prerelease": true}'
 
