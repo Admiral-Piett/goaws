@@ -2,8 +2,9 @@ package app
 
 /*** config ***/
 type EnvSubsciption struct {
-	QueueName string
-	Raw       bool
+	QueueName    string
+	Raw          bool
+	FilterPolicy string
 }
 
 type EnvTopic struct {

@@ -25,6 +25,8 @@ func init() {
 	app.SnsErrors["SubscriptionNotFound"] = err2
 	err3 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."}
 	app.SnsErrors["TopicExists"] = err3
+	err4 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.ValidationError", Message: "The input fails to satisfy the constraints specified by an AWS service."}
+	app.SnsErrors["ValidationError"] = err4
 }
 
 func ListTopics(w http.ResponseWriter, req *http.Request) {
@@ -174,6 +176,63 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 					SendResponseBack(w, req, respStruct, content)
 					return
 				}
+
+				if Attribute == "FilterPolicy" {
+					filterPolicy := &app.FilterPolicy{}
+					err := json.Unmarshal([]byte(Value), filterPolicy)
+					if err != nil {
+						createErrorResponse(w, req, "ValidationError")
+						return
+					}
+
+					app.SyncTopics.Lock()
+					sub.FilterPolicy = filterPolicy
+					app.SyncTopics.Unlock()
+
+					//Good Response == return
+					uuid, _ := common.NewUUID()
+					respStruct := app.SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
+					SendResponseBack(w, req, respStruct, content)
+					return
+				}
+
+			}
+		}
+	}
+	createErrorResponse(w, req, "SubscriptionNotFound")
+}
+
+func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
+
+	content := req.FormValue("ContentType")
+	subsArn := req.FormValue("SubscriptionArn")
+
+	for _, topic := range app.SyncTopics.Topics {
+		for _, sub := range topic.Subscriptions {
+			if sub.SubscriptionArn == subsArn {
+
+				entries := make([]app.SubscriptionAttributeEntry, 0, 0)
+				entry := app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "Protocol", Value: sub.Protocol}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "Endpoint", Value: sub.EndPoint}
+				entries = append(entries, entry)
+
+				if sub.FilterPolicy != nil {
+					filterPolicyBytes, _ := json.Marshal(sub.FilterPolicy)
+					entry = app.SubscriptionAttributeEntry{Key: "FilterPolicy", Value: string(filterPolicyBytes)}
+					entries = append(entries, entry)
+				}
+
+				result := app.GetSubscriptionAttributesResult{SubscriptionAttributes: app.SubscriptionAttributes{Entries: entries}}
+				uuid, _ := common.NewUUID()
+				respStruct := app.GetSubscriptionAttributesResponse{"http://sns.amazonaws.com/doc/2010-03-31", result, app.ResponseMetadata{RequestId: uuid}}
+
+				SendResponseBack(w, req, respStruct, content)
+
+				return
+
 			}
 		}
 	}
@@ -236,6 +295,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	subject := req.FormValue("Subject")
 	messageBody := req.FormValue("Message")
 	messageStructure := req.FormValue("MessageStructure")
+	messageAttributes := getMessageAttributesFromRequest(req)
 
 	arnSegments := strings.Split(topicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
@@ -245,6 +305,10 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 		log.Println("Publish to Topic:", topicName)
 		for _, subs := range app.SyncTopics.Topics[topicName].Subscriptions {
 			if app.Protocol(subs.Protocol) == app.ProtocolSQS {
+
+				if subs.FilterPolicy != nil && !subs.FilterPolicy.IsSatisfiedBy(messageAttributes) {
+					continue
+				}
 
 				endPoint := subs.EndPoint
 				uriSegments := strings.Split(endPoint, "/")
@@ -290,6 +354,20 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	uuid, _ := common.NewUUID()
 	respStruct := app.PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.PublishResult{MessageId: msgId}, app.ResponseMetadata{RequestId: uuid}}
 	SendResponseBack(w, req, respStruct, content)
+}
+
+func getMessageAttributesFromRequest(req *http.Request) *app.TopicMessageAttributes {
+	messageAttributes := &app.TopicMessageAttributes{}
+	for i := 1; i <= 10; i++ {
+		messageAttributeName := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Name", i))
+		if messageAttributeName == "" {
+			break
+		}
+
+		(*messageAttributes)[messageAttributeName] = req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
+	}
+
+	return messageAttributes
 }
 
 type TopicMessage struct {
