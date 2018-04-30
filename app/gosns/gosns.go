@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -328,6 +327,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 
 						msg.MessageBody = m
 					} else {
+						msg.MessageAttributes = messageAttributes
 						msg.MessageBody = []byte(messageBody)
 					}
 
@@ -356,18 +356,35 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	SendResponseBack(w, req, respStruct, content)
 }
 
-func getMessageAttributesFromRequest(req *http.Request) *app.TopicMessageAttributes {
-	messageAttributes := &app.TopicMessageAttributes{}
-	for i := 1; i <= 10; i++ {
-		messageAttributeName := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Name", i))
-		if messageAttributeName == "" {
+func getMessageAttributesFromRequest(req *http.Request) map[string]app.MessageAttributeValue {
+	attributes := make(map[string]app.MessageAttributeValue)
+
+	for i := 1; true; i++ {
+		name := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Name", i))
+		if name == "" {
 			break
 		}
 
-		(*messageAttributes)[messageAttributeName] = req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
+		dataType := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.DataType", i))
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
+
+		// StringListValue and BinaryListValue is currently not implemented
+		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
+			value := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.%s", i, valueKey))
+			if value != "" {
+				attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+			}
+		}
+
+		if _, ok := attributes[name]; !ok {
+			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+		}
 	}
 
-	return messageAttributes
+	return attributes
 }
 
 type TopicMessage struct {

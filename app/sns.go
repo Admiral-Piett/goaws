@@ -26,14 +26,21 @@ type Subscription struct {
 type FilterPolicy map[string][]string
 
 // Function checks if MessageAttributes passed to Topic satisfy FilterPolicy set by subscription
-func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs *TopicMessageAttributes) bool {
+func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs map[string]MessageAttributeValue) bool {
 	for policyAttrName, policyAttrValues := range *fp {
-		attrValue, ok := (*msgAttrs)[policyAttrName]
+		attrValue, ok := msgAttrs[policyAttrName]
 		if !ok {
 			return false // the attribute has to be present in the message
 		}
 
-		if !stringInSlice(attrValue, policyAttrValues) {
+		// String, String.Array, Number data-types are allowed by SNS filter policies
+		// however go-AWS currently only supports String filter policies. That feature can be added here
+		// ref: https://docs.aws.amazon.com/sns/latest/dg/message-filtering.html
+		if attrValue.DataType != "String" {
+			return false
+		}
+
+		if !stringInSlice(attrValue.Value, policyAttrValues) {
 			return false // the attribute value has to be among filtered ones
 		}
 	}

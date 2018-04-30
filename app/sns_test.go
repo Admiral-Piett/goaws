@@ -1,41 +1,49 @@
 package app
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestFilterPolicy_IsSatisfiedBy(t *testing.T) {
 	var tests = []struct {
 		filterPolicy      *FilterPolicy
-		messageAttributes *TopicMessageAttributes
+		messageAttributes map[string]MessageAttributeValue
 		expected          bool
 	}{
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			&TopicMessageAttributes{"foo": "bar"},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "bar"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}},
-			&TopicMessageAttributes{"foo": "xyz"},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "xyz"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}, "abc": {"def"}},
-			&TopicMessageAttributes{"foo": "xyz", "abc": "def"},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "xyz"},
+				"abc": MessageAttributeValue{DataType: "String", Value: "def"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			&TopicMessageAttributes{"foo": "baz"},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "baz"}},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			&TopicMessageAttributes{},
+			map[string]MessageAttributeValue{},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}, "abc": {"def"}},
-			&TopicMessageAttributes{"foo": "bar"},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "bar"}},
+			false,
+		},
+		{
+			&FilterPolicy{"foo": {"bar"}},
+			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "Binary", Value: "bar"}},
 			false,
 		},
 	}
