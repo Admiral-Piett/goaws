@@ -1,13 +1,14 @@
 package gosns
 
 import (
-	"github.com/p4tin/goaws/app"
-	"github.com/p4tin/goaws/app/common"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/p4tin/goaws/app"
+	"github.com/p4tin/goaws/app/common"
 )
 
 func TestListTopicshandler_POST_NoTopics(t *testing.T) {
@@ -221,6 +222,7 @@ func TestPublishHandler_POST_FilterPolicyPassesTheMessage(t *testing.T) {
 	form.Add("TopicArn", topicArn)
 	form.Add("Message", "TestMessage1")
 	form.Add("MessageAttributes.entry.1.Name", "foo")              // special format of parameter for MessageAttribute
+	form.Add("MessageAttributes.entry.1.Value.DataType", "String") // Datatype must be specified for proper parsing by aws
 	form.Add("MessageAttributes.entry.1.Value.StringValue", "bar") // we actually sent attribute `foo` to be equal `baz`
 	req.PostForm = form
 
