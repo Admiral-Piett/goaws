@@ -100,6 +100,6 @@ func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
 
 	filterPolicy := app.SyncTopics.Topics["local-topic1"].Subscriptions[1].FilterPolicy
 	if (*filterPolicy)["foo"][0] != "bar" {
-		t.Errorf("Expected FilterPolicy subscription on local-topic1 to be: bar but got %d\n", (*filterPolicy)["foo"][0])
+		t.Errorf("Expected FilterPolicy subscription on local-topic1 to be: bar but got %s\n", (*filterPolicy)["foo"][0])
 	}
 }
