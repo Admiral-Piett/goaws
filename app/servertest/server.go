@@ -7,6 +7,10 @@ import (
 	"sync"
 
 	"github.com/p4tin/goaws/app/router"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/p4tin/goaws/app"
+	"strings"
 )
 
 // Server is a fake SQS / SNS server for testing purposes.
@@ -36,8 +40,18 @@ func New(addr string) (*Server, error) {
 	if addr == "" {
 		addr = "localhost:0"
 	}
+	localURL := strings.Split(addr, ":")
+	app.CurrentEnvironment.Host = localURL[0]
+	app.CurrentEnvironment.Port = localURL[1]
+	log.WithFields(log.Fields{
+		"host": app.CurrentEnvironment.Host,
+		"port": app.CurrentEnvironment.Port,
+	}).Info("URL Sarting to listen")
 
 	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot listen on localhost: %v", err)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("cannot listen on localhost: %v", err)
 	}

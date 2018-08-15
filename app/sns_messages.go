@@ -41,6 +41,13 @@ type SubscribeResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
+/*** ConfirmSubscriptionResponse ***/
+type ConfirmSubscriptionResponse struct {
+	Xmlns    string           `xml:"xmlns,attr"`
+	Result   SubscribeResult  `xml:"ConfirmSubscriptionResult"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+}
+
 /***  Set Subscription Response ***/
 
 type SetSubscriptionAttributesResponse struct {

@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	sns "github.com/p4tin/goaws/app/gosns"
 	sqs "github.com/p4tin/goaws/app/gosqs"
+	"fmt"
 )
 
 // New returns a new router
@@ -17,6 +18,8 @@ func New() http.Handler {
 
 	r.HandleFunc("/", actionHandler).Methods("GET", "POST")
 	r.HandleFunc("/queue/{queueName}", actionHandler).Methods("GET", "POST")
+	r.HandleFunc("/SimpleNotificationService/{id}.pem", pemHandler).Methods("GET")
+	r.HandleFunc("/health", health).Methods("GET")
 
 	return r
 }
@@ -42,6 +45,7 @@ var routingTable = map[string]http.HandlerFunc{
 	"CreateTopic":               sns.CreateTopic,
 	"DeleteTopic":               sns.DeleteTopic,
 	"Subscribe":                 sns.Subscribe,
+	"ConfirmSubscription":       sns.ConfirmSubscription,
 	"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
@@ -50,7 +54,17 @@ var routingTable = map[string]http.HandlerFunc{
 	"Publish":                   sns.Publish,
 }
 
+func health(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(200)
+	fmt.Fprint(w, "OK")
+}
+
 func actionHandler(w http.ResponseWriter, req *http.Request) {
+	log.WithFields(
+		log.Fields{
+			"action": req.FormValue("Action"),
+			"url":    req.URL,
+		}).Debug("Handling URL request")
 	fn, ok := routingTable[req.FormValue("Action")]
 	if !ok {
 		log.Println("Bad Request - Action:", req.FormValue("Action"))
@@ -60,4 +74,9 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.HandlerFunc(fn).ServeHTTP(w, req)
+}
+
+func pemHandler(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write(sns.PemKEY)
 }
