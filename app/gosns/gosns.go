@@ -11,6 +11,7 @@ import (
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
+	"github.com/p4tin/goaws/app/gosqs"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -328,10 +329,10 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 						msg.MessageBody = m
 					} else {
 						msg.MessageAttributes = messageAttributes
+						msg.MD5OfMessageAttributes = gosqs.HashAttributes(messageAttributes)
 						msg.MessageBody = []byte(messageBody)
 					}
 
-					msg.MD5OfMessageAttributes = common.GetMD5Hash("GoAws")
 					msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 					msg.Uuid, _ = common.NewUUID()
 					app.SyncQueues.Lock()

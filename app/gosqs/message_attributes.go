@@ -66,7 +66,7 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageA
 	}
 }
 
-func hashAttributes(attributes map[string]app.MessageAttributeValue) string {
+func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
 	hasher := md5.New()
 
 	keys := sortedKeys(attributes)
