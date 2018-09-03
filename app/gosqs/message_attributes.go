@@ -1,17 +1,10 @@
 package gosqs
 
 import (
-	"crypto/md5"
-	"encoding/base64"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
-	"hash"
-	"net/http"
-	"sort"
-
 	"github.com/p4tin/goaws/app"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 func extractMessageAttributes(req *http.Request, prefix string) map[string]app.MessageAttributeValue {
@@ -64,47 +57,4 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageA
 		Name:  a.Name,
 		Value: v,
 	}
-}
-
-func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
-	hasher := md5.New()
-
-	keys := sortedKeys(attributes)
-	for _, key := range keys {
-		attributeValue := attributes[key]
-
-		addStringToHash(hasher, key)
-		addStringToHash(hasher, attributeValue.DataType)
-		if attributeValue.ValueKey == "StringValue" {
-			hasher.Write([]byte{1})
-			addStringToHash(hasher, attributeValue.Value)
-		} else if attributeValue.ValueKey == "BinaryValue" {
-			hasher.Write([]byte{2})
-			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.Value)
-			addBytesToHash(hasher, bytes)
-		}
-	}
-
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func sortedKeys(attributes map[string]app.MessageAttributeValue) []string {
-	var keys []string
-	for key, _ := range attributes {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func addStringToHash(hasher hash.Hash, str string) {
-	bytes := []byte(str)
-	addBytesToHash(hasher, bytes)
-}
-
-func addBytesToHash(hasher hash.Hash, arr []byte) {
-	bs := make([]byte, 4)
-	binary.BigEndian.PutUint32(bs, uint32(len(arr)))
-	hasher.Write(bs)
-	hasher.Write(arr)
 }

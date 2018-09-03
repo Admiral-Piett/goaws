@@ -164,7 +164,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
 		msg.MessageAttributes = messageAttributes
-		msg.MD5OfMessageAttributes = HashAttributes(messageAttributes)
+		msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
 	}
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 	msg.Uuid, _ = common.NewUUID()
@@ -290,7 +290,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
 			msg.MessageAttributes = sendEntry.MessageAttributes
-			msg.MD5OfMessageAttributes = HashAttributes(sendEntry.MessageAttributes)
+			msg.MD5OfMessageAttributes = common.HashAttributes(sendEntry.MessageAttributes)
 		}
 		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
 		msg.GroupID = sendEntry.MessageGroupId
