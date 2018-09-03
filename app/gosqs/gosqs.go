@@ -162,9 +162,11 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("Putting Message in Queue:", queueName)
 	msg := app.Message{MessageBody: []byte(messageBody)}
-	msg.MD5OfMessageAttributes = hashAttributes(messageAttributes)
+	if len(messageAttributes) > 0 {
+		msg.MessageAttributes = messageAttributes
+		msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
+	}
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-	msg.MessageAttributes = messageAttributes
 	msg.Uuid, _ = common.NewUUID()
 	msg.GroupID = messageGroupID
 
@@ -288,7 +290,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
 			msg.MessageAttributes = sendEntry.MessageAttributes
-			msg.MD5OfMessageAttributes = hashAttributes(sendEntry.MessageAttributes)
+			msg.MD5OfMessageAttributes = common.HashAttributes(sendEntry.MessageAttributes)
 		}
 		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
 		msg.GroupID = sendEntry.MessageGroupId

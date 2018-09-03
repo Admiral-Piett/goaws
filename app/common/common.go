@@ -3,12 +3,17 @@ package common
 import (
 	"crypto/md5"
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/p4tin/goaws/app"
+	"hash"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 )
 
 var LogMessages bool
@@ -44,4 +49,47 @@ func LogMessage(msg string) {
 	if LogMessages == true {
 		ioutil.WriteFile(LogFile, []byte(msg), 0644)
 	}
+}
+
+func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
+	hasher := md5.New()
+
+	keys := sortedKeys(attributes)
+	for _, key := range keys {
+		attributeValue := attributes[key]
+
+		addStringToHash(hasher, key)
+		addStringToHash(hasher, attributeValue.DataType)
+		if attributeValue.ValueKey == "StringValue" {
+			hasher.Write([]byte{1})
+			addStringToHash(hasher, attributeValue.Value)
+		} else if attributeValue.ValueKey == "BinaryValue" {
+			hasher.Write([]byte{2})
+			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.Value)
+			addBytesToHash(hasher, bytes)
+		}
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func sortedKeys(attributes map[string]app.MessageAttributeValue) []string {
+	var keys []string
+	for key, _ := range attributes {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func addStringToHash(hasher hash.Hash, str string) {
+	bytes := []byte(str)
+	addBytesToHash(hasher, bytes)
+}
+
+func addBytesToHash(hasher hash.Hash, arr []byte) {
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(len(arr)))
+	hasher.Write(bs)
+	hasher.Write(arr)
 }
