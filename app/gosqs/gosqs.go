@@ -572,8 +572,8 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
-			for _, deleteEntry := range deleteEntries {
+		for _, deleteEntry := range deleteEntries {
+			for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
 					// Unlock messages for the group
 					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
@@ -583,6 +583,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 					deleteEntry.Deleted = true
 					deletedEntry := app.DeleteMessageBatchResultEntry{Id: deleteEntry.Id}
 					deletedEntries = append(deletedEntries, deletedEntry)
+					break
 				}
 			}
 		}
