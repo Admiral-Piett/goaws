@@ -1,11 +1,13 @@
 package gosns
 
 import (
+	"github.com/gorilla/mux"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -290,7 +292,19 @@ func TestSubscribehandler_POST_Success(t *testing.T) {
 	}
 }
 
-func TestSubscribehandler_HTTP_POST_Success(t *testing.T){
+func TestSubscribehandler_HTTP_POST_Success(t *testing.T) {
+	done := make(chan bool)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/sns_post", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		close(done)
+
+	}))
+
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
 	req, err := http.NewRequest("POST", "/", nil)
@@ -301,12 +315,15 @@ func TestSubscribehandler_HTTP_POST_Success(t *testing.T){
 	form := url.Values{}
 	form.Add("TopicArn", "arn:aws:sns:local:000000000000:UnitTestTopic1")
 	form.Add("Protocol", "http")
-	form.Add("Endpoint", "http://localhost:4100/sns_post")
+	form.Add("Endpoint", ts.URL+"/sns_post")
 	req.PostForm = form
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
+
 	handler := http.HandlerFunc(Subscribe)
+
+	// Create ResponseRecorder for http side
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -319,10 +336,16 @@ func TestSubscribehandler_HTTP_POST_Success(t *testing.T){
 	}
 
 	// Check the response body is what we expect.
-	expected := "</SubscriptionResult>"
+	expected := "</SubscribeResponse>"
 	if !strings.Contains(rr.Body.String(), expected) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("http sns handler must be called")
 	}
 }
 
