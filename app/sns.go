@@ -13,6 +13,26 @@ type SnsErrorType struct {
 
 var SnsErrors map[string]SnsErrorType
 
+type MsgAttr struct {
+	Type  string
+	Value string
+}
+type SNSMessage struct {
+	Type              string
+	Token             string `json:"Token",omitempty`
+	MessageId         string
+	TopicArn          string
+	Subject           string
+	Message           string
+	Timestamp         string
+	SignatureVersion  string
+	Signature         string `json:"Signature",omitempty`
+	SigningCertURL    string
+	UnsubscribeURL    string
+	SubscribeURL      string             `json:"SubscribeURL",omitempty`
+	MessageAttributes map[string]MsgAttr `json:"MessageAttributes",omitempty`
+}
+
 type Subscription struct {
 	TopicArn        string
 	Protocol        string
@@ -66,11 +86,13 @@ type Topic struct {
 type TopicMessageAttributes map[string]string
 
 type (
-	Protocol         string
+	Protocol string
 	MessageStructure string
 )
 
 const (
+	ProtocolHTTP    Protocol = "http"
+	ProtocolHTTPS   Protocol = "https"
 	ProtocolSQS     Protocol = "sqs"
 	ProtocolDefault Protocol = "default"
 )
