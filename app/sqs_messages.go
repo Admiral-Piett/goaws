@@ -46,6 +46,7 @@ type ResultMessage struct {
 	Body                   []byte                    `xml:"Body,omitempty"`
 	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty"`
 	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
+	Attributes             []*ResultAttribute        `xml:"Attribute,omitempty"`
 }
 
 type ResultMessageAttributeValue struct {
@@ -57,6 +58,11 @@ type ResultMessageAttributeValue struct {
 type ResultMessageAttribute struct {
 	Name  string                       `xml:"Name,omitempty"`
 	Value *ResultMessageAttributeValue `xml:"Value,omitempty"`
+}
+
+type ResultAttribute struct {
+	Name  string `xml:"Name,omitempty"`
+	Value string `xml:"Value,omitempty"`
 }
 
 type ReceiveMessageResult struct {

@@ -843,9 +843,22 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 }
 
 func getMessageResult(m *app.Message) *app.ResultMessage {
-	attrs := []*app.ResultMessageAttribute{}
+	msgMttrs := []*app.ResultMessageAttribute{}
 	for _, attr := range m.MessageAttributes {
-		attrs = append(attrs, getMessageAttributeResult(&attr))
+		msgMttrs = append(msgMttrs, getMessageAttributeResult(&attr))
+	}
+
+	attrsMap := map[string]string{
+		"SenderId":                "foo",
+		"ApproximateReceiveCount": "4",
+	}
+
+	var attrs []*app.ResultAttribute
+	for k, v := range attrsMap {
+		attrs = append(attrs, &app.ResultAttribute{
+			Name:  k,
+			Value: v,
+		})
 	}
 
 	return &app.ResultMessage{
@@ -854,7 +867,8 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 		ReceiptHandle:          m.ReceiptHandle,
 		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
 		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
-		MessageAttributes:      attrs,
+		MessageAttributes:      msgMttrs,
+		Attributes:             attrs,
 	}
 }
 
