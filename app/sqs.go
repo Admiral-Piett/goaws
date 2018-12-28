@@ -28,6 +28,7 @@ type Message struct {
 	ReceiptHandle          string
 	ReceiptTime            time.Time
 	VisibilityTimeout      time.Time
+	NumberOfReceives       int
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 	GroupID                string

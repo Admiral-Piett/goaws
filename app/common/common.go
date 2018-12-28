@@ -7,13 +7,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/p4tin/goaws/app"
 	"hash"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"sort"
+
+	"github.com/p4tin/goaws/app"
 )
 
 var LogMessages bool

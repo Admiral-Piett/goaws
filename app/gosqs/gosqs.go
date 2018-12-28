@@ -59,7 +59,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
 							queue.UnlockGroup(msg.GroupID)
 							msg.ReceiptHandle = ""
-							msg.ReceiptTime = time.Time{}
+							msg.ReceiptTime = time.Now().UTC()
 							msg.Retry++
 							if queue.MaxReceiveCount > 0 &&
 								queue.DeadLetterQueue != nil &&
@@ -107,8 +107,8 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
 	host := app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port
-	queueUrl := "http://" + host + "/queue/" + queueName
-	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queueName
+	queueUrl := "http://" + host + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
@@ -355,7 +355,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var message []*app.ResultMessage
+	var messages []*app.ResultMessage
 	//	respMsg := ResultMessage{}
 	respStruct := app.ReceiveMessageResponse{}
 
@@ -383,7 +383,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
-		message = make([]*app.ResultMessage, 0)
+		messages = make([]*app.ResultMessage, 0)
 		for i := range app.SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
@@ -397,28 +397,28 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 			msg := &app.SyncQueues.Queues[queueName].Messages[i]
 			msg.ReceiptHandle = msg.Uuid + "#" + uuid
-			msg.ReceiptTime = time.Now()
+			msg.ReceiptTime = time.Now().UTC()
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 
 			if app.SyncQueues.Queues[queueName].IsFIFO {
-				// If we got message here it means we have not processed it yet, so get next
+				// If we got messages here it means we have not processed it yet, so get next
 				if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
 					continue
 				}
-				// Otherwise lock message for group ID
+				// Otherwise lock messages for group ID
 				app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 			}
 
-			message = append(message, getMessageResult(msg))
+			messages = append(messages, getMessageResult(msg))
 
 			numMsg++
 		}
 
-		//		respMsg = ResultMessage{MessageId: message.Uuid, ReceiptHandle: message.ReceiptHandle, MD5OfBody: message.MD5OfMessageBody, Body: message.MessageBody, MD5OfMessageAttributes: message.MD5OfMessageAttributes}
+		//		respMsg = ResultMessage{MessageId: messages.Uuid, ReceiptHandle: messages.ReceiptHandle, MD5OfBody: messages.MD5OfMessageBody, Body: messages.MessageBody, MD5OfMessageAttributes: messages.MD5OfMessageAttributes}
 		respStruct = app.ReceiveMessageResponse{
 			"http://queue.amazonaws.com/doc/2012-11-05/",
 			app.ReceiveMessageResult{
-				Message: message,
+				Message: messages,
 			},
 			app.ResponseMetadata{
 				RequestId: "00000000-0000-0000-0000-000000000000",
@@ -482,7 +482,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		if msgs[i].ReceiptHandle == receiptHandle {
 			timeout := app.SyncQueues.Queues[queueName].TimeoutSecs
 			if visibilityTimeout == 0 {
-				msgs[i].ReceiptTime = time.Time{}
+				msgs[i].ReceiptTime = time.Now().UTC()
 				msgs[i].ReceiptHandle = ""
 				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(timeout) * time.Second)
 				msgs[i].Retry++
@@ -849,8 +849,10 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 	}
 
 	attrsMap := map[string]string{
-		"SenderId":                "foo",
-		"ApproximateReceiveCount": "4",
+		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.Unix()),
+		"SenderId":                         app.CurrentEnvironment.AccountID,
+		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
+		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().Unix()),
 	}
 
 	var attrs []*app.ResultAttribute

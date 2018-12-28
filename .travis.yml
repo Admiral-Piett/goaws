@@ -3,7 +3,7 @@ language: go
 go_import_path: github.com/p4tin/goaws
 
 go:
-  - 1.7
   - 1.9.2
+  - 1.11.4
   
 script: go test -v -cover -race ./app/...

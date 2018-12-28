@@ -83,10 +83,8 @@ type Topic struct {
 	Subscriptions []*Subscription
 }
 
-type TopicMessageAttributes map[string]string
-
 type (
-	Protocol string
+	Protocol         string
 	MessageStructure string
 )
 
