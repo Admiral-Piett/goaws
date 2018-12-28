@@ -2,9 +2,10 @@ package gosqs
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/p4tin/goaws/app"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 func extractMessageAttributes(req *http.Request, prefix string) map[string]app.MessageAttributeValue {
@@ -50,6 +51,8 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageA
 	case "Binary":
 		v.BinaryValue = a.Value
 	case "String":
+		v.StringValue = a.Value
+	case "Number":
 		v.StringValue = a.Value
 	}
 

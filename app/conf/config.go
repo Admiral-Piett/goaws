@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"encoding/json"
+
 	"github.com/ghodss/yaml"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -65,8 +66,8 @@ func LoadYamlConfig(filename string, env string) []string {
 	app.SyncQueues.Lock()
 	app.SyncTopics.Lock()
 	for _, queue := range envs[env].Queues {
-		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queue.Name
-		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queue.Name
+		queueUrl := "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
+		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queue.Name
 
 		if queue.ReceiveMessageWaitTimeSeconds == 0 {
 			queue.ReceiveMessageWaitTimeSeconds = app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
@@ -83,7 +84,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	}
 
 	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topic.Name
+		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
 
 		newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
 		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
@@ -91,8 +92,8 @@ func LoadYamlConfig(filename string, env string) []string {
 		for _, subs := range topic.Subscriptions {
 			if _, ok := app.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
-				queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + subs.QueueName
-				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + subs.QueueName
+				queueUrl := "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + subs.QueueName
+				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{
 					Name:                subs.QueueName,
 					TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,

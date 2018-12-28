@@ -3,13 +3,15 @@ package gosns
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/p4tin/goaws/app"
 )
 
 const (
-	testArn              = "arn:aws:sns:local:000000000000:UnitTestTopic1"
-	messageKey           = "Message"
-	subjectKey           = "Subject"
-	messageStructureJSON = "json"
+	messageKey            = "Message"
+	subjectKey            = "Subject"
+	messageStructureJSON  = "json"
+	messageStructureEmpty = ""
 )
 
 // When simple message string is passed,
@@ -17,14 +19,19 @@ const (
 func TestCreateMessageBody_NonJson(t *testing.T) {
 	message := "message text"
 	subject := "subject"
-	protocol := "sqs"
+	subs := &app.Subscription{
+		Protocol:        "sqs",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
 
-	snsMessage, err := CreateMessageBody(message, subject, testArn, protocol, "")
+	snsMessage, err := CreateMessageBody(subs, message, subject, messageStructureEmpty, make(map[string]app.MessageAttributeValue))
 	if err != nil {
 		t.Fatalf(`error creating SNS message: %s`, err)
 	}
 
-	var unmarshalled map[string]string
+	var unmarshalled map[string]interface{}
 	err = json.Unmarshal(snsMessage, &unmarshalled)
 	if err != nil {
 		t.Fatalf(`error unmarshalling SNS message "%s": %s`, snsMessage, err)
@@ -52,16 +59,21 @@ func TestCreateMessageBody_NonJson(t *testing.T) {
 // When no protocol specific message is passed,
 // default message must be forwarded
 func TestCreateMessageBody_OnlyDefaultValueInJson(t *testing.T) {
+	subs := &app.Subscription{
+		Protocol:        "sqs",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
 	message := `{"default": "default message text", "http": "HTTP message text"}`
 	subject := "subject"
-	protocol := "sqs"
 
-	snsMessage, err := CreateMessageBody(message, subject, testArn, protocol, messageStructureJSON)
+	snsMessage, err := CreateMessageBody(subs, message, subject, messageStructureJSON, nil)
 	if err != nil {
 		t.Fatalf(`error creating SNS message: %s`, err)
 	}
 
-	var unmarshalled map[string]string
+	var unmarshalled map[string]interface{}
 	err = json.Unmarshal(snsMessage, &unmarshalled)
 	if err != nil {
 		t.Fatalf(`error unmarshalling SNS message "%s": %s`, snsMessage, err)
@@ -90,11 +102,16 @@ func TestCreateMessageBody_OnlyDefaultValueInJson(t *testing.T) {
 // When only protocol specific message is passed,
 // error must be returned
 func TestCreateMessageBody_OnlySqsValueInJson(t *testing.T) {
+	subs := &app.Subscription{
+		Protocol:        "sqs",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
 	message := `{"sqs": "message text"}`
 	subject := "subject"
-	protocol := "sqs"
 
-	snsMessage, err := CreateMessageBody(message, subject, testArn, protocol, messageStructureJSON)
+	snsMessage, err := CreateMessageBody(subs, message, subject, messageStructureJSON, nil)
 	if err == nil {
 		t.Fatalf(`error expected but instead SNS message was returned: %s`, snsMessage)
 	}
@@ -103,16 +120,21 @@ func TestCreateMessageBody_OnlySqsValueInJson(t *testing.T) {
 // when both default and protocol specific messages are passed,
 // protocol specific message must be used
 func TestCreateMessageBody_BothDefaultAndSqsValuesInJson(t *testing.T) {
+	subs := &app.Subscription{
+		Protocol:        "sqs",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
 	message := `{"default": "default message text", "sqs": "sqs message text"}`
 	subject := "subject"
-	protocol := "sqs"
 
-	snsMessage, err := CreateMessageBody(message, subject, testArn, protocol, messageStructureJSON)
+	snsMessage, err := CreateMessageBody(subs, message, subject, messageStructureJSON, nil)
 	if err != nil {
 		t.Fatalf(`error creating SNS message: %s`, err)
 	}
 
-	var unmarshalled map[string]string
+	var unmarshalled map[string]interface{}
 	err = json.Unmarshal(snsMessage, &unmarshalled)
 	if err != nil {
 		t.Fatalf(`error unmarshalling SNS message "%s": %s`, snsMessage, err)
@@ -141,16 +163,21 @@ func TestCreateMessageBody_BothDefaultAndSqsValuesInJson(t *testing.T) {
 // When simple message string is passed,
 // it must be used as is (even if it contains JSON)
 func TestCreateMessageBody_NonJsonContainingJson(t *testing.T) {
+	subs := &app.Subscription{
+		Protocol:        "sns",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
 	message := `{"default": "default message text", "sqs": "sqs message text"}`
 	subject := "subject"
-	protocol := "sqs"
 
-	snsMessage, err := CreateMessageBody(message, subject, testArn, protocol, "")
+	snsMessage, err := CreateMessageBody(subs, message, subject, "", nil)
 	if err != nil {
 		t.Fatalf(`error creating SNS message: %s`, err)
 	}
 
-	var unmarshalled map[string]string
+	var unmarshalled map[string]interface{}
 	err = json.Unmarshal(snsMessage, &unmarshalled)
 	if err != nil {
 		t.Fatalf(`error unmarshalling SNS message "%s": %s`, snsMessage, err)

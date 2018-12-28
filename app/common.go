@@ -28,6 +28,7 @@ type Environment struct {
 	SqsPort                string
 	SnsPort                string
 	Region                 string
+	AccountID              string
 	LogMessages            bool
 	LogFile                string
 	Topics                 []EnvTopic

@@ -18,11 +18,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"io/ioutil"
+	"math/big"
+
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"math/big"
 )
 
 type pendingConfirm struct {
@@ -515,7 +516,7 @@ func publishSQS(w http.ResponseWriter, req *http.Request,
 		msg := app.Message{}
 
 		if subs.Raw == false {
-			m, err := CreateMessageBody(messageBody, subject, topicArn, subs.Protocol, messageStructure)
+			m, err := CreateMessageBody(subs, messageBody, subject, messageStructure, messageAttributes)
 			if err != nil {
 				createErrorResponse(w, req, err.Error())
 				return
@@ -666,24 +667,25 @@ func getMessageAttributesFromRequest(req *http.Request) map[string]app.MessageAt
 	return attributes
 }
 
-type TopicMessage struct {
-	Type      string
-	MessageId string
-	TopicArn  string
-	Subject   string
-	Message   string
-	Timestamp string
-}
+func CreateMessageBody(subs *app.Subscription, msg string, subject string, messageStructure string,
+	messageAttributes map[string]app.MessageAttributeValue) ([]byte, error) {
 
-func CreateMessageBody(msg string, subject string, topicArn string, protocol string, messageStructure string) ([]byte, error) {
 	msgId, _ := common.NewUUID()
 
-	message := TopicMessage{}
-	message.Type = "Notification"
-	message.Subject = subject
+	message := app.SNSMessage{
+		Type:              "Notification",
+		MessageId:         msgId,
+		TopicArn:          subs.TopicArn,
+		Subject:           subject,
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		SignatureVersion:  "1",
+		SigningCertURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + msgId + ".pem",
+		UnsubscribeURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
+		MessageAttributes: formatAttributes(messageAttributes),
+	}
 
 	if app.MessageStructure(messageStructure) == app.MessageStructureJSON {
-		m, err := extractMessageFromJSON(msg, protocol)
+		m, err := extractMessageFromJSON(msg, subs.Protocol)
 		if err != nil {
 			return nil, err
 		}
@@ -692,10 +694,12 @@ func CreateMessageBody(msg string, subject string, topicArn string, protocol str
 		message.Message = msg
 	}
 
-	message.MessageId = msgId
-	message.TopicArn = topicArn
-	t := time.Now()
-	message.Timestamp = fmt.Sprint(t.Format("2006-01-02T15:04:05.001Z"))
+	signature, err := signMessage(PrivateKEY, &message)
+	if err != nil {
+		log.Error(err)
+	} else {
+		message.Signature = signature
+	}
 
 	byteMsg, _ := json.Marshal(message)
 	return byteMsg, nil
