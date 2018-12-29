@@ -107,7 +107,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
 	host := app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port
-	queueUrl := "http://" + app.CurrentEnvironment.Region + "." + host + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	queueUrl := "http://sqs." + app.CurrentEnvironment.Region + "." + host + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
