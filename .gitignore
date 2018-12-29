@@ -1,6 +1,7 @@
 .idea
 
 vendor/
+deployments/
 
 goaws
 goaws_linux_amd64
