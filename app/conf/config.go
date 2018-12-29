@@ -40,14 +40,14 @@ func LoadYamlConfig(filename string, env string) []string {
 		app.CurrentEnvironment.Region = "local"
 	}
 
+	app.CurrentEnvironment = envs[env]
+
 	if envs[env].Port != "" {
 		ports = []string{envs[env].Port}
 	} else if envs[env].SqsPort != "" && envs[env].SnsPort != "" {
 		ports = []string{envs[env].SqsPort, envs[env].SnsPort}
 		app.CurrentEnvironment.Port = envs[env].SqsPort
 	}
-
-	app.CurrentEnvironment = envs[env]
 
 	common.LogMessages = false
 	common.LogFile = "./goaws_messages.log"
