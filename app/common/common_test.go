@@ -2,6 +2,9 @@ package common
 
 import (
 	"testing"
+
+	"github.com/p4tin/goaws/app"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUUID_alwaysgood(t *testing.T) {
@@ -23,4 +26,15 @@ func TestGetMD5Hash(t *testing.T) {
 	if hash1 == hash2 {
 		t.Errorf("hashs and hash2 are the same, but should not be")
 	}
+}
+
+func TestSortedKeys(t *testing.T) {
+	attributes := map[string]app.MessageAttributeValue{
+		"b": {},
+		"a": {},
+	}
+
+	keys := sortedKeys(attributes)
+	assert.Equal(t, "a", keys[0])
+	assert.Equal(t, "b", keys[1])
 }

@@ -63,10 +63,24 @@ func LoadYamlConfig(filename string, env string) []string {
 		app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
 	}
 
+	if app.CurrentEnvironment.AccountID == "" {
+		app.CurrentEnvironment.AccountID = "queue"
+	}
+
+	if app.CurrentEnvironment.Host == "" {
+		app.CurrentEnvironment.Host = "localhost"
+		app.CurrentEnvironment.Port = "4100"
+	}
+
 	app.SyncQueues.Lock()
 	app.SyncTopics.Lock()
 	for _, queue := range envs[env].Queues {
-		queueUrl := "http://sqs." + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
+		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
+			"/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
+		if app.CurrentEnvironment.Region != "" {
+			queueUrl = "http://sqs." + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
+				app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
+		}
 		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queue.Name
 
 		if queue.ReceiveMessageWaitTimeSeconds == 0 {
@@ -92,7 +106,12 @@ func LoadYamlConfig(filename string, env string) []string {
 		for _, subs := range topic.Subscriptions {
 			if _, ok := app.SyncQueues.Queues[subs.QueueName]; !ok {
 				//Queue does not exist yet, create it.
-				queueUrl := "http://sqs." + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + subs.QueueName
+				queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
+					"/" + app.CurrentEnvironment.AccountID + "/" + subs.QueueName
+				if app.CurrentEnvironment.Region != "" {
+					queueUrl = "http://sqs." + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
+						app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + subs.QueueName
+				}
 				queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + subs.QueueName
 				app.SyncQueues.Queues[subs.QueueName] = &app.Queue{
 					Name:                subs.QueueName,
