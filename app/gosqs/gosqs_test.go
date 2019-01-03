@@ -130,7 +130,7 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 	expectedQueue := &app.Queue{
 		Name:        queueName,
-		URL:         "http://sqs..://" + queueName,
+		URL:         "http://://" + queueName,
 		Arn:         "arn:aws:sqs:::" + queueName,
 		TimeoutSecs: 60,
 	}
@@ -176,7 +176,7 @@ func TestCreateFIFOQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 	expectedQueue := &app.Queue{
 		Name:        queueName,
-		URL:         "http://sqs..://" + queueName,
+		URL:         "http://://" + queueName,
 		Arn:         "arn:aws:sqs:::" + queueName,
 		TimeoutSecs: 60,
 		IsFIFO:      true,

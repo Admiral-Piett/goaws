@@ -106,8 +106,13 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	queueName := req.FormValue("QueueName")
-	host := app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port
-	queueUrl := "http://sqs." + app.CurrentEnvironment.Region + "." + host + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+
+	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
+		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	if app.CurrentEnvironment.Region != "" {
+		queueUrl = "http://sqs." + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
+			app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	}
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
@@ -177,7 +182,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	}
 	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 	app.SyncQueues.Unlock()
-	common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
+	log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 
 	respStruct := app.SendMessageResponse{
 		Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
@@ -310,7 +315,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 			SequenceNumber:         fifoSeqNumber,
 		}
 		sentEntries = append(sentEntries, se)
-		common.LogMessage(fmt.Sprintf("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody))
+		log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 	}
 
 	respStruct := app.SendMessageBatchResponse{

@@ -9,9 +9,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
 	"sort"
 
 	"github.com/p4tin/goaws/app"
@@ -37,19 +34,6 @@ func GetMD5Hash(text string) string {
 	hasher := md5.New()
 	hasher.Write([]byte(text))
 	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func LogMessage(msg string) {
-	if _, err := os.Stat(LogFile); os.IsNotExist(err) {
-		_, err := os.Create("/tmp/dat2")
-		if err != nil {
-			log.Println("could not create log file:", LogFile)
-			return
-		}
-	}
-	if LogMessages == true {
-		ioutil.WriteFile(LogFile, []byte(msg), 0644)
-	}
 }
 
 func HashAttributes(attributes map[string]app.MessageAttributeValue) string {

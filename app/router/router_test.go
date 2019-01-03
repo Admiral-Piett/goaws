@@ -58,3 +58,35 @@ func TestIndexServerhandler_POST_GoodRequest(t *testing.T) {
 			status, http.StatusOK)
 	}
 }
+
+func TestIndexServerhandler_POST_GoodRequest_With_URL(t *testing.T) {
+
+	req, err := http.NewRequest("POST", "/100010001000/local-queue1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "local-queue1")
+	req.PostForm = form
+	rr := httptest.NewRecorder()
+	New().ServeHTTP(rr, req)
+
+	form = url.Values{}
+	form.Add("Action", "GetQueueAttributes")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr = httptest.NewRecorder()
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	New().ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
