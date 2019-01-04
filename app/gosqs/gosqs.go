@@ -54,6 +54,15 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 				log.Debugf("Queue [%s] length [%d]", queue.Name, len(queue.Messages))
 				for i := 0; i < len(queue.Messages); i++ {
 					msg := &queue.Messages[i]
+
+					// Reset deduplication period
+					for dedupId, startTime := range queue.Duplicates {
+						if time.Now().After(startTime.Add(app.DeduplicationPeriod)) {
+							log.Debugf("deduplication period for message with deduplicationId [%s] expired", dedupId)
+							delete(queue.Duplicates, dedupId)
+						}
+					}
+
 					if msg.ReceiptHandle != "" {
 						if msg.VisibilityTimeout.Before(time.Now()) {
 							log.Debugf("Making message visible again %s", msg.ReceiptHandle)
@@ -124,6 +133,8 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
 			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
 			IsFIFO:              app.HasFIFOQueueName(queueName),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
 		}
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
@@ -146,6 +157,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	messageBody := req.FormValue("MessageBody")
 	messageGroupID := req.FormValue("MessageGroupId")
+	messageDeduplicationID := req.FormValue("MessageDeduplicationId")
 	messageAttributes := extractMessageAttributes(req, "")
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
@@ -174,6 +186,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
 	msg.Uuid, _ = common.NewUUID()
 	msg.GroupID = messageGroupID
+	msg.DeduplicationID = messageDeduplicationID
 	msg.SentTime = time.Now()
 
 	app.SyncQueues.Lock()
@@ -181,7 +194,14 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	if app.SyncQueues.Queues[queueName].IsFIFO {
 		fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(messageGroupID)
 	}
-	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+
+	if !app.SyncQueues.Queues[queueName].IsDuplicate(messageDeduplicationID) {
+		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+	} else {
+		log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", messageDeduplicationID, queueName)
+	}
+
+	app.SyncQueues.Queues[queueName].InitDuplicatation(messageDeduplicationID)
 	app.SyncQueues.Unlock()
 	log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 
@@ -266,8 +286,12 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 				sendEntries[keyIndex-1].MessageGroupId = v[0]
 			}
 
-			if keySegments[2] == "MessageAttribute" {
-				sendEntries[keyIndex-1].MessageAttributes = extractMessageAttributes(req, strings.Join(keySegments[0:2], "."))
+			if keySegments[2] == "MessageGroupId" {
+				sendEntries[keyIndex-1].MessageGroupId = v[0]
+			}
+
+			if keySegments[2] == "MessageDeduplicationId" {
+				sendEntries[keyIndex-1].MessageDeduplicationId = v[0]
 			}
 		}
 	}
@@ -300,6 +324,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		}
 		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
 		msg.GroupID = sendEntry.MessageGroupId
+		msg.DeduplicationID = sendEntry.MessageDeduplicationId
 		msg.Uuid, _ = common.NewUUID()
 		msg.SentTime = time.Now()
 		app.SyncQueues.Lock()
@@ -307,7 +332,15 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		if app.SyncQueues.Queues[queueName].IsFIFO {
 			fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(sendEntry.MessageGroupId)
 		}
-		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+
+		if !app.SyncQueues.Queues[queueName].IsDuplicate(sendEntry.MessageDeduplicationId) {
+			app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+		} else {
+			log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", sendEntry.MessageDeduplicationId, queueName)
+		}
+
+		app.SyncQueues.Queues[queueName].InitDuplicatation(sendEntry.MessageDeduplicationId)
+
 		app.SyncQueues.Unlock()
 		se := app.SendMessageBatchResultEntry{
 			Id:                     sendEntry.Id,
@@ -602,6 +635,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
 					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
+					delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
 					deleteEntry.Deleted = true
 					deletedEntry := app.DeleteMessageBatchResultEntry{Id: deleteEntry.Id}
@@ -666,6 +700,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
+				delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
 				app.SyncQueues.Unlock()
 				// Create, encode/xml and send response
@@ -731,6 +766,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
 		app.SyncQueues.Queues[queueName].Messages = nil
+		app.SyncQueues.Queues[queueName].Duplicates = make(map[string]time.Time)
 		respStruct := app.PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")

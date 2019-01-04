@@ -10,6 +10,7 @@ Local:                              # Environment name that can be passed on the
   AccountId: "100010001000"
   LogToFile: false                 # Log messages (true/false)
   LogFile: .st/goaws_messages.log  # Log filename (for message logging
+  EnableDuplicates: false           # Enable or not deduplication based on messageDeduplicationId
   QueueAttributeDefaults:           # default attributes for all queues
     VisibilityTimeout: 30              # message visibility timeout
     ReceiveMessageWaitTimeSeconds: 0   # receive message max wait time

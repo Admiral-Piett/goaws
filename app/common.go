@@ -34,6 +34,7 @@ type Environment struct {
 	AccountID              string
 	LogToFile              bool
 	LogFile                string
+	EnableDuplicates       bool
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes
