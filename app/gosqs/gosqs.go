@@ -597,7 +597,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	notFoundEntries := make([]app.BatchResultErrorEntry, 0)
 	for _, deleteEntry := range deleteEntries {
-		if deleteEntry.Deleted == false {
+		if deleteEntry.Deleted {
 			notFoundEntries = append(notFoundEntries, app.BatchResultErrorEntry{
 				Code:        "1",
 				Id:          deleteEntry.Id,
