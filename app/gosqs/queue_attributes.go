@@ -41,39 +41,48 @@ func validateAndSetQueueAttributes(q *app.Queue, u url.Values) error {
 	}
 	strRedrivePolicy := attr["RedrivePolicy"]
 	if strRedrivePolicy != "" {
-		// support both int and string maxReceiveCount (Amazon clients use string)
-		redrivePolicy1 := struct {
-			MaxReceiveCount     int    `json:"maxReceiveCount"`
-			DeadLetterTargetArn string `json:"deadLetterTargetArn"`
-		}{}
-		redrivePolicy2 := struct {
-			MaxReceiveCount     string `json:"maxReceiveCount"`
-			DeadLetterTargetArn string `json:"deadLetterTargetArn"`
-		}{}
-		err1 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy1)
-		err2 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy2)
-		maxReceiveCount := redrivePolicy1.MaxReceiveCount
-		deadLetterQueueArn := redrivePolicy1.DeadLetterTargetArn
-		if err1 != nil && err2 != nil {
-			return ErrInvalidAttributeValue
-		} else if err1 != nil {
-			maxReceiveCount, _ = strconv.Atoi(redrivePolicy2.MaxReceiveCount)
-			deadLetterQueueArn = redrivePolicy2.DeadLetterTargetArn
+		if err := ValidateAndSetRedrivePolicy(q, strRedrivePolicy); err != nil {
+			return err
 		}
-
-		if (deadLetterQueueArn != "" && maxReceiveCount == 0) ||
-			(deadLetterQueueArn == "" && maxReceiveCount != 0) {
-			return ErrInvalidParameterValue
-		}
-		dlt := strings.Split(deadLetterQueueArn, ":")
-		deadLetterQueueName := dlt[len(dlt)-1]
-		deadLetterQueue, ok := app.SyncQueues.Queues[deadLetterQueueName]
-		if !ok {
-			return ErrInvalidParameterValue
-		}
-		q.DeadLetterQueue = deadLetterQueue
-		q.MaxReceiveCount = maxReceiveCount
 	}
+
+	return nil
+}
+
+// ValidateAndSetRedrivePolicy applies the requested redrive policy to the given queue.
+func ValidateAndSetRedrivePolicy(q *app.Queue, strRedrivePolicy string) error {
+	// support both int and string maxReceiveCount (Amazon clients use string)
+	redrivePolicy1 := struct {
+		MaxReceiveCount     int    `json:"maxReceiveCount"`
+		DeadLetterTargetArn string `json:"deadLetterTargetArn"`
+	}{}
+	redrivePolicy2 := struct {
+		MaxReceiveCount     string `json:"maxReceiveCount"`
+		DeadLetterTargetArn string `json:"deadLetterTargetArn"`
+	}{}
+	err1 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy1)
+	err2 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy2)
+	maxReceiveCount := redrivePolicy1.MaxReceiveCount
+	deadLetterQueueArn := redrivePolicy1.DeadLetterTargetArn
+	if err1 != nil && err2 != nil {
+		return ErrInvalidAttributeValue
+	} else if err1 != nil {
+		maxReceiveCount, _ = strconv.Atoi(redrivePolicy2.MaxReceiveCount)
+		deadLetterQueueArn = redrivePolicy2.DeadLetterTargetArn
+	}
+
+	if (deadLetterQueueArn != "" && maxReceiveCount == 0) ||
+		(deadLetterQueueArn == "" && maxReceiveCount != 0) {
+		return ErrInvalidParameterValue
+	}
+	dlt := strings.Split(deadLetterQueueArn, ":")
+	deadLetterQueueName := dlt[len(dlt)-1]
+	deadLetterQueue, ok := app.SyncQueues.Queues[deadLetterQueueName]
+	if !ok {
+		return ErrInvalidParameterValue
+	}
+	q.DeadLetterQueue = deadLetterQueue
+	q.MaxReceiveCount = maxReceiveCount
 
 	return nil
 }
