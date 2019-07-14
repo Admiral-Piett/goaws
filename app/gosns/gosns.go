@@ -617,7 +617,7 @@ func callEndpoint(endpoint string, subArn string, msg app.SNSMessage) error {
 			"statusCode": res.StatusCode,
 			"status":     res.Status,
 			"header":     res.Header,
-			"endpoing":   endpoint,
+			"endpoint":   endpoint,
 		}).Error("Not 2xx repsone")
 		return errors.New("Not 2xx response")
 	}
