@@ -1,10 +1,15 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	log "github.com/sirupsen/logrus"
 )
 
 type SqsErrorType struct {
@@ -32,6 +37,43 @@ type Message struct {
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 	GroupID                string
+	SentTime			   time.Time
+}
+
+func (m *Message) IsReadyForReceipt() bool {
+	randomLatency, err := getRandomLatency()
+	if err != nil {
+		log.Error(err)
+		return true
+	}
+	return m.SentTime.Add(randomLatency).Before(time.Now())
+}
+
+func getRandomLatency() (time.Duration, error){
+	minVar := os.Getenv("GOAWS_RANDOM_LATENCY_MIN")
+	maxVar := os.Getenv("GOAWS_RANDOM_LATENCY_MAX")
+	if minVar == "" || maxVar == "" {
+		return time.Duration(0), nil
+	}
+	min, err := strconv.Atoi(minVar)
+	if err != nil {
+		return time.Duration(0), errors.New(fmt.Sprintf("Invalid value for GOAWS_RANDOM_LATENCY_MIN: %s", minVar))
+	}
+	max, err := strconv.Atoi(maxVar)
+	if err != nil {
+		return time.Duration(0), errors.New(fmt.Sprintf("Invalid value for GOAWS_RANDOM_LATENCY_MAX: %s", maxVar))
+	}
+	var randomLatencyValue int
+	if max == min {
+		randomLatencyValue = max
+	} else {
+		randomLatencyValue = rand.Intn(max-min) + min
+	}
+	randomDuration, err := time.ParseDuration(fmt.Sprintf("%dms", randomLatencyValue))
+	if err != nil {
+		return time.Duration(0), errors.New(fmt.Sprintf("Error parsing random latency value: %dms", randomLatencyValue))
+	}
+	return randomDuration, nil
 }
 
 type MessageAttributeValue struct {
