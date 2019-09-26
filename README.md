@@ -102,68 +102,68 @@ You can test that your installation is working correctly in one of two ways:
  2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 
 * aws --endpoint-url http://localhost:4100 sqs create-queue --queue-name test1
-```
-    {
-        "QueueUrl": "http://localhost:4100/test1"
-    }
+```json
+{
+    "QueueUrl": "http://localhost:4100/test1"
+}
 ```
 * aws --endpoint-url http://localhost:4100 sqs list-queues
-```
-    {
-        "QueueUrls": [
-            "http://localhost:4100/test1"
-        ]
-    }
+```json
+{
+    "QueueUrls": [
+        "http://localhost:4100/test1"
+    ]
+}
 ```
 * aws --endpoint-url http://localhost:4100 sqs send-message --queue-url http://localhost:4100/test1 --message-body "this is a test of the GoAws Queue messaging"
-```
-    {
-        "MD5OfMessageBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
-        "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
-        "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
-    }
+```json
+{
+    "MD5OfMessageBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
+    "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
+    "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
+}
 ```
 * aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1
-```
-    {
-        "Messages": [
-            {
-                "Body": "this is a test of the GoAws Queue messaging",
-                "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
-                "ReceiptHandle": "66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461",
-                "MD5OfBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
-                "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
-            }
-        ]
-    }
+```json
+{
+    "Messages": [
+        {
+            "Body": "this is a test of the GoAws Queue messaging",
+            "MD5OfMessageAttributes": "b095c6d16871105acb75d59332513337",
+            "ReceiptHandle": "66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461",
+            "MD5OfBody": "9d3f5eaac3b1b4dd509f39e71e25f954",
+            "MessageId": "66a1b4f5-cecf-473e-92b6-810156d41bbe"
+        }
+    ]
+}
 ```
 * aws --endpoint-url http://localhost:4100 sqs delete-message --queue-url http://localhost:4100/test1 --receipt-handle 66a1b4f5-cecf-473e-92b6-810156d41bbe#f1fc455c-698e-442e-9747-f415bee5b461
 ```
-    No output
+No output
 ```
 * aws --endpoint-url http://localhost:4100 sqs receive-message --queue-url http://localhost:4100/test1
 ```
-    No output (No messages in Q)
+No output (No messages in Q)
 ```
 * aws --endpoint-url http://localhost:4100 sqs delete-queue --queue-url http://localhost:4100/test1
 ```
-    No output
+No output
 ```
 * aws --endpoint-url http://localhost:4100 sqs list-queues
 ```
-    No output (There are no Queues left)
+No output (There are no Queues left)
 ```
 
 * aws --endpoint-url http://localhost:4100 sns list-topics  (Example Response from list-topics)
-```
-    {
-        "Topics": [
-            {
-                "TopicArn": "arn:aws:sns:local:000000000000:topic1"
-            },
-            {
-                "TopicArn": "arn:aws:sns:local:000000000000:topic2"
-            }
-        ]
-    }
+```json
+{
+    "Topics": [
+        {
+            "TopicArn": "arn:aws:sns:local:000000000000:topic1"
+        },
+        {
+            "TopicArn": "arn:aws:sns:local:000000000000:topic2"
+        }
+    ]
+}
 ```
