@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1034,6 +1035,101 @@ func TestReceiveMessageWaitTimeEnforced(t *testing.T) {
 	if elapsed > 1*time.Second {
 		t.Fatal("handler waited when message was available, expected not to wait")
 	}
+}
+
+func TestReceiveMessage_WithConcurrentDeleteQueue(t *testing.T) {
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "waiting-queue")
+	form.Add("Attribute.1.Name", "ReceiveMessageWaitTimeSeconds")
+	form.Add("Attribute.1.Value", "1")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// receive message
+		req, err := http.NewRequest("POST", "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		form := url.Values{}
+		form.Add("Action", "ReceiveMessage")
+		form.Add("QueueUrl", "http://localhost:4100/queue/waiting-queue")
+		form.Add("Version", "2012-11-05")
+		req.PostForm = form
+
+		rr := httptest.NewRecorder()
+
+		http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+		// Check the status code is what we expect.
+		if status := rr.Code; status != http.StatusBadRequest {
+			t.Errorf("handler returned wrong status code: got %v want %v",
+				status, http.StatusBadRequest)
+		}
+
+		// Check the response body is what we expect.
+		expected := "QueueNotFound"
+		if !strings.Contains(rr.Body.String(), "Not Found") {
+			t.Errorf("handler returned unexpected body: got %v want %v",
+				rr.Body.String(), expected)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(10 * time.Millisecond) // 10ms to let the ReceiveMessage() block
+		// delete queue message
+		req, err := http.NewRequest("POST", "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		form := url.Values{}
+		form.Add("Action", "DeleteQueue")
+		form.Add("QueueUrl", "http://localhost:4100/queue/waiting-queue")
+		form.Add("Version", "2012-11-05")
+		req.PostForm = form
+
+		rr := httptest.NewRecorder()
+		http.HandlerFunc(DeleteQueue).ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got \n%v want %v",
+				status, http.StatusOK)
+		}
+	}()
+
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return // completed successfully
+	case <-time.After(2 * time.Second):
+		t.Errorf("concurrent handlers timeout, expecting both to return within timeout")
+	}
+
 }
 
 func TestSetQueueAttributes_POST_QueueNotFound(t *testing.T) {
