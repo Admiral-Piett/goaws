@@ -374,15 +374,13 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	for loops > 0 {
 		app.SyncQueues.RLock()
 		_, queueFound := app.SyncQueues.Queues[queueName]
-		var messageFound bool
-		if queueFound {
-			messageFound = len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
-		}
-		app.SyncQueues.RUnlock()
 		if !queueFound {
+			app.SyncQueues.RUnlock()
 			createErrorResponse(w, req, "QueueNotFound")
 			return
 		}
+		messageFound := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
+		app.SyncQueues.RUnlock()
 		if !messageFound {
 			time.Sleep(100 * time.Millisecond)
 			loops--
