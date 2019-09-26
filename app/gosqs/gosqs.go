@@ -898,7 +898,10 @@ func getQueueFromPath(formVal string, theUrl string) string {
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := app.SqsErrors[err]
-	respStruct := app.ErrorResponse{app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct := app.ErrorResponse{
+		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+		RequestId: "00000000-0000-0000-0000-000000000000",
+	}
 
 	w.WriteHeader(er.HttpError)
 	enc := xml.NewEncoder(w)
