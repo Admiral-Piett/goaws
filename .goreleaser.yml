@@ -1,0 +1,69 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+# Before running goreleaser create a tag and push it:
+#  - git tag -a v0.2.0 -m "Adding Docker to the publish"
+#  - git push origin v0.2.0
+
+before:
+  hooks:
+    # you may remove this if you don't use vgo
+    - go mod tidy
+    # you may remove this if you don't need go generate
+    # - go generate ./...
+    # go test all
+    # - go test -cover -race ./...
+builds:
+  -
+    main: ./app/cmd/goaws.go
+    binary: goaws
+    env:
+      - CGO_ENABLED=0
+
+    goos:
+      - darwin
+      - linux
+      - windows
+
+    goarch:
+      - amd64
+      - arm
+      - arm64
+
+    goarm:
+      - 6
+      - 7
+
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: linux
+        goarch: arm
+        goarm: 7
+
+dockers:
+  -
+    image_templates:
+      - "pafortin/goaws"
+      - "docker.io/pafortin/goaws:{{ .Tag }}"
+      - "docker.io/pafortin/goaws:latest"
+    extra_files:
+      - app/conf/goaws.yaml
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
