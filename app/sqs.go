@@ -3,13 +3,12 @@ package app
 import (
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	log "github.com/sirupsen/logrus"
 )
 
 type SqsErrorType struct {
@@ -50,18 +49,10 @@ func (m *Message) IsReadyForReceipt() bool {
 }
 
 func getRandomLatency() (time.Duration, error){
-	minVar := os.Getenv("GOAWS_RANDOM_LATENCY_MIN")
-	maxVar := os.Getenv("GOAWS_RANDOM_LATENCY_MAX")
-	if minVar == "" || maxVar == "" {
+	min := CurrentEnvironment.RandomLatency.Min
+	max := CurrentEnvironment.RandomLatency.Max
+	if min == 0 && max == 0 {
 		return time.Duration(0), nil
-	}
-	min, err := strconv.Atoi(minVar)
-	if err != nil {
-		return time.Duration(0), errors.New(fmt.Sprintf("Invalid value for GOAWS_RANDOM_LATENCY_MIN: %s", minVar))
-	}
-	max, err := strconv.Atoi(maxVar)
-	if err != nil {
-		return time.Duration(0), errors.New(fmt.Sprintf("Invalid value for GOAWS_RANDOM_LATENCY_MAX: %s", maxVar))
 	}
 	var randomLatencyValue int
 	if max == min {

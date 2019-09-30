@@ -2,14 +2,13 @@ package app
 
 import (
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 	"time"
 )
 
 func TestMessage_IsReadyForReceipt(t *testing.T) {
-	os.Setenv("GOAWS_RANDOM_LATENCY_MIN", "100")
-	os.Setenv("GOAWS_RANDOM_LATENCY_MAX", "100")
+	CurrentEnvironment.RandomLatency.Min = 100
+	CurrentEnvironment.RandomLatency.Max = 100
 	msg := Message{
 		SentTime:               time.Now(),
 	}

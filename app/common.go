@@ -34,6 +34,7 @@ type Environment struct {
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes
+	RandomLatency		   RandomLatency
 }
 
 var CurrentEnvironment Environment
@@ -53,4 +54,9 @@ type ErrorResult struct {
 
 type ErrorResponse struct {
 	Result ErrorResult `xml:"Error"`
+}
+
+type RandomLatency struct {
+	Min int
+	Max int
 }
