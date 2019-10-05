@@ -60,7 +60,7 @@ func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
 
 func sortedKeys(attributes map[string]app.MessageAttributeValue) []string {
 	var keys []string
-	for key, _ := range attributes {
+	for key := range attributes {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)

@@ -12,23 +12,23 @@ func TestFilterPolicy_IsSatisfiedBy(t *testing.T) {
 	}{
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "bar"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "String", Value: "bar"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "xyz"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "String", Value: "xyz"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}, "abc": {"def"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "xyz"},
-				"abc": MessageAttributeValue{DataType: "String", Value: "def"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "String", Value: "xyz"},
+				"abc": {DataType: "String", Value: "def"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "baz"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "String", Value: "baz"}},
 			false,
 		},
 		{
@@ -38,12 +38,12 @@ func TestFilterPolicy_IsSatisfiedBy(t *testing.T) {
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}, "abc": {"def"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "String", Value: "bar"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "String", Value: "bar"}},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]MessageAttributeValue{"foo": MessageAttributeValue{DataType: "Binary", Value: "bar"}},
+			map[string]MessageAttributeValue{"foo": {DataType: "Binary", Value: "bar"}},
 			false,
 		},
 	}
