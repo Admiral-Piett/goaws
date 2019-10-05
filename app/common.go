@@ -32,7 +32,7 @@ type Environment struct {
 	SnsPort                string
 	Region                 string
 	AccountID              string
-	LogMessages            bool
+	LogToFile              bool
 	LogFile                string
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue

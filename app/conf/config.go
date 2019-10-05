@@ -52,7 +52,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	common.LogMessages = false
 	common.LogFile = "./goaws_messages.log"
 
-	if envs[env].LogMessages == true {
+	if envs[env].LogToFile == true {
 		common.LogMessages = true
 		if envs[env].LogFile != "" {
 			common.LogFile = envs[env].LogFile
