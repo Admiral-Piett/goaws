@@ -202,7 +202,7 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 			} else {
 				snsMSG.Signature = signature
 			}
-			err = callEndpoint(subscription.EndPoint, uuid, *snsMSG)
+			err = callEndpoint(subscription.EndPoint, uuid, *snsMSG, subscription.Raw)
 			if err != nil {
 				log.Error("Error posting to url ", err)
 			}
@@ -563,7 +563,7 @@ func publishHTTP(subs *app.Subscription, messageBody string, messageAttributes m
 	} else {
 		msg.Signature = signature
 	}
-	err = callEndpoint(subs.EndPoint, subs.SubscriptionArn, msg)
+	err = callEndpoint(subs.EndPoint, subs.SubscriptionArn, msg, subs.Raw)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"EndPoint": subs.EndPoint,
@@ -584,13 +584,20 @@ func formatAttributes(values map[string]app.MessageAttributeValue) map[string]ap
 	return attr
 }
 
-func callEndpoint(endpoint string, subArn string, msg app.SNSMessage) error {
+func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
 	log.WithFields(log.Fields{
 		"sns":      msg,
 		"subArn":   subArn,
 		"endpoint": endpoint,
 	}).Debug("Calling endpoint")
-	byteData, err := json.Marshal(msg)
+	var err error
+	var byteData []byte
+
+	if raw {
+		byteData, err = json.Marshal(msg.Message)
+	} else {
+		byteData, err = json.Marshal(msg)
+	}
 	if err != nil {
 		return err
 	}

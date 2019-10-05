@@ -2,6 +2,9 @@ package app
 
 /*** config ***/
 type EnvSubsciption struct {
+	Protocol     string
+	EndPoint     string
+	TopicArn     string
 	QueueName    string
 	Raw          bool
 	FilterPolicy string
