@@ -86,6 +86,11 @@ type DeleteMessageResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }
 
+type DeleteQueueResponse struct {
+	Xmlns    string           `xml:"xmlns,attr,omitempty"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+}
+
 type DeleteMessageBatchResultEntry struct {
 	Id string `xml:"Id"`
 }
