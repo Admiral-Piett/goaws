@@ -18,11 +18,11 @@ func New() http.Handler {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", actionHandler).Methods("GET", "POST")
+	r.HandleFunc("/health", health).Methods("GET")
 	r.HandleFunc("/{account}", actionHandler).Methods("GET", "POST")
 	r.HandleFunc("/queue/{queueName}", actionHandler).Methods("GET", "POST")
 	r.HandleFunc("/{account}/{queueName}", actionHandler).Methods("GET", "POST")
 	r.HandleFunc("/SimpleNotificationService/{id}.pem", pemHandler).Methods("GET")
-	r.HandleFunc("/health", health).Methods("GET")
 
 	return r
 }

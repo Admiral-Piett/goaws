@@ -2,6 +2,9 @@ package app
 
 /*** config ***/
 type EnvSubsciption struct {
+	Protocol     string
+	EndPoint     string
+	TopicArn     string
 	QueueName    string
 	Raw          bool
 	FilterPolicy string
@@ -29,7 +32,7 @@ type Environment struct {
 	SnsPort                string
 	Region                 string
 	AccountID              string
-	LogMessages            bool
+	LogToFile              bool
 	LogFile                string
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
@@ -45,12 +48,12 @@ type ResponseMetadata struct {
 
 /*** Error Responses ***/
 type ErrorResult struct {
-	Type      string `xml:"Type,omitempty"`
-	Code      string `xml:"Code,omitempty"`
-	Message   string `xml:"Message,omitempty"`
-	RequestId string `xml:"RequestId,omitempty"`
+	Type    string `xml:"Type,omitempty"`
+	Code    string `xml:"Code,omitempty"`
+	Message string `xml:"Message,omitempty"`
 }
 
 type ErrorResponse struct {
-	Result ErrorResult `xml:"Error"`
+	Result    ErrorResult `xml:"Error"`
+	RequestId string      `xml:"RequestId"`
 }
