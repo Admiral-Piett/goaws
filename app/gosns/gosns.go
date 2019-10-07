@@ -191,9 +191,9 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 				Token:            token,
 				TopicArn:         topicArn,
 				Message:          "You have chosen to subscribe to the topic " + topicArn + ".\nTo confirm the subscription, visit the SubscribeURL included in this message.",
-				SigningCertURL:   "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + uuid + ".pem",
+				SigningCertURL:   "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + uuid + ".pem",
 				SignatureVersion: "1",
-				SubscribeURL:     "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=ConfirmSubscription&TopicArn=" + topicArn + "&Token=" + token,
+				SubscribeURL:     "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=ConfirmSubscription&TopicArn=" + topicArn + "&Token=" + token,
 				Timestamp:        time.Now().UTC().Format(time.RFC3339),
 			}
 			signature, err := signMessage(PrivateKEY, snsMSG)
@@ -552,8 +552,8 @@ func publishHTTP(subs *app.Subscription, messageBody string, messageAttributes m
 		Message:           messageBody,
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + id + ".pem",
-		UnsubscribeURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
+		SigningCertURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + id + ".pem",
+		UnsubscribeURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
@@ -686,8 +686,8 @@ func CreateMessageBody(subs *app.Subscription, msg string, subject string, messa
 		Subject:           subject,
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + msgId + ".pem",
-		UnsubscribeURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
+		SigningCertURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + msgId + ".pem",
+		UnsubscribeURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
