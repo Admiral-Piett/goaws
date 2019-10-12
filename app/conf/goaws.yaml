@@ -25,6 +25,10 @@ Local:                              # Environment name that can be passed on the
         - QueueName: local-queue4   # Queue name
           Raw: true                 # Raw message delivery (true/false)
           #FilterPolicy: '{"foo": ["bar"]}' # Subscription's FilterPolicy, json object as a string
+    - Name: sub-topic            # Topic name - with some Subscriptions
+      Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)
+          - QueueName: local-queue1   # Queue name
+            Raw: true                # Raw message delivery (true/false)
     - Name: local-topic2            # Topic name - no Subscriptions
     - Name: my_topic                # Topic name - http subscription
       Subscriptions:
