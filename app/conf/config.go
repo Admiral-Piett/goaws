@@ -104,27 +104,24 @@ func LoadYamlConfig(filename string, env string) []string {
 		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
 
 		for _, subs := range topic.Subscriptions {
-			if _, ok := app.SyncQueues.Queues[subs.QueueName]; !ok {
-				var newSub *app.Subscription
-				if strings.Contains(subs.Protocol, "http") {
-					newSub = createHttpSubscription(subs)
-				} else {
-					//Queue does not exist yet, create it.
-					newSub = createSqsSubscription(subs, topicArn)
+			var newSub *app.Subscription
+			if strings.Contains(subs.Protocol, "http") {
+				newSub = createHttpSubscription(subs)
+			} else {
+				//Queue does not exist yet, create it.
+				newSub = createSqsSubscription(subs, topicArn)
+			}
+			if subs.FilterPolicy != "" {
+				filterPolicy := &app.FilterPolicy{}
+				err = json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return ports
 				}
-				if subs.FilterPolicy != "" {
-					filterPolicy := &app.FilterPolicy{}
-					err = json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
-					if err != nil {
-						log.Errorf("err: %s", err)
-						return ports
-					}
-					newSub.FilterPolicy = filterPolicy
-				}
-
-				newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
+				newSub.FilterPolicy = filterPolicy
 			}
 
+			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
 		app.SyncTopics.Topics[topic.Name] = newTopic
 	}
@@ -144,20 +141,22 @@ func createHttpSubscription(configSubscription app.EnvSubsciption) *app.Subscrip
 }
 
 func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn string) *app.Subscription {
-	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
-		"/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
-	if app.CurrentEnvironment.Region != "" {
-		queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
-			app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
-	}
-	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
-	app.SyncQueues.Queues[configSubscription.QueueName] = &app.Queue{
-		Name:                configSubscription.QueueName,
-		TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
-		Arn:                 queueArn,
-		URL:                 queueUrl,
-		ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
-		IsFIFO:              app.HasFIFOQueueName(configSubscription.QueueName),
+	if _, ok := app.SyncQueues.Queues[configSubscription.QueueName]; !ok {
+		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
+			"/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
+		if app.CurrentEnvironment.Region != "" {
+			queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
+				app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
+		}
+		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
+		app.SyncQueues.Queues[configSubscription.QueueName] = &app.Queue{
+			Name:                configSubscription.QueueName,
+			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+			Arn:                 queueArn,
+			URL:                 queueUrl,
+			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			IsFIFO:              app.HasFIFOQueueName(configSubscription.QueueName),
+		}
 	}
 	qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn
 	newSub := &app.Subscription{EndPoint: qArn, Protocol: "sqs", TopicArn: topicArn, Raw: configSubscription.Raw}
