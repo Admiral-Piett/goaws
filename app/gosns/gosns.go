@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncTopics.Topics[topicName]; ok {
 		topicArn = app.SyncTopics.Topics[topicName].Arn
 	} else {
-		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
+		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topicName
 
 		log.Println("Creating Topic:", topicName)
 		topic := &app.Topic{Name: topicName, Arn: topicArn}
@@ -134,18 +135,32 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicArn := req.FormValue("TopicArn")
 	protocol := req.FormValue("Protocol")
 	endpoint := req.FormValue("Endpoint")
+	filterPolicy := &app.FilterPolicy{}
+	raw := false
+
+	for attrIndex := 1; req.FormValue("Attributes.entry."+strconv.Itoa(attrIndex)+".key") != ""; attrIndex++ {
+		value := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".value")
+		switch key := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".key"); key {
+		case "FilterPolicy":
+			json.Unmarshal([]byte(value), filterPolicy)
+		case "RawMessageDelivery":
+			raw = (value == "true")
+		}
+	}
 
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 	log.WithFields(log.Fields{
-		"content":   content,
-		"topicArn":  topicArn,
-		"topicName": topicName,
-		"protocol":  protocol,
-		"endpoint":  endpoint,
+		"content":      content,
+		"topicArn":     topicArn,
+		"topicName":    topicName,
+		"protocol":     protocol,
+		"endpoint":     endpoint,
+		"filterPolicy": filterPolicy,
+		"raw":          raw,
 	}).Info("Creating Subscription")
 
-	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
+	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: raw, FilterPolicy: filterPolicy}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
@@ -191,9 +206,9 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 				Token:            token,
 				TopicArn:         topicArn,
 				Message:          "You have chosen to subscribe to the topic " + topicArn + ".\nTo confirm the subscription, visit the SubscribeURL included in this message.",
-				SigningCertURL:   "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + uuid + ".pem",
+				SigningCertURL:   "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + uuid + ".pem",
 				SignatureVersion: "1",
-				SubscribeURL:     "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=ConfirmSubscription&TopicArn=" + topicArn + "&Token=" + token,
+				SubscribeURL:     "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=ConfirmSubscription&TopicArn=" + topicArn + "&Token=" + token,
 				Timestamp:        time.Now().UTC().Format(time.RFC3339),
 			}
 			signature, err := signMessage(PrivateKEY, snsMSG)
@@ -202,7 +217,7 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 			} else {
 				snsMSG.Signature = signature
 			}
-			err = callEndpoint(subscription.EndPoint, uuid, *snsMSG)
+			err = callEndpoint(subscription.EndPoint, uuid, *snsMSG, subscription.Raw)
 			if err != nil {
 				log.Error("Error posting to url ", err)
 			}
@@ -383,7 +398,19 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 			if sub.SubscriptionArn == subsArn {
 
 				entries := make([]app.SubscriptionAttributeEntry, 0, 0)
-				entry := app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
+				entry := app.SubscriptionAttributeEntry{Key: "Owner", Value: app.CurrentEnvironment.AccountID}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "RawMessageDelivery", Value: strconv.FormatBool(sub.Raw)}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "TopicArn", Value: sub.TopicArn}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "Endpoint", Value: sub.EndPoint}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "PendingConfirmation", Value: "false"}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "ConfirmationWasAuthenticated", Value: "true"}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
 				entries = append(entries, entry)
 				entry = app.SubscriptionAttributeEntry{Key: "Protocol", Value: sub.Protocol}
 				entries = append(entries, entry)
@@ -552,8 +579,8 @@ func publishHTTP(subs *app.Subscription, messageBody string, messageAttributes m
 		Message:           messageBody,
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + id + ".pem",
-		UnsubscribeURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
+		SigningCertURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + id + ".pem",
+		UnsubscribeURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
@@ -563,7 +590,7 @@ func publishHTTP(subs *app.Subscription, messageBody string, messageAttributes m
 	} else {
 		msg.Signature = signature
 	}
-	err = callEndpoint(subs.EndPoint, subs.SubscriptionArn, msg)
+	err = callEndpoint(subs.EndPoint, subs.SubscriptionArn, msg, subs.Raw)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"EndPoint": subs.EndPoint,
@@ -584,13 +611,20 @@ func formatAttributes(values map[string]app.MessageAttributeValue) map[string]ap
 	return attr
 }
 
-func callEndpoint(endpoint string, subArn string, msg app.SNSMessage) error {
+func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
 	log.WithFields(log.Fields{
 		"sns":      msg,
 		"subArn":   subArn,
 		"endpoint": endpoint,
 	}).Debug("Calling endpoint")
-	byteData, err := json.Marshal(msg)
+	var err error
+	var byteData []byte
+
+	if raw {
+		byteData, err = json.Marshal(msg.Message)
+	} else {
+		byteData, err = json.Marshal(msg)
+	}
 	if err != nil {
 		return err
 	}
@@ -679,8 +713,8 @@ func CreateMessageBody(subs *app.Subscription, msg string, subject string, messa
 		Subject:           subject,
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + msgId + ".pem",
-		UnsubscribeURL:    "http://sqs." + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
+		SigningCertURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + msgId + ".pem",
+		UnsubscribeURL:    "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=Unsubscribe&SubscriptionArn=" + subs.SubscriptionArn,
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
@@ -725,7 +759,10 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := app.SnsErrors[err]
-	respStruct := app.ErrorResponse{app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message, RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct := app.ErrorResponse{
+		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+		RequestId: "00000000-0000-0000-0000-000000000000",
+	}
 
 	w.WriteHeader(er.HttpError)
 	enc := xml.NewEncoder(w)

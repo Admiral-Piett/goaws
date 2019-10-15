@@ -97,9 +97,4 @@ func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
 	if receiveWaitTime != 20 {
 		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
 	}
-
-	filterPolicy := app.SyncTopics.Topics["local-topic1"].Subscriptions[1].FilterPolicy
-	if (*filterPolicy)["foo"][0] != "bar" {
-		t.Errorf("Expected FilterPolicy subscription on local-topic1 to be: bar but got %s\n", (*filterPolicy)["foo"][0])
-	}
 }

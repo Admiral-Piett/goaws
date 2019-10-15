@@ -1,13 +1,14 @@
 package gosns
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -470,6 +471,17 @@ func TestGetSubscriptionAttributesHandler_POST_Success(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
+
+	expectedElements := []string{"Owner", "RawMessageDelivery", "TopicArn", "Endpoint", "PendingConfirmation",
+		"ConfirmationWasAuthenticated", "SubscriptionArn", "Protocol", "FilterPolicy"}
+	for _, element := range expectedElements {
+		expected := "<key>" + element + "</key>"
+		if !strings.Contains(rr.Body.String(), expected) {
+			t.Errorf("handler returned unexpected body: got %v want %v",
+				rr.Body.String(), expected)
+		}
+	}
+
 	// Check the response body is what we expect.
 	expected = "{&#34;foo&#34;:[&#34;bar&#34;]}"
 	if !strings.Contains(rr.Body.String(), expected) {

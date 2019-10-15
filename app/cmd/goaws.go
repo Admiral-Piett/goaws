@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/p4tin/goaws/app"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/p4tin/goaws/app/conf"
@@ -22,10 +24,11 @@ func main() {
 
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
+
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
-		log.SetLevel(log.WarnLevel)
+		log.SetLevel(log.InfoLevel)
 	}
 
 	env := "Local"
@@ -34,6 +37,16 @@ func main() {
 	}
 
 	portNumbers := conf.LoadYamlConfig(filename, env)
+
+	if app.CurrentEnvironment.LogToFile {
+		filename := app.CurrentEnvironment.LogFile
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err == nil {
+			log.SetOutput(file)
+		} else {
+			log.Infof("Failed to log to file: %s, using default stderr", filename)
+		}
+	}
 
 	r := router.New()
 
