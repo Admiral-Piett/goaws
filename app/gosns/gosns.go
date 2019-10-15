@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncTopics.Topics[topicName]; ok {
 		topicArn = app.SyncTopics.Topics[topicName].Arn
 	} else {
-		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
+		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topicName
 
 		log.Println("Creating Topic:", topicName)
 		topic := &app.Topic{Name: topicName, Arn: topicArn}
@@ -134,18 +135,32 @@ func Subscribe(w http.ResponseWriter, req *http.Request) {
 	topicArn := req.FormValue("TopicArn")
 	protocol := req.FormValue("Protocol")
 	endpoint := req.FormValue("Endpoint")
+	filterPolicy := &app.FilterPolicy{}
+	raw := false
+
+	for attrIndex := 1; req.FormValue("Attributes.entry."+strconv.Itoa(attrIndex)+".key") != ""; attrIndex++ {
+		value := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".value")
+		switch key := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".key"); key {
+		case "FilterPolicy":
+			json.Unmarshal([]byte(value), filterPolicy)
+		case "RawMessageDelivery":
+			raw = (value == "true")
+		}
+	}
 
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
 	log.WithFields(log.Fields{
-		"content":   content,
-		"topicArn":  topicArn,
-		"topicName": topicName,
-		"protocol":  protocol,
-		"endpoint":  endpoint,
+		"content":      content,
+		"topicArn":     topicArn,
+		"topicName":    topicName,
+		"protocol":     protocol,
+		"endpoint":     endpoint,
+		"filterPolicy": filterPolicy,
+		"raw":          raw,
 	}).Info("Creating Subscription")
 
-	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: false}
+	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: raw, FilterPolicy: filterPolicy}
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
 	subscription.SubscriptionArn = subArn
@@ -383,7 +398,19 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 			if sub.SubscriptionArn == subsArn {
 
 				entries := make([]app.SubscriptionAttributeEntry, 0, 0)
-				entry := app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
+				entry := app.SubscriptionAttributeEntry{Key: "Owner", Value: app.CurrentEnvironment.AccountID}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "RawMessageDelivery", Value: strconv.FormatBool(sub.Raw)}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "TopicArn", Value: sub.TopicArn}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "Endpoint", Value: sub.EndPoint}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "PendingConfirmation", Value: "false"}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "ConfirmationWasAuthenticated", Value: "true"}
+				entries = append(entries, entry)
+				entry = app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
 				entries = append(entries, entry)
 				entry = app.SubscriptionAttributeEntry{Key: "Protocol", Value: sub.Protocol}
 				entries = append(entries, entry)
