@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
