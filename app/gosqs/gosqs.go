@@ -860,10 +860,10 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 	}
 
 	attrsMap := map[string]string{
-		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.Unix()),
+		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.UnixNano()/int64(time.Millisecond)),
 		"SenderId":                         app.CurrentEnvironment.AccountID,
 		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
-		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().Unix()),
+		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().UnixNano()/int64(time.Millisecond)),
 	}
 
 	var attrs []*app.ResultAttribute
