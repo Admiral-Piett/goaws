@@ -1061,7 +1061,8 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		// receive message (that will be canceled)
-		req, err := http.NewRequestWithContext(ctx, "POST", "/", nil)
+		req, err := http.NewRequest("POST", "/", nil)
+		req = req.WithContext(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
