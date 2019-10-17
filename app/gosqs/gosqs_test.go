@@ -3,7 +3,6 @@ package gosqs
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1074,9 +1073,7 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 		req.PostForm = form
 
 		rr := httptest.NewRecorder()
-		fmt.Println("		http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)")
 		http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
-		fmt.Println("	END	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)")
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code: got \n%v want %v",
@@ -1084,11 +1081,11 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 		}
 
 		if ok := strings.Contains(rr.Body.String(), "12345"); ok {
-			t.Fatal("expecting this Receive() to not pickup this message as it should canceled before the Send()")
+			t.Fatal("expecting this ReceiveMessage() to not pickup this message as it should canceled before the Send()")
 		}
 	}()
 	time.Sleep(100 * time.Millisecond) // let enought time for the Receive go to wait mode
-	cancelReceive()                    // cancel the first Receive(), make sure it will not pickup the sent message below
+	cancelReceive()                    // cancel the first ReceiveMessage(), make sure it will not pickup the sent message below
 	time.Sleep(5 * time.Millisecond)
 
 	// send a message
@@ -1142,7 +1139,7 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 	}
 
 	if timedout := waitTimeout(&wg, 2*time.Second); timedout {
-		t.Errorf("expected receive() in goroutine to exit quickly due to cancelReceive() called")
+		t.Errorf("expected ReceiveMessage() in goroutine to exit quickly due to cancelReceive() called")
 	}
 }
 
@@ -1466,6 +1463,7 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 
 // waitTimeout waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.
+// credits: https://stackoverflow.com/questions/32840687/timeout-for-waitgroup-wait
 func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 	c := make(chan struct{})
 	go func() {
