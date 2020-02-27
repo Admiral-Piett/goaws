@@ -90,3 +90,19 @@ func TestIndexServerhandler_POST_GoodRequest_With_URL(t *testing.T) {
 			status, http.StatusOK)
 	}
 }
+
+func TestIndexServerhandler_GET_GoodRequest_Pem_cert(t *testing.T) {
+
+	req, err := http.NewRequest("GET", "/SimpleNotificationService/100010001000.pem", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	New().ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
