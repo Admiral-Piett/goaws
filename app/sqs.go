@@ -1,6 +1,10 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	log "github.com/sirupsen/logrus"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +36,35 @@ type Message struct {
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 	GroupID                string
+	SentTime			   time.Time
+}
+
+func (m *Message) IsReadyForReceipt() bool {
+	randomLatency, err := getRandomLatency()
+	if err != nil {
+		log.Error(err)
+		return true
+	}
+	return m.SentTime.Add(randomLatency).Before(time.Now())
+}
+
+func getRandomLatency() (time.Duration, error){
+	min := CurrentEnvironment.RandomLatency.Min
+	max := CurrentEnvironment.RandomLatency.Max
+	if min == 0 && max == 0 {
+		return time.Duration(0), nil
+	}
+	var randomLatencyValue int
+	if max == min {
+		randomLatencyValue = max
+	} else {
+		randomLatencyValue = rand.Intn(max-min) + min
+	}
+	randomDuration, err := time.ParseDuration(fmt.Sprintf("%dms", randomLatencyValue))
+	if err != nil {
+		return time.Duration(0), errors.New(fmt.Sprintf("Error parsing random latency value: %dms", randomLatencyValue))
+	}
+	return randomDuration, nil
 }
 
 type MessageAttributeValue struct {
