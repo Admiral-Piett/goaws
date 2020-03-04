@@ -90,11 +90,11 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 
 	log.Info("Listing Queues")
 	for _, queue := range app.SyncQueues.Queues {
-		app.SyncQueues.Lock()
+		app.SyncQueues.RLock()
 		if strings.HasPrefix(queue.Name, queueNamePrefix) {
 			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
 		}
-		app.SyncQueues.Unlock()
+		app.SyncQueues.RUnlock()
 	}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
@@ -797,9 +797,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
 		attribs = append(attribs, attr)
-		app.SyncQueues.RLock()
 		attr = app.Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
-		app.SyncQueues.RUnlock()
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
 		attribs = append(attribs, attr)

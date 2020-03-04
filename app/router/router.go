@@ -58,8 +58,11 @@ var routingTable = map[string]http.HandlerFunc{
 }
 
 func health(w http.ResponseWriter, req *http.Request) {
+	//Add locks to healthcheck so we actually assert the health of things, if deadlocked it will fail
+	app.SyncQueues.Lock()
 	w.WriteHeader(200)
 	fmt.Fprint(w, "OK")
+	app.SyncQueues.Unlock()
 }
 
 func actionHandler(w http.ResponseWriter, req *http.Request) {
