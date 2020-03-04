@@ -88,7 +88,7 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	respStruct.Result.QueueUrl = make([]string, 0)
 	queueNamePrefix := req.FormValue("QueueNamePrefix")
 
-	log.Println("Listing Queues")
+	log.Info("Listing Queues")
 	for _, queue := range app.SyncQueues.Queues {
 		app.SyncQueues.Lock()
 		if strings.HasPrefix(queue.Name, queueNamePrefix) {
@@ -99,7 +99,7 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -116,7 +116,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		log.Println("Creating Queue:", queueName)
+		log.Infof("Creating Queue: %s", queueName)
 		queue := &app.Queue{
 			Name:                queueName,
 			URL:                 queueUrl,
@@ -138,7 +138,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -165,7 +165,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println("Putting Message in Queue:", queueName)
+	log.Infof("Putting Message in Queue: %s", queueName)
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
 		msg.MessageAttributes = messageAttributes
@@ -201,7 +201,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -291,7 +291,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	sentEntries := make([]app.SendMessageBatchResultEntry, 0)
-	log.Println("Putting Message in Queue:", queueName)
+	log.Infof("Putting Message in Queue: %s", queueName)
 	for _, sendEntry := range sendEntries {
 		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
@@ -328,7 +328,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -398,7 +398,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		}
 
 	}
-	log.Println("Getting Message from Queue:", queueName)
+	log.Infof("Getting Message from Queue: %s", queueName)
 
 	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
@@ -448,14 +448,14 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			},
 		}
 	} else {
-		log.Println("No messages in Queue:", queueName)
+		log.Debugf("No messages in Queue: %s", queueName)
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
 	app.SyncQueues.Unlock() // Unlock the Queues
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -536,7 +536,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 		createErrorResponse(w, req, "GeneralError")
 		return
 	}
@@ -598,8 +598,9 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 		for _, deleteEntry := range deleteEntries {
 			for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
+					log.Infof("Deleting Message, Queue: %s, ReceiptHandle: %s", queueName, msg.ReceiptHandle)
 					// Unlock messages for the group
-					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
+					log.Debugf("FIFO Queue %s unlocking group %s: %s", queueName, msg.GroupID)
 					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
@@ -632,7 +633,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -654,7 +655,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	log.Println("Deleting Message, Queue:", queueName, ", ReceiptHandle:", receiptHandle)
+	log.Infof("Deleting Message, Queue: %s, ReceiptHandle: %s", queueName, receiptHandle)
 
 	// Find queue/message with the receipt handle and delete
 	app.SyncQueues.Lock()
@@ -662,7 +663,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				// Unlock messages for the group
-				log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
+				log.Debugf("FIFO Queue %s unlocking group %s: %s", queueName, msg.GroupID)
 				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
@@ -673,14 +674,14 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 				enc := xml.NewEncoder(w)
 				enc.Indent("  ", "    ")
 				if err := enc.Encode(respStruct); err != nil {
-					log.Printf("error: %v\n", err)
+					log.Errorf("error: %v\n", err)
 				}
 				return
 			}
 		}
-		log.Println("Receipt Handle not found")
+		log.Warn("Receipt Handle not found")
 	} else {
-		log.Println("Queue not found")
+		log.Warn("Queue not found")
 	}
 	app.SyncQueues.Unlock()
 
@@ -702,7 +703,7 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	log.Println("Deleting Queue:", queueName)
+	log.Infof("Deleting Queue: %s", queueName)
 	app.SyncQueues.Lock()
 	delete(app.SyncQueues.Queues, queueName)
 	app.SyncQueues.Unlock()
@@ -712,7 +713,7 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
@@ -726,7 +727,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 	uriSegments := strings.Split(queueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
 
-	log.Println("Purging Queue:", queueName)
+	log.Infof("Purging Queue: %s", queueName)
 
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
@@ -735,11 +736,11 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 			createErrorResponse(w, req, "GeneralError")
 		}
 	} else {
-		log.Println("Purge Queue:", queueName, ", queue does not exist!!!")
+		log.Warnf("Purge Queue: %s failed - queue does not exist", queueName)
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 	app.SyncQueues.Unlock()
@@ -753,17 +754,17 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	queueName := req.FormValue("QueueName")
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		url := queue.URL
-		log.Println("Get Queue URL:", queueName)
+		log.Infof("Get Queue URL: %s", queueName)
 		// Create, encode/xml and send response
 		result := app.GetQueueUrlResult{QueueUrl: url}
 		respStruct := app.GetQueueUrlResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 		}
 	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		log.Warnf("Get Queue URL: %s failed - queue does not exist", queueName)
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 }
@@ -783,7 +784,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	log.Println("Get Queue Attributes:", queueName)
+	log.Infof("Get Queue Attributes: %s", queueName)
 	app.SyncQueues.RLock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		// Create, encode/xml and send response
@@ -819,10 +820,10 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 		}
 	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		log.Warnf("Get Queue URL: %s failed - queue does not exist", queueName)
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 	app.SyncQueues.RUnlock()
@@ -843,7 +844,7 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	log.Println("Set Queue Attributes:", queueName)
+	log.Infof("Set Queue Attributes: %s", queueName)
 	app.SyncQueues.Lock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
@@ -856,10 +857,10 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 		}
 	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
+		log.Warnf("Get Queue URL: %s failed - queue does not exist")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 	app.SyncQueues.Unlock()
@@ -919,6 +920,6 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
