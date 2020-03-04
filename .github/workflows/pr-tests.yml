@@ -20,5 +20,8 @@ jobs:
       run: |
         go get -v -t -d ./...
 
+    - name: Fmt
+      run: go fmt
+
     - name: Unit Tests
       run: go test -cover -race ./app/...
