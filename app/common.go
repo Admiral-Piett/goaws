@@ -37,7 +37,7 @@ type Environment struct {
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes
-	RandomLatency		   RandomLatency
+	RandomLatency          RandomLatency
 }
 
 var CurrentEnvironment Environment
