@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
+	app "github.com/p4tin/goaws/app"
 	sns "github.com/p4tin/goaws/app/gosns"
 	sqs "github.com/p4tin/goaws/app/gosqs"
 )
@@ -73,7 +74,7 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 		}).Debug("Handling URL request")
 	fn, ok := routingTable[req.FormValue("Action")]
 	if !ok {
-		log.Println("Bad Request - Action:", req.FormValue("Action"))
+		log.Warnf("Bad Request - Action: %s", req.FormValue("Action"))
 		w.WriteHeader(http.StatusBadRequest)
 		io.WriteString(w, "Bad Request")
 		return

@@ -7,9 +7,12 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"hash"
 	"io"
 	"sort"
+	"strings"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/p4tin/goaws/app"
 )
@@ -56,6 +59,12 @@ func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func DeriveQueueUrl(queueUrl string, req *http.Request) string {
+	derivedQueueUrl := strings.Replace(queueUrl, app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port, req.Host, -1)
+	log.Debugf("Derived new queue URL: %s from request: %s with original: %s", derivedQueueUrl, req.Host, queueUrl)
+	return derivedQueueUrl
 }
 
 func sortedKeys(attributes map[string]app.MessageAttributeValue) []string {

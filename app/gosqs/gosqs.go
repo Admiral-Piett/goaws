@@ -92,7 +92,12 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	for _, queue := range app.SyncQueues.Queues {
 		app.SyncQueues.RLock()
 		if strings.HasPrefix(queue.Name, queueNamePrefix) {
-			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
+			queueUrl := queue.URL
+			// If derive host is enabled, generate it dynamically from the incoming requests, solves for multiple ingress paths.
+			if app.CurrentEnvironment.DeriveHostAndPort {
+				queueUrl = common.DeriveQueueUrl(queueUrl, req)
+			}
+			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queueUrl)
 		}
 		app.SyncQueues.RUnlock()
 	}
@@ -754,6 +759,10 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	queueName := req.FormValue("QueueName")
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		url := queue.URL
+		// If derive host is enabled, generate it dynamically from the incoming requests, solves for multiple ingress paths.
+		if app.CurrentEnvironment.DeriveHostAndPort {
+			url = common.DeriveQueueUrl(url, req)
+		}
 		log.Infof("Get Queue URL: %s", queueName)
 		// Create, encode/xml and send response
 		result := app.GetQueueUrlResult{QueueUrl: url}
