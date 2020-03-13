@@ -1,19 +1,29 @@
-#FROM golang:alpine as builder
-#
-#WORKDIR /go/src/github.com/p4tin/goaws
-#
-#RUN apk add --update --repository https://dl-3.alpinelinux.org/alpine/edge/testing/ git
-#RUN go get github.com/golang/dep/cmd/dep
-#
-#COPY Gopkg.lock Gopkg.toml app ./
-#RUN dep ensure
-#COPY . .
-#
-#RUN go build -o goaws_linux_amd64 app/cmd/goaws.goc
-FROM alpine
+FROM docker.io/library/golang:1.14-alpine as builder
+
+WORKDIR /go/src/github.com/p4tin/goaws
+
+RUN apk add --no-cache --no-progress \
+    ca-certificates \
+    make \
+    git \
+    openssh \
+    gcc \
+    libc-dev
+
+COPY . .
+
+RUN GOOS=linux  GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags "-w -s" app/cmd/goaws.go
+
+FROM scratch
+
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /go/src/github.com/p4tin/goaws/app/conf/goaws.yaml /conf/goaws.yaml
+COPY --from=builder /go/src/github.com/p4tin/goaws/goaws /
+COPY --from=builder /go/src/github.com/p4tin/goaws/Dockerfile /
 
 EXPOSE 4100
 
-COPY goaws /
-COPY app/conf/goaws.yaml /conf/
+USER nobody
+
 ENTRYPOINT ["/goaws"]
