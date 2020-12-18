@@ -13,6 +13,7 @@ Local:                              # Environment name that can be passed on the
   QueueAttributeDefaults:           # default attributes for all queues
     VisibilityTimeout: 30              # message visibility timeout
     ReceiveMessageWaitTimeSeconds: 0   # receive message max wait time
+    MaximumMessageSize: 262144         # maximum message size (bytes)
   Queues:                           # List of queues to create at startup
     - Name: local-queue1                # Queue name
     - Name: local-queue2                # Queue name

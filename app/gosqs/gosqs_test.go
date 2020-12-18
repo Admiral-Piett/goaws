@@ -108,6 +108,8 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	form.Add("QueueName", "UnitTestQueue1")
 	form.Add("Attribute.1.Name", "VisibilityTimeout")
 	form.Add("Attribute.1.Value", "60")
+	form.Add("Attribute.2.Name", "MaximumMessageSize")
+	form.Add("Attribute.2.Value", "2048")
 	req.PostForm = form
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
@@ -135,6 +137,7 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 		URL:         "http://://" + queueName,
 		Arn:         "arn:aws:sqs:::" + queueName,
 		TimeoutSecs: 60,
+		MaximumMessageSize: 2048,
 	}
 	actualQueue := app.SyncQueues.Queues[queueName]
 	if !reflect.DeepEqual(expectedQueue, actualQueue) {
@@ -189,6 +192,82 @@ func TestCreateFIFOQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 }
 
+func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["test_max_message_size"] =
+		&app.Queue{Name: "test_max_message_size", MaximumMessageSize: 100}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/test_max_message_size")
+	form.Add("MessageBody", "test%20message%20body%201")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SendMessage)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := "MD5OfMessageBody"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestSendMessage_MaximumMessageSize_MessageTooBig(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["test_max_message_size"] =
+		&app.Queue{Name: "test_max_message_size", MaximumMessageSize: 10}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/test_max_message_size")
+	form.Add("MessageBody", "test%20message%20body%201")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SendMessage)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	// Check the response body is what we expect.
+	expected := "MessageTooBig"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
 func TestSendQueue_POST_NonExistant(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -235,6 +314,10 @@ func TestSendMessageBatch_POST_QueueNotFound(t *testing.T) {
 	form := url.Values{}
 	form.Add("Action", "SendMessageBatch")
 	form.Add("QueueUrl", "http://localhost:4100/queue/testing")
+	form.Add("SendMessageBatchRequestEntry.1.Id", "test_msg_001")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "test%20message%20body%201")
+	form.Add("SendMessageBatchRequestEntry.2.Id", "test_msg_002")
+	form.Add("SendMessageBatchRequestEntry.2.MessageBody", "test%20message%20body%202")
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 

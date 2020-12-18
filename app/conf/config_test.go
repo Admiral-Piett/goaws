@@ -73,10 +73,18 @@ func TestConfig_QueueAttributes(t *testing.T) {
 	if timeoutSecs != 10 {
 		t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 10 but got %d\n", timeoutSecs)
 	}
+	maximumMessageSize := app.SyncQueues.Queues["local-queue1"].MaximumMessageSize
+	if maximumMessageSize != 1024 {
+		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 1024 but got %d\n", maximumMessageSize)
+	}
 
 	receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs
 	if receiveWaitTime != 20 {
 		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
+	}
+	maximumMessageSize = app.SyncQueues.Queues["local-queue2"].MaximumMessageSize
+	if maximumMessageSize != 128 {
+		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 128 but got %d\n", maximumMessageSize)
 	}
 }
 

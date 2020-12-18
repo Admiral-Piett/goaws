@@ -39,6 +39,10 @@ func validateAndSetQueueAttributes(q *app.Queue, u url.Values) error {
 	if receiveWaitTime != 0 {
 		q.ReceiveWaitTimeSecs = receiveWaitTime
 	}
+	maximumMessageSize, _ := strconv.Atoi(attr["MaximumMessageSize"])
+	if maximumMessageSize != 0 {
+		q.MaximumMessageSize = maximumMessageSize
+	}
 	strRedrivePolicy := attr["RedrivePolicy"]
 	if strRedrivePolicy != "" {
 		// support both int and string maxReceiveCount (Amazon clients use string)
