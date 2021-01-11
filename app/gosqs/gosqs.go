@@ -605,7 +605,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
 					log.Infof("Deleting Message, Queue: %s, ReceiptHandle: %s", queueName, msg.ReceiptHandle)
 					// Unlock messages for the group
-					log.Debugf("FIFO Queue %s unlocking group %s: %s", queueName, msg.GroupID)
+					log.Debugf("FIFO Queue %s unlocking group: %s", queueName, msg.GroupID)
 					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 
@@ -668,7 +668,7 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				// Unlock messages for the group
-				log.Debugf("FIFO Queue %s unlocking group %s: %s", queueName, msg.GroupID)
+				log.Debugf("FIFO Queue %s unlocking group: %s", queueName, msg.GroupID)
 				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
@@ -869,7 +869,7 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 			log.Errorf("error: %v\n", err)
 		}
 	} else {
-		log.Warnf("Get Queue URL: %s failed - queue does not exist")
+		log.Warnf("Get Queue URL: %s failed - queue does not exist", queueName)
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 	app.SyncQueues.Unlock()
