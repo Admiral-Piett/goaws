@@ -436,6 +436,51 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	createErrorResponse(w, req, "SubscriptionNotFound")
 }
 
+func GetTopicAttributes(w http.ResponseWriter, req *http.Request) {
+
+	content := req.FormValue("ContentType")
+	topicArn := req.FormValue("TopicArn")
+
+	log.Infof("GetTopicAttributes: %s", topicArn)
+	for _, topic := range app.SyncTopics.Topics {
+		if topic.Arn == topicArn {
+			entries := make([]app.TopicAttributeEntry, 0, 0)
+			entry := app.TopicAttributeEntry{Key: "Owner", Value: app.CurrentEnvironment.AccountID}
+			entries = append(entries, entry)
+			entry = app.TopicAttributeEntry{Key: "TopicArn", Value: topic.Arn}
+			entries = append(entries, entry)
+
+			result := app.GetTopicAttributesResult{TopicAttributes: app.TopicAttributes{Entries: entries}}
+			uuid, _ := common.NewUUID()
+			respStruct := app.GetTopicAttributesResponse{"http://sns.amazonaws.com/doc/2010-03-31", result, app.ResponseMetadata{RequestId: uuid}}
+
+			SendResponseBack(w, req, respStruct, content)
+			return
+		}
+	}
+	createErrorResponse(w, req, "TopicNotFound")
+}
+
+func ListTagsForResource(w http.ResponseWriter, req *http.Request) {
+
+	content := req.FormValue("ContentType")
+	resourceArn := req.FormValue("ResourceArn")
+
+	log.Infof("ListTagsForResource: %s", resourceArn)
+	for _, topic := range app.SyncTopics.Topics {
+		if topic.Arn == resourceArn {
+			var tags []app.ListTags
+			result := app.ListTagsForResourceResult{Tags: tags}
+			uuid, _ := common.NewUUID()
+			respStruct := app.ListTagsForResourceResponse{"http://sns.amazonaws.com/doc/2010-03-31", result, app.ResponseMetadata{RequestId: uuid}}
+
+			SendResponseBack(w, req, respStruct, content)
+			return
+		}
+	}
+	createErrorResponse(w, req, "TopicNotFound")
+}
+
 func Unsubscribe(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	subArn := req.FormValue("SubscriptionArn")

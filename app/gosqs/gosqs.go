@@ -817,6 +817,11 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attr = app.Attribute{Name: "QueueArn", Value: queue.Arn}
 		attribs = append(attribs, attr)
 
+		if len(queue.Policy) > 0 {
+			attr = app.Attribute{Name: "Policy", Value: queue.Policy}
+			attribs = append(attribs, attr)
+		}
+
 		deadLetterTargetArn := ""
 		if queue.DeadLetterQueue != nil {
 			deadLetterTargetArn = queue.DeadLetterQueue.Name
@@ -873,6 +878,40 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "QueueNotFound")
 	}
 	app.SyncQueues.Unlock()
+}
+
+func ListQueueTags(w http.ResponseWriter, req *http.Request) {
+	// Sent response type
+	w.Header().Set("Content-Type", "application/xml")
+	
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+
+	queueName := ""
+	if queueUrl == "" {
+		vars := mux.Vars(req)
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+
+	log.Infof("List Queue Tags: %s", queueName)
+	if _, ok := app.SyncQueues.Queues[queueName]; ok {
+		// Create, encode/xml and send response
+		var tags []app.Tag
+		//TODO Setup tags
+		result := app.ListQueueTagsResult{Tag: tags}
+		uuid, _ := common.NewUUID()
+		respStruct := app.ListQueueTagsResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: uuid}}
+		enc := xml.NewEncoder(w)
+		enc.Indent("  ", "    ")
+		if err := enc.Encode(respStruct); err != nil {
+			log.Errorf("error: %v\n", err)
+		}
+	} else {
+		log.Warnf("List Queue Tags: %s failed - queue does not exist", queueName)
+		createErrorResponse(w, req, "QueueNotFound")
+	}
 }
 
 func getMessageResult(m *app.Message) *app.ResultMessage {
