@@ -139,7 +139,12 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 		app.SyncQueues.Unlock()
 	}
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	derivedQueueUrl := queueUrl
+	if app.CurrentEnvironment.DeriveHostAndPort {
+		derivedQueueUrl = common.DeriveQueueUrl(queueUrl, req)
+	}
+
+	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: derivedQueueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {

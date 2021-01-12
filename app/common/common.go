@@ -62,7 +62,12 @@ func HashAttributes(attributes map[string]app.MessageAttributeValue) string {
 }
 
 func DeriveQueueUrl(queueUrl string, req *http.Request) string {
-	derivedQueueUrl := strings.Replace(queueUrl, app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port, req.Host, -1)
+	//check if we get a forwarded proto, honor it if we do
+	externalProto := req.Header.Get("X-Forwarded-Proto")
+	if len(externalProto) == 0 {
+		externalProto = "http"
+	}
+	derivedQueueUrl := strings.Replace(queueUrl, "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port, externalProto + "://" + req.Host, -1)
 	log.Debugf("Derived new queue URL: %s from request: %s with original: %s", derivedQueueUrl, req.Host, queueUrl)
 	return derivedQueueUrl
 }
