@@ -99,7 +99,7 @@ func LoadYamlConfig(filename string, env string) []string {
 		}
 	}
 
-	// loop one more time to create queue's RedrivePolicy and assigned deadletter queues
+	// loop one more time to create queue's RedrivePolicy and assign deadletter queues in case dead letter queue is defined first in the config
 	for _, queue := range envs[env].Queues {
 		q := app.SyncQueues.Queues[queue.Name]
 		if queue.RedrivePolicy != "" {
