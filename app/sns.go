@@ -78,9 +78,12 @@ func stringInSlice(a string, list []string) bool {
 }
 
 type Topic struct {
-	Name          string
-	Arn           string
-	Subscriptions []*Subscription
+	Name                    string
+	Arn                     string
+	Subscriptions           []*Subscription
+	Policy                  *TopicAttributePolicy
+	EffectiveDeliveryPolicy *DeliveryPolicy
+	DeliveryPolicy          *DeliveryPolicy
 }
 
 type (
@@ -106,5 +109,9 @@ const (
 
 var SyncTopics = struct {
 	sync.RWMutex
-	Topics map[string]*Topic
-}{Topics: make(map[string]*Topic)}
+	Topics    map[string]*Topic
+	ArnTopics map[string]*Topic
+}{
+	Topics:    make(map[string]*Topic),
+	ArnTopics: make(map[string]*Topic),
+}

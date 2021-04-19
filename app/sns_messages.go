@@ -60,12 +60,26 @@ type GetSubscriptionAttributesResult struct {
 	SubscriptionAttributes SubscriptionAttributes `xml:"Attributes,omitempty"`
 }
 
+type GetTopicAttributesResult struct {
+	Attributes *TopicAttributes `xml:"Attributes,omitempty"`
+}
+
 type SubscriptionAttributes struct {
 	/* SubscriptionArn, FilterPolicy */
-	Entries []SubscriptionAttributeEntry `xml:"entry,omitempty"`
+	Entries *[]SubscriptionAttributeEntry `xml:"entry,omitempty"`
+}
+
+type TopicAttributes struct {
+	/* TopicArn, FilterPolicy */
+	Entries *[]TopicAttributeEntry `xml:"entry,omitempty"`
 }
 
 type SubscriptionAttributeEntry struct {
+	Key   string `xml:"key,omitempty"`
+	Value string `xml:"value,omitempty"`
+}
+
+type TopicAttributeEntry struct {
 	Key   string `xml:"key,omitempty"`
 	Value string `xml:"value,omitempty"`
 }
@@ -76,13 +90,19 @@ type GetSubscriptionAttributesResponse struct {
 	Metadata ResponseMetadata                `xml:"ResponseMetadata,omitempty"`
 }
 
+type GetTopicAttributesResponse struct {
+	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
+	Result   GetTopicAttributesResult `xml:"GetTopicAttributesResult" binding:"required"`
+	Metadata *ResponseMetadata        `xml:"ResponseMetadata,omitempty"`
+}
+
 /*** List Subscriptions Response */
 type TopicMemberResult struct {
-	TopicArn        string `xml:"TopicArn"`
-	Protocol        string `xml:"Protocol"`
-	SubscriptionArn string `xml:"SubscriptionArn"`
-	Owner           string `xml:"Owner"`
-	Endpoint        string `xml:"Endpoint"`
+	TopicArn        string  `xml:"TopicArn" binding:"required"`
+	Protocol        *string `xml:"Protocol,omitempty"`
+	SubscriptionArn *string `xml:"SubscriptionArn,omitempty"`
+	Owner           string  `xml:"Owner" binding:"required"`
+	Endpoint        *string `xml:"Endpoint,omitempty"`
 }
 
 type TopicSubscriptions struct {
@@ -133,4 +153,42 @@ type UnsubscribeResponse struct {
 type DeleteTopicResponse struct {
 	Xmlns    string           `xml:"xmlns,attr"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+/*** Policy ***/
+type TopicAttributePolicy struct {
+	Version   string          `json:"Version" binding:"required"`
+	Id        string          `json:"Id" binding:"required"`
+	Statement *[]AWSStatement `json:"Statement,omitempty"`
+}
+
+type AWSStatement struct {
+	Effect    *string                 `json:"Effect,omitempty"`
+	Sid       string                  `json:"Sid" binding:"required"`
+	Principal AWSPrincipal            `json:"Principal" binding:"required"`
+	Action    []string                `json:"Action" binding:"required"`
+	Resource  string                  `json:"Resource" binding:"required"`
+	Condition *map[string]interface{} `json:"Condition,omitempty"`
+}
+
+type AWSPrincipal struct {
+	AWS string `json:"AWS" binding:"required"`
+}
+
+type DeliveryPolicy struct {
+	DefaultHealthyRetryPolicy *RetryPolicy `json:"defaultHealthyRetryPolicy,omitempty"`
+	SicklyRetryPolicy         *RetryPolicy `json:"sicklyRetryPolicy,omitempty"`
+	ThrottlePolicy            *RetryPolicy `json:"throttlePolicy,omitempty"`
+	Guaranteed                *bool        `json:"guaranteed,omitempty"`
+}
+
+type RetryPolicy struct {
+	NumberNoDelayRetries     *int    `json:"numNoDelayRetries,omitempty"`
+	NumberMinDelayRetries    *int    `json:"numMinDelayRetries,omitempty"`
+	MinimumDelayTarget       *int    `json:"minDelayTarget,omitempty"`
+	MaximumDelayTarget       *int    `json:"maxDelayTarget,omitempty"`
+	NumberMaxDelayRetries    *int    `json:"numMaxDelayRetries,omitempty"`
+	NumberRetries            *int    `json:"numRetries,omitempty"`
+	BackoffFunction          *string `json:"backoffFunction,omitempty"`
+	MaximumReceivesPerSecond *int    `json:"maxReceivesPerSecond,omitempty"`
 }

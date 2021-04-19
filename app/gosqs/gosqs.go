@@ -10,7 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	
+
 	"github.com/gorilla/mux"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -37,7 +37,15 @@ func init() {
 	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "ValidationError", Code: "AWS.SimpleQueueService.ValidationError", Message: "The visibility timeout is incorrect"}
 	app.SqsErrors["InvalidVisibilityTimeout"] = err8
 	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
-	app.SqsErrors["MessageNotInFlight"] = err9
+	app.SqsErrors["InvalidVisibilityTimeout"] = err9
+	err10 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MissingParameter", Code: "AWS.SimpleQueueService.MissingParameter", Message: "A required parameter for the specified action is not supplied."}
+	app.SqsErrors["MissingParameter"] = err10
+	err11 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidQueryParameter", Code: "AWS.SimpleQueueService.InvalidQueryParameter", Message: "The AWS query string is malformed or does not adhere to AWS standards."}
+	app.SqsErrors["InvalidQueryParameter"] = err11
+	err12 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidParameterValue", Code: "AWS.SimpleQueueService.InvalidParameterValue", Message: "An invalid or out-of-range value was supplied for the input parameter."}
+	app.SqsErrors["InvalidParameterValue"] = err12
+	err13 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidParameterCombination", Code: "AWS.SimpleQueueService.InvalidParameterCombination", Message: "Parameters that must not be used together were used together."}
+	app.SqsErrors["InvalidParameterCombination"] = err13
 	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
 	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
 }
@@ -82,9 +90,11 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	respStruct := app.ListQueuesResponse{}
-	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
-	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.ListQueuesResponse{
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Metadata: app.ResponseMetadata{RequestId: mockRequestId},
+	}
 	respStruct.Result.QueueUrl = make([]string, 0)
 	queueNamePrefix := req.FormValue("QueueNamePrefix")
 
@@ -115,6 +125,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	}
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
+	now := time.Now()
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &app.Queue{
@@ -124,6 +135,9 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
 			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
 			IsFIFO:              app.HasFIFOQueueName(queueName),
+			Created:             now,
+			LastModified:        now,
+			Tags:                make(map[string]string),
 		}
 		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
@@ -134,7 +148,12 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 		app.SyncQueues.Unlock()
 	}
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.CreateQueueResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.CreateQueueResult{QueueUrl: queueUrl},
+		app.ResponseMetadata{RequestId: mockRequestId},
+	}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -185,6 +204,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Unlock()
 	log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 
+	mockRequestId, _ := common.NewUUID()
 	respStruct := app.SendMessageResponse{
 		Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result: app.SendMessageResult{
@@ -194,7 +214,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 			SequenceNumber:         fifoSeqNumber,
 		},
 		Metadata: app.ResponseMetadata{
-			RequestId: "00000000-0000-0000-0000-000000000000",
+			RequestId: mockRequestId,
 		},
 	}
 
@@ -320,10 +340,11 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 	}
 
+	mockRequestId, _ := common.NewUUID()
 	respStruct := app.SendMessageBatchResponse{
 		"http://queue.amazonaws.com/doc/2012-11-05/",
 		app.SendMessageBatchResult{Entry: sentEntries},
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		app.ResponseMetadata{RequestId: mockRequestId}}
 
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
@@ -344,6 +365,11 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	mom := req.FormValue("MaxNumberOfMessages")
 	if mom != "" {
 		maxNumberOfMessages, _ = strconv.Atoi(mom)
+	}
+
+	if maxNumberOfMessages > 10 {
+		createErrorResponse(w, req, "InvalidParameterValue")
+		return
 	}
 
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
@@ -400,6 +426,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	}
 	log.Println("Getting Message from Queue:", queueName)
 
+	mockRequestId, _ := common.NewUUID()
 	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
@@ -444,12 +471,15 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 				Message: messages,
 			},
 			app.ResponseMetadata{
-				RequestId: "00000000-0000-0000-0000-000000000000",
+				RequestId: mockRequestId,
 			},
 		}
 	} else {
 		log.Println("No messages in Queue:", queueName)
-		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct = app.ReceiveMessageResponse{
+			Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+			Result:   app.ReceiveMessageResult{},
+			Metadata: app.ResponseMetadata{RequestId: mockRequestId}}
 	}
 	app.SyncQueues.Unlock() // Unlock the Queues
 	enc := xml.NewEncoder(w)
@@ -467,6 +497,160 @@ func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 		}
 	}
 	return num
+}
+
+func TagQueue(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	sourceTags := make(map[string]string)
+	for i := 1; true; i++ {
+		tagKey := req.FormValue(fmt.Sprintf("Tag.%d.Key", i))
+		tagValue := req.FormValue(fmt.Sprintf("Tag.%d.Value", i))
+		if len(tagKey) == 0 {
+			break
+		}
+
+		sourceTags[tagKey] = tagValue
+	}
+
+	if len(sourceTags) == 0 {
+		createErrorResponse(w, req, "MissingParameter")
+		return
+	}
+
+	app.SyncQueues.Lock()
+	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
+		for tagKey, tagValue := range sourceTags {
+			queue.Tags[tagKey] = tagValue
+		}
+	}
+	app.SyncQueues.Unlock()
+
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.TagQueueResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: mockRequestId}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "GeneralError")
+		return
+	}
+}
+
+func ListQueueTags(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	taglist := app.ListQueueTagsResult{make([]app.Tag, 0, 0)}
+	app.SyncQueues.RLock()
+	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
+		for tagKey, tagValue := range queue.Tags {
+			taglist.Tags = append(taglist.Tags, app.Tag{Key: tagKey, Value: tagValue})
+		}
+	}
+	app.SyncQueues.RUnlock()
+
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.ListQueueTagsResponse{
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Metadata: app.ResponseMetadata{RequestId: mockRequestId},
+		Result:   taglist,
+	}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "GeneralError")
+		return
+	}
+}
+
+func UntagQueue(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/xml")
+	vars := mux.Vars(req)
+
+	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueName := ""
+	if queueUrl == "" {
+		queueName = vars["queueName"]
+	} else {
+		uriSegments := strings.Split(queueUrl, "/")
+		queueName = uriSegments[len(uriSegments)-1]
+	}
+
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	sourceTags := make([]string, 0, 0)
+	for i := 1; true; i++ {
+		tagKey := req.FormValue(fmt.Sprintf("TagKey.%d", i))
+		if len(tagKey) == 0 {
+			break
+		}
+
+		sourceTags = append(sourceTags, tagKey)
+	}
+
+	if len(sourceTags) == 0 {
+		createErrorResponse(w, req, "MissingParameter")
+		return
+	}
+
+	app.SyncQueues.Lock()
+	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
+		for _, tagKey := range sourceTags {
+			delete(queue.Tags, tagKey)
+		}
+	}
+	app.SyncQueues.Unlock()
+
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.UntagQueueResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: mockRequestId}}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent(" ", "    ")
+	if err := enc.Encode(respStruct); err != nil {
+		log.Printf("error: %v\n", err)
+		createErrorResponse(w, req, "GeneralError")
+		return
+	}
 }
 
 func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
@@ -529,9 +713,10 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	mockRequestId, _ := common.NewUUID()
 	respStruct := app.ChangeMessageVisibilityResult{
 		"http://queue.amazonaws.com/doc/2012-11-05/",
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		app.ResponseMetadata{RequestId: mockRequestId}}
 
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
@@ -624,10 +809,11 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	mockRequestId, _ := common.NewUUID()
 	respStruct := app.DeleteMessageBatchResponse{
 		"http://queue.amazonaws.com/doc/2012-11-05/",
 		app.DeleteMessageBatchResult{Entry: deletedEntries, Error: notFoundEntries},
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		app.ResponseMetadata{RequestId: mockRequestId}}
 
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
@@ -669,7 +855,8 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 
 				app.SyncQueues.Unlock()
 				// Create, encode/xml and send response
-				respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+				mockRequestId, _ := common.NewUUID()
+				respStruct := app.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: mockRequestId}}
 				enc := xml.NewEncoder(w)
 				enc.Indent("  ", "    ")
 				if err := enc.Encode(respStruct); err != nil {
@@ -708,7 +895,10 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Unlock()
 
 	// Create, encode/xml and send response
-	respStruct := app.DeleteQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	mockRequestId, _ := common.NewUUID()
+	respStruct := app.DeleteQueueResponse{
+		"http://queue.amazonaws.com/doc/2012-11-05/",
+		app.ResponseMetadata{RequestId: mockRequestId}}
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(respStruct); err != nil {
@@ -731,7 +921,10 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
 		app.SyncQueues.Queues[queueName].Messages = nil
-		respStruct := app.PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		mockRequestId, _ := common.NewUUID()
+		respStruct := app.PurgeQueueResponse{
+			"http://queue.amazonaws.com/doc/2012-11-05/",
+			app.ResponseMetadata{RequestId: mockRequestId}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
@@ -756,7 +949,10 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		log.Println("Get Queue URL:", queueName)
 		// Create, encode/xml and send response
 		result := app.GetQueueUrlResult{QueueUrl: url}
-		respStruct := app.GetQueueUrlResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		mockRequestId, _ := common.NewUUID()
+		respStruct := app.GetQueueUrlResponse{
+			"http://queue.amazonaws.com/doc/2012-11-05/",
+			result, app.ResponseMetadata{RequestId: mockRequestId}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
@@ -786,6 +982,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	log.Println("Get Queue Attributes:", queueName)
 	app.SyncQueues.RLock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
+		app.SyncQueues.RUnlock()
 		// Create, encode/xml and send response
 		attribs := make([]app.Attribute, 0, 0)
 		attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.TimeoutSecs)}
@@ -800,9 +997,9 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attr = app.Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
 		app.SyncQueues.RUnlock()
 		attribs = append(attribs, attr)
-		attr = app.Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
+		attr = app.Attribute{Name: "CreatedTimestamp", Value: strconv.FormatInt(queue.Created.Unix(), 10)}
 		attribs = append(attribs, attr)
-		attr = app.Attribute{Name: "LastModifiedTimestamp", Value: "0000000000"}
+		attr = app.Attribute{Name: "LastModifiedTimestamp", Value: strconv.FormatInt(queue.LastModified.Unix(), 10)}
 		attribs = append(attribs, attr)
 		attr = app.Attribute{Name: "QueueArn", Value: queue.Arn}
 		attribs = append(attribs, attr)
@@ -815,17 +1012,21 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		attribs = append(attribs, attr)
 
 		result := app.GetQueueAttributesResult{Attrs: attribs}
-		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		mockRequestId, _ := common.NewUUID()
+		respStruct := app.GetQueueAttributesResponse{
+			"http://queue.amazonaws.com/doc/2012-11-05/",
+			result,
+			app.ResponseMetadata{RequestId: mockRequestId}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
 			log.Printf("error: %v\n", err)
 		}
 	} else {
+		app.SyncQueues.RUnlock()
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
-	app.SyncQueues.RUnlock()
 }
 
 func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
@@ -852,7 +1053,10 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		respStruct := app.SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		mockRequestId, _ := common.NewUUID()
+		respStruct := app.SetQueueAttributesResponse{
+			"http://queue.amazonaws.com/doc/2012-11-05/",
+			app.ResponseMetadata{RequestId: mockRequestId}}
 		enc := xml.NewEncoder(w)
 		enc.Indent("  ", "    ")
 		if err := enc.Encode(respStruct); err != nil {
@@ -910,9 +1114,10 @@ func getQueueFromPath(formVal string, theUrl string) string {
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := app.SqsErrors[err]
+	mockRequestId, _ := common.NewUUID()
 	respStruct := app.ErrorResponse{
 		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
-		RequestId: "00000000-0000-0000-0000-000000000000",
+		RequestId: mockRequestId,
 	}
 
 	w.WriteHeader(er.HttpError)

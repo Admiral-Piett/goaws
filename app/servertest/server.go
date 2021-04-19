@@ -9,8 +9,9 @@ import (
 	"github.com/p4tin/goaws/app/router"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/p4tin/goaws/app"
 	"strings"
+
+	"github.com/p4tin/goaws/app"
 )
 
 // Server is a fake SQS / SNS server for testing purposes.

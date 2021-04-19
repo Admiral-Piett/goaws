@@ -80,6 +80,31 @@ type ChangeMessageVisibilityResult struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
+type TagQueueResponse struct {
+	Xmlns    string           `xml:"xmlns,attr"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+type UntagQueueResponse struct {
+	Xmlns    string           `xml:"xmlns,attr"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+type ListQueueTagsResponse struct {
+	Xmlns    string              `xml:"xmlns,attr"`
+	Result   ListQueueTagsResult `xml:"ListQueueTagsResult,omitempty"`
+	Metadata ResponseMetadata    `xml:"ResponseMetadata"`
+}
+
+type ListQueueTagsResult struct {
+	Tags []Tag `xml:"Tag,omitempty"`
+}
+
+type Tag struct {
+	Key   string `xml:"Key,omitempty"`
+	Value string `xml:"Value,omitempty"`
+}
+
 /*** Delete Message Response */
 type DeleteMessageResponse struct {
 	Xmlns    string           `xml:"xmlns,attr,omitempty"`

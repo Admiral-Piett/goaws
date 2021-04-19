@@ -28,13 +28,16 @@ import (
 
 func TestNew(t *testing.T) {
 	// Consume address
-	srv, err := New("localhost:4100")
+	srv, err := New("localhost:4123")
 	noSetupError(t, err)
 	defer srv.Quit()
 
 	// Test
-	_, err = New("localhost:4100")
-	assert.Equal(t, errors.New("cannot listen on localhost: listen tcp 127.0.0.1:4100: bind: address already in use"), err, "Error")
+	_, err = New("localhost:4123")
+	assert.Contains(
+		t,
+		err.Error(),
+		"cannot listen on localhost: listen tcp 127.0.0.1:4123: bind")
 }
 
 func TestNewIntegration(t *testing.T) {
@@ -117,7 +120,7 @@ func TestNewIntegration(t *testing.T) {
 
 func TestSNSRoutes(t *testing.T) {
 	// Consume address
-	srv, err := NewSNSTest("localhost:4100", &snsTest{t: t})
+	srv, err := newSNSTest("localhost:4100", &snsTest{t: t})
 
 	noSetupError(t, err)
 	defer srv.Quit()
@@ -181,7 +184,7 @@ type snsTest struct {
 	t *testing.T
 }
 
-func NewSNSTest(addr string, snsTest *snsTest) (*Server, error) {
+func newSNSTest(addr string, snsTest *snsTest) (*Server, error) {
 	if addr == "" {
 		addr = "localhost:0"
 	}
@@ -271,7 +274,7 @@ func (s *snsTest) NotificationHandle(rw http.ResponseWriter, req *http.Request) 
 	subArn := req.Header.Get("X-Amz-Sns-Subscription-Arn")
 
 	msg := app.SNSMessage{}
-	_, err := DecodeJSONMessage(req, &msg)
+	_, err := decodeJSONMessage(req, &msg)
 	if err != nil {
 		log.Error(err)
 		return []byte{}
@@ -281,7 +284,7 @@ func (s *snsTest) NotificationHandle(rw http.ResponseWriter, req *http.Request) 
 	return []byte(msg.Message)
 }
 
-func DecodeJSONMessage(req *http.Request, v interface{}) ([]byte, error) {
+func decodeJSONMessage(req *http.Request, v interface{}) ([]byte, error) {
 
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {

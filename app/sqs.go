@@ -3,12 +3,13 @@ package app
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type SqsErrorType struct {
@@ -36,7 +37,7 @@ type Message struct {
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 	GroupID                string
-	SentTime			   time.Time
+	SentTime               time.Time
 }
 
 func (m *Message) IsReadyForReceipt() bool {
@@ -48,7 +49,7 @@ func (m *Message) IsReadyForReceipt() bool {
 	return m.SentTime.Add(randomLatency).Before(time.Now())
 }
 
-func getRandomLatency() (time.Duration, error){
+func getRandomLatency() (time.Duration, error) {
 	min := CurrentEnvironment.RandomLatency.Min
 	max := CurrentEnvironment.RandomLatency.Max
 	if min == 0 && max == 0 {
@@ -86,6 +87,9 @@ type Queue struct {
 	IsFIFO              bool
 	FIFOMessages        map[string]int
 	FIFOSequenceNumbers map[string]int
+	Created             time.Time
+	LastModified        time.Time
+	Tags                map[string]string
 }
 
 var SyncQueues = struct {

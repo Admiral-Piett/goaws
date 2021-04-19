@@ -139,7 +139,7 @@ func TestPublishHandler_POST_FilterPolicyRejectsTheMessage(t *testing.T) {
 	topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
-	app.SyncTopics.Topics[topicName] = &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
+	topic := &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
 		{
 			EndPoint:        app.SyncQueues.Queues[queueName].Arn,
 			Protocol:        "sqs",
@@ -149,6 +149,8 @@ func TestPublishHandler_POST_FilterPolicyRejectsTheMessage(t *testing.T) {
 			},
 		},
 	}}
+	app.SyncTopics.Topics[topicName] = topic
+	app.SyncTopics.ArnTopics[topicArn] = topic
 
 	form := url.Values{}
 	form.Add("TopicArn", topicArn)
@@ -210,7 +212,7 @@ func TestPublishHandler_POST_FilterPolicyPassesTheMessage(t *testing.T) {
 	topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
-	app.SyncTopics.Topics[topicName] = &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
+	topic := &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
 		{
 			EndPoint:        app.SyncQueues.Queues[queueName].Arn,
 			Protocol:        "sqs",
@@ -220,6 +222,8 @@ func TestPublishHandler_POST_FilterPolicyPassesTheMessage(t *testing.T) {
 			},
 		},
 	}}
+	app.SyncTopics.Topics[topicName] = topic
+	app.SyncTopics.ArnTopics[topicArn] = topic
 
 	form := url.Values{}
 	form.Add("TopicArn", topicArn)
@@ -438,7 +442,7 @@ func TestGetSubscriptionAttributesHandler_POST_Success(t *testing.T) {
 	topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
-	app.SyncTopics.Topics[topicName] = &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
+	topic := &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
 		{
 			SubscriptionArn: subArn,
 			FilterPolicy: &app.FilterPolicy{
@@ -446,6 +450,8 @@ func TestGetSubscriptionAttributesHandler_POST_Success(t *testing.T) {
 			},
 		},
 	}}
+	app.SyncTopics.Topics[topicName] = topic
+	app.SyncTopics.ArnTopics[topicArn] = topic
 
 	form := url.Values{}
 	form.Add("SubscriptionArn", subArn)
@@ -502,11 +508,13 @@ func TestSetSubscriptionAttributesHandler_FilterPolicy_POST_Success(t *testing.T
 	topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":000000000000:" + topicName
 	subArn, _ := common.NewUUID()
 	subArn = topicArn + ":" + subArn
-	app.SyncTopics.Topics[topicName] = &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
+	topic := &app.Topic{Name: topicName, Arn: topicArn, Subscriptions: []*app.Subscription{
 		{
 			SubscriptionArn: subArn,
 		},
 	}}
+	app.SyncTopics.Topics[topicName] = topic
+	app.SyncTopics.ArnTopics[topicArn] = topic
 
 	form := url.Values{}
 	form.Add("SubscriptionArn", subArn)

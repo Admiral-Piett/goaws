@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/p4tin/goaws/app"
 )
@@ -73,6 +74,7 @@ func validateAndSetQueueAttributes(q *app.Queue, u url.Values) error {
 		}
 		q.DeadLetterQueue = deadLetterQueue
 		q.MaxReceiveCount = maxReceiveCount
+		q.LastModified = time.Now()
 	}
 
 	return nil

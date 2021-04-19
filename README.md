@@ -26,11 +26,11 @@ Here is a list of the APIs:
  - [x] ChangeMessageVisibility
  - [ ] ChangeMessageVisibilityBatch
  - [ ] ListDeadLetterSourceQueues
- - [ ] ListQueueTags
+ - [x] ListQueueTags
  - [ ] RemovePermission
  - [x] SetQueueAttributes (Only supported attributes are set - see Supported Queue Attributes)
- - [ ] TagQueue
- - [ ] UntagQueue
+ - [x] TagQueue
+ - [x] UntagQueue
 
 ## Supported Queue Attributes
 
@@ -51,6 +51,7 @@ Here is a list of the APIs:
  - [X] ListSubscriptionsByTopic
  - [x] GetSubscriptionAttributes
  - [x] SetSubscriptionAttributes (Only supported attributes are set - see Supported Subscription Attributes)
+ - [x] GetTopicAttributes
 
 ## Supported Subscription Attributes
 
