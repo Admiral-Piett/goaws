@@ -108,6 +108,8 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	form.Add("QueueName", "UnitTestQueue1")
 	form.Add("Attribute.1.Name", "VisibilityTimeout")
 	form.Add("Attribute.1.Value", "60")
+	form.Add("Attribute.2.Name", "MaximumMessageSize")
+	form.Add("Attribute.2.Value", "2048")
 	req.PostForm = form
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
@@ -135,6 +137,8 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 		URL:         "http://://" + queueName,
 		Arn:         "arn:aws:sqs:::" + queueName,
 		TimeoutSecs: 60,
+		MaximumMessageSize: 2048,
+		Duplicates:  make(map[string]time.Time),
 	}
 	actualQueue := app.SyncQueues.Queues[queueName]
 	if !reflect.DeepEqual(expectedQueue, actualQueue) {
@@ -182,10 +186,87 @@ func TestCreateFIFOQueuehandler_POST_CreateQueue(t *testing.T) {
 		Arn:         "arn:aws:sqs:::" + queueName,
 		TimeoutSecs: 60,
 		IsFIFO:      true,
+		Duplicates:   make(map[string]time.Time),
 	}
 	actualQueue := app.SyncQueues.Queues[queueName]
 	if !reflect.DeepEqual(expectedQueue, actualQueue) {
 		t.Fatalf("expected %+v, got %+v", expectedQueue, actualQueue)
+	}
+}
+
+func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["test_max_message_size"] =
+		&app.Queue{Name: "test_max_message_size", MaximumMessageSize: 100}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/test_max_message_size")
+	form.Add("MessageBody", "test%20message%20body%201")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SendMessage)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := "MD5OfMessageBody"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestSendMessage_MaximumMessageSize_MessageTooBig(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["test_max_message_size"] =
+		&app.Queue{Name: "test_max_message_size", MaximumMessageSize: 10}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/test_max_message_size")
+	form.Add("MessageBody", "test%20message%20body%201")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(SendMessage)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	// Check the response body is what we expect.
+	expected := "MessageTooBig"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
 	}
 }
 
@@ -235,6 +316,10 @@ func TestSendMessageBatch_POST_QueueNotFound(t *testing.T) {
 	form := url.Values{}
 	form.Add("Action", "SendMessageBatch")
 	form.Add("QueueUrl", "http://localhost:4100/queue/testing")
+	form.Add("SendMessageBatchRequestEntry.1.Id", "test_msg_001")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "test%20message%20body%201")
+	form.Add("SendMessageBatchRequestEntry.2.Id", "test_msg_002")
+	form.Add("SendMessageBatchRequestEntry.2.MessageBody", "test%20message%20body%202")
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
@@ -1460,6 +1545,221 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	}
 
 	done <- struct{}{}
+}
+
+func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "stantdard-testing")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/stantdard-testing")
+	form.Add("MessageBody", "Test1")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["stantdard-testing"].Messages) == 0 {
+		t.Fatal("there should be 1 message in queue")
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/stantdard-testing")
+	form.Add("MessageBody", "Test2")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["stantdard-testing"].Messages) == 1 {
+		t.Fatal("there should be 2 messages in queue")
+	}
+}
+
+func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "no-dup-testing.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/no-dup-testing.fifo")
+	form.Add("MessageBody", "Test1")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["no-dup-testing.fifo"].Messages) == 0 {
+		t.Fatal("there should be 1 message in queue")
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/no-dup-testing.fifo")
+	form.Add("MessageBody", "Test2")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["no-dup-testing.fifo"].Messages) != 2 {
+		t.Fatal("there should be 2 message in queue")
+	}
+}
+
+func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "dup-testing.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.SyncQueues.Queues["dup-testing.fifo"].EnableDuplicates = true
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/dup-testing.fifo")
+	form.Add("MessageBody", "Test1")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["dup-testing.fifo"].Messages) == 0 {
+		t.Fatal("there should be 1 message in queue")
+	}
+
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/dup-testing.fifo")
+	form.Add("MessageBody", "Test2")
+	form.Add("MessageDeduplicationId", "123")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["dup-testing.fifo"].Messages) != 1 {
+		t.Fatal("there should be 1 message in queue")
+	}
+	if body := app.SyncQueues.Queues["dup-testing.fifo"].Messages[0].MessageBody; string(body) == "Test2" {
+		t.Fatal("duplicate message should not be added to queue")
+	}
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.

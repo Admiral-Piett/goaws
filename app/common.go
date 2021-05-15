@@ -19,11 +19,13 @@ type EnvQueue struct {
 	Name                          string
 	ReceiveMessageWaitTimeSeconds int
 	RedrivePolicy                 string
+	MaximumMessageSize            int
 }
 
 type EnvQueueAttributes struct {
 	VisibilityTimeout             int
 	ReceiveMessageWaitTimeSeconds int
+	MaximumMessageSize						int
 }
 
 type Environment struct {
@@ -35,6 +37,7 @@ type Environment struct {
 	AccountID              string
 	LogToFile              bool
 	LogFile                string
+	EnableDuplicates       bool
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes

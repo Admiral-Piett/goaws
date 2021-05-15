@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -65,6 +66,10 @@ func LoadYamlConfig(filename string, env string) []string {
 		app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
 	}
 
+	if app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize == 0 {
+		app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
+	}
+
 	if app.CurrentEnvironment.AccountID == "" {
 		app.CurrentEnvironment.AccountID = "queue"
 	}
@@ -88,6 +93,9 @@ func LoadYamlConfig(filename string, env string) []string {
 		if queue.ReceiveMessageWaitTimeSeconds == 0 {
 			queue.ReceiveMessageWaitTimeSeconds = app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
 		}
+		if queue.MaximumMessageSize == 0 {
+			queue.MaximumMessageSize = app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize
+		}
 
 		app.SyncQueues.Queues[queue.Name] = &app.Queue{
 			Name:                queue.Name,
@@ -95,7 +103,10 @@ func LoadYamlConfig(filename string, env string) []string {
 			Arn:                 queueArn,
 			URL:                 queueUrl,
 			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:  queue.MaximumMessageSize,
 			IsFIFO:              app.HasFIFOQueueName(queue.Name),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
 		}
 	}
 
@@ -170,7 +181,10 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
 			Arn:                 queueArn,
 			URL:                 queueUrl,
 			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
 			IsFIFO:              app.HasFIFOQueueName(configSubscription.QueueName),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
 		}
 	}
 	qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn

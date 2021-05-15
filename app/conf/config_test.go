@@ -73,6 +73,10 @@ func TestConfig_QueueAttributes(t *testing.T) {
 	if timeoutSecs != 10 {
 		t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 10 but got %d\n", timeoutSecs)
 	}
+	maximumMessageSize := app.SyncQueues.Queues["local-queue1"].MaximumMessageSize
+	if maximumMessageSize != 1024 {
+		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 1024 but got %d\n", maximumMessageSize)
+	}
 
 	if app.SyncQueues.Queues["local-queue1"].DeadLetterQueue != nil {
 		t.Errorf("Expected local-queue1 Queue to be configured without redrive policy\n")
@@ -91,6 +95,10 @@ func TestConfig_QueueAttributes(t *testing.T) {
 	}
 	if dlq.Name != "local-queue3-dlq" {
 		t.Errorf("Expected local-queue3 to have dead letter queue local-queue3-dlq but got %s\n", dlq.Name)
+	}
+	maximumMessageSize = app.SyncQueues.Queues["local-queue2"].MaximumMessageSize
+	if maximumMessageSize != 128 {
+		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 128 but got %d\n", maximumMessageSize)
 	}
 }
 
