@@ -553,7 +553,12 @@ func publishSQS(w http.ResponseWriter, req *http.Request,
 		} else {
 			msg.MessageAttributes = messageAttributes
 			msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
-			msg.MessageBody = []byte(messageBody)
+			m, err := extractMessageFromJSON(messageBody, subs.Protocol)
+			if (err == nil) {
+				msg.MessageBody = []byte(m)
+			} else {
+				msg.MessageBody = []byte(messageBody)
+			}
 		}
 
 		msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
