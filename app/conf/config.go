@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -102,6 +103,8 @@ func LoadYamlConfig(filename string, env string) []string {
 			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
 			MaximumMessageSize:  queue.MaximumMessageSize,
 			IsFIFO:              app.HasFIFOQueueName(queue.Name),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
 		}
 	}
 
@@ -165,6 +168,8 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
 			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
 			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
 			IsFIFO:              app.HasFIFOQueueName(configSubscription.QueueName),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
 		}
 	}
 	qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn
