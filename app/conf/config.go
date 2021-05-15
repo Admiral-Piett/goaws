@@ -2,8 +2,10 @@ package conf
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,6 +110,19 @@ func LoadYamlConfig(filename string, env string) []string {
 		}
 	}
 
+	// loop one more time to create queue's RedrivePolicy and assign deadletter queues in case dead letter queue is defined first in the config
+	for _, queue := range envs[env].Queues {
+		q := app.SyncQueues.Queues[queue.Name]
+		if queue.RedrivePolicy != "" {
+			err := setQueueRedrivePolicy(app.SyncQueues.Queues, q, queue.RedrivePolicy)
+			if err != nil {
+				log.Errorf("err: %s", err)
+				return ports
+			}
+		}
+
+	}
+
 	for _, topic := range envs[env].Topics {
 		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
 
@@ -178,4 +193,41 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
 	subArn = topicArn + ":" + subArn
 	newSub.SubscriptionArn = subArn
 	return newSub
+}
+
+func setQueueRedrivePolicy(queues map[string]*app.Queue, q *app.Queue, strRedrivePolicy string) error {
+	// support both int and string maxReceiveCount (Amazon clients use string)
+	redrivePolicy1 := struct {
+		MaxReceiveCount     int    `json:"maxReceiveCount"`
+		DeadLetterTargetArn string `json:"deadLetterTargetArn"`
+	}{}
+	redrivePolicy2 := struct {
+		MaxReceiveCount     string `json:"maxReceiveCount"`
+		DeadLetterTargetArn string `json:"deadLetterTargetArn"`
+	}{}
+	err1 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy1)
+	err2 := json.Unmarshal([]byte(strRedrivePolicy), &redrivePolicy2)
+	maxReceiveCount := redrivePolicy1.MaxReceiveCount
+	deadLetterQueueArn := redrivePolicy1.DeadLetterTargetArn
+	if err1 != nil && err2 != nil {
+		return fmt.Errorf("invalid json for queue redrive policy ")
+	} else if err1 != nil {
+		maxReceiveCount, _ = strconv.Atoi(redrivePolicy2.MaxReceiveCount)
+		deadLetterQueueArn = redrivePolicy2.DeadLetterTargetArn
+	}
+
+	if (deadLetterQueueArn != "" && maxReceiveCount == 0) ||
+		(deadLetterQueueArn == "" && maxReceiveCount != 0) {
+		return fmt.Errorf("invalid redrive policy values")
+	}
+	dlt := strings.Split(deadLetterQueueArn, ":")
+	deadLetterQueueName := dlt[len(dlt)-1]
+	deadLetterQueue, ok := queues[deadLetterQueueName]
+	if !ok {
+		return fmt.Errorf("deadletter queue not found")
+	}
+	q.DeadLetterQueue = deadLetterQueue
+	q.MaxReceiveCount = maxReceiveCount
+
+	return nil
 }

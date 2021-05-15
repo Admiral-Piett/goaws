@@ -18,6 +18,7 @@ type EnvTopic struct {
 type EnvQueue struct {
 	Name                          string
 	ReceiveMessageWaitTimeSeconds int
+	RedrivePolicy                 string
 	MaximumMessageSize            int
 }
 

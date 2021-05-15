@@ -40,11 +40,11 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	}
 
 	numQueues := len(envs[env].Queues)
-	if numQueues != 3 {
+	if numQueues != 4 {
 		t.Errorf("Expected three queues to be in the environment but got %d\n", numQueues)
 	}
 	numQueues = len(app.SyncQueues.Queues)
-	if numQueues != 5 {
+	if numQueues != 6 {
 		t.Errorf("Expected five queues to be in the sqs topics but got %d\n", numQueues)
 	}
 
@@ -78,9 +78,23 @@ func TestConfig_QueueAttributes(t *testing.T) {
 		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 1024 but got %d\n", maximumMessageSize)
 	}
 
-	receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs
-	if receiveWaitTime != 20 {
-		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
+	if app.SyncQueues.Queues["local-queue1"].DeadLetterQueue != nil {
+		t.Errorf("Expected local-queue1 Queue to be configured without redrive policy\n")
+	}
+	if app.SyncQueues.Queues["local-queue1"].MaxReceiveCount != 0 {
+		t.Errorf("Expected local-queue1 Queue to be configured without redrive policy and therefore MaxReceiveCount: 0 \n")
+	}
+
+	maxReceiveCount := app.SyncQueues.Queues["local-queue3"].MaxReceiveCount
+	if maxReceiveCount != 100 {
+		t.Errorf("Expected local-queue2 Queue to be configured with MaxReceiveCount: 3 from RedrivePolicy but got %d\n", maxReceiveCount)
+	}
+	dlq := app.SyncQueues.Queues["local-queue3"].DeadLetterQueue
+	if dlq == nil {
+		t.Errorf("Expected local-queue3 to have one dead letter queue to redrive to\n")
+	}
+	if dlq.Name != "local-queue3-dlq" {
+		t.Errorf("Expected local-queue3 to have dead letter queue local-queue3-dlq but got %s\n", dlq.Name)
 	}
 	maximumMessageSize = app.SyncQueues.Queues["local-queue2"].MaximumMessageSize
 	if maximumMessageSize != 128 {
