@@ -10,7 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	
+
 	"github.com/gorilla/mux"
 	"github.com/p4tin/goaws/app"
 	"github.com/p4tin/goaws/app/common"
@@ -38,6 +38,8 @@ func init() {
 	app.SqsErrors["InvalidVisibilityTimeout"] = err8
 	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
 	app.SqsErrors["MessageNotInFlight"] = err9
+	err10 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageTooBig", Code: "InvalidMessageContents", Message: "The message size exceeds the limit."}
+	app.SqsErrors["MessageTooBig"] = err10
 	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
 	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
 }
@@ -132,6 +134,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			Arn:                 queueArn,
 			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
 			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
 			IsFIFO:              app.HasFIFOQueueName(queueName),
 			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
 			Duplicates:          make(map[string]time.Time),
@@ -174,6 +177,13 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		// Queue does not exist
 		createErrorResponse(w, req, "QueueNotFound")
+		return
+	}
+
+	if (app.SyncQueues.Queues[queueName].MaximumMessageSize > 0 &&
+		len(messageBody) > app.SyncQueues.Queues[queueName].MaximumMessageSize) {
+		// Message size is too big
+		createErrorResponse(w, req, "MessageTooBig")
 		return
 	}
 

@@ -81,6 +81,7 @@ type Queue struct {
 	Arn                 string
 	TimeoutSecs         int
 	ReceiveWaitTimeSecs int
+	MaximumMessageSize  int
 	Messages            []Message
 	DeadLetterQueue     *Queue
 	MaxReceiveCount     int

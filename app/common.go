@@ -18,11 +18,13 @@ type EnvTopic struct {
 type EnvQueue struct {
 	Name                          string
 	ReceiveMessageWaitTimeSeconds int
+	MaximumMessageSize            int
 }
 
 type EnvQueueAttributes struct {
 	VisibilityTimeout             int
 	ReceiveMessageWaitTimeSeconds int
+	MaximumMessageSize						int
 }
 
 type Environment struct {
