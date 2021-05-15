@@ -36,6 +36,7 @@ type Message struct {
 	Retry                  int
 	MessageAttributes      map[string]MessageAttributeValue
 	GroupID                string
+	DeduplicationID        string
 	SentTime			   time.Time
 }
 
@@ -86,12 +87,16 @@ type Queue struct {
 	IsFIFO              bool
 	FIFOMessages        map[string]int
 	FIFOSequenceNumbers map[string]int
+	EnableDuplicates    bool
+	Duplicates          map[string]time.Time
 }
 
 var SyncQueues = struct {
 	sync.RWMutex
 	Queues map[string]*Queue
 }{Queues: make(map[string]*Queue)}
+
+var DeduplicationPeriod = 5 * time.Minute
 
 func HasFIFOQueueName(queueName string) bool {
 	return strings.HasSuffix(queueName, ".fifo")
@@ -124,5 +129,25 @@ func (q *Queue) LockGroup(groupId string) {
 func (q *Queue) UnlockGroup(groupId string) {
 	if _, ok := q.FIFOMessages[groupId]; ok {
 		delete(q.FIFOMessages, groupId)
+	}
+}
+
+func (q *Queue) IsDuplicate(deduplicationId string) bool {
+	if !q.EnableDuplicates || !q.IsFIFO || deduplicationId == "" {
+		return false
+	}
+
+	_, ok := q.Duplicates[deduplicationId]
+
+	return ok
+}
+
+func (q *Queue) InitDuplicatation(deduplicationId string) {
+	if !q.EnableDuplicates || !q.IsFIFO || deduplicationId == "" {
+		return
+	}
+
+	if _, ok := q.Duplicates[deduplicationId]; !ok {
+		q.Duplicates[deduplicationId] = time.Now()
 	}
 }
