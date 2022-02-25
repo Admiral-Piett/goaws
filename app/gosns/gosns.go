@@ -554,7 +554,7 @@ func publishSQS(w http.ResponseWriter, req *http.Request,
 			msg.MessageAttributes = messageAttributes
 			msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
 			m, err := extractMessageFromJSON(messageBody, subs.Protocol)
-			if (err == nil) {
+			if err == nil {
 				msg.MessageBody = []byte(m)
 			} else {
 				msg.MessageBody = []byte(messageBody)
@@ -609,7 +609,7 @@ func formatAttributes(values map[string]app.MessageAttributeValue) map[string]ap
 	attr := make(map[string]app.MsgAttr)
 	for k, v := range values {
 		attr[k] = app.MsgAttr{
-			Type:  v.ValueKey,
+			Type:  v.DataType,
 			Value: v.Value,
 		}
 	}
