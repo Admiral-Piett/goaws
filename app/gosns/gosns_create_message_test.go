@@ -12,6 +12,7 @@ const (
 	subjectKey            = "Subject"
 	messageStructureJSON  = "json"
 	messageStructureEmpty = ""
+	messageAttributesKey  = "MessageAttributes"
 )
 
 // When simple message string is passed,
@@ -200,5 +201,63 @@ func TestCreateMessageBody_NonJsonContainingJson(t *testing.T) {
 
 	if receivedSubject != subject {
 		t.Errorf(`expected subject "%s" but received "%s"`, subject, receivedSubject)
+	}
+}
+
+// When message attributes are passed,
+// the requested Name, DataType, StringValue (or NumberValue) are correctly mapped to Name, Type, Value
+func TestCreateMessageBody_WithMessageAttributes(t *testing.T) {
+	message := "message text"
+	subject := "subject"
+	subs := &app.Subscription{
+		Protocol:        "sqs",
+		TopicArn:        "topic-arn",
+		SubscriptionArn: "subs-arn",
+		Raw:             false,
+	}
+	stringMessageAttributeValue := app.MessageAttributeValue{ValueKey: "StringValue", Value: "test", DataType: "String"}
+	attributes := map[string]app.MessageAttributeValue{
+		stringMessageAttributeValue.DataType: stringMessageAttributeValue,
+	}
+	snsMessage, err := CreateMessageBody(subs, message, subject, messageStructureEmpty, attributes)
+	if err != nil {
+		t.Fatalf(`error creating SNS message: %s`, err)
+	}
+
+	var unmarshalled map[string]interface{}
+	err = json.Unmarshal(snsMessage, &unmarshalled)
+
+	if err != nil {
+		t.Fatalf(`error unmarshalling SNS message "%s": %s`, snsMessage, err)
+	}
+
+	receivedMessageAttributes, ok := unmarshalled[messageAttributesKey]
+	if !ok {
+		t.Fatalf(`SNS message "%s" does not contain key "%s"`, snsMessage, messageAttributesKey)
+	}
+
+	attributesMap, ok := receivedMessageAttributes.(map[string]interface{})
+	if !ok {
+		t.Fatalf(`SNS messageAttributes is invalid interface`)
+	}
+
+	attribute, ok := attributesMap[stringMessageAttributeValue.DataType]
+	if !ok {
+		t.Fatalf(`SNS messageAttributes does not contain key "%s"`, stringMessageAttributeValue.DataType)
+	}
+
+	attributeMap, ok := attribute.(map[string]interface{})
+	if !ok {
+		t.Fatalf(`SNS messageAttribute is invalid interface`)
+	}
+
+	attributeType, _ := attributeMap["Type"]
+	if attributeType != stringMessageAttributeValue.DataType {
+		t.Fatalf(`expected Type "%s" but received %s`, stringMessageAttributeValue.DataType, attributeType)
+	}
+
+	attributeValue, _ := attributeMap["Value"]
+	if attributeValue != stringMessageAttributeValue.Value {
+		t.Fatalf(`expected Value "%s" but received %s`, stringMessageAttributeValue.Value, attributeValue)
 	}
 }
