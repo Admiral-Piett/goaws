@@ -651,14 +651,19 @@ func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) 
 	if res == nil {
 		return errors.New("response is nil")
 	}
-	if res.StatusCode%200 != 0 {
+
+	//Amazon considers a Notification delivery attempt successful if the endpoint
+	//responds in the range of 200-499. Response codes outside that range will
+	//trigger the Subscription's retry policy.
+	//https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html
+	if res.StatusCode < 200 || res.statusCode > 499 {
 		log.WithFields(log.Fields{
 			"statusCode": res.StatusCode,
 			"status":     res.Status,
 			"header":     res.Header,
 			"endpoint":   endpoint,
-		}).Error("Not 2xx repsone")
-		return errors.New("Not 2xx response")
+		}).Error("Response outside of acceptable (200-499) range")
+		return errors.New("Response outside of acceptable (200-499) range")
 	}
 
 	defer res.Body.Close()
