@@ -10,8 +10,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/p4tin/goaws/app"
-	"github.com/p4tin/goaws/app/common"
+	"github.com/Admiral-Piett/goaws/app"
+	"github.com/Admiral-Piett/goaws/app/common"
 )
 
 func TestListTopicshandler_POST_NoTopics(t *testing.T) {

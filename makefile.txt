@@ -16,7 +16,7 @@ run: dep fmt test
 	go run app/cmd/goaws.go
 
 git-release:
-	curl --data $(APIJSON) https://api.github.com/repos/p4tin/goaws/releases?access_token=$(GITHUB_API_KEY)
+	curl --data $(APIJSON) https://api.github.com/repos/Admiral-Piett/goaws/releases?access_token=$(GITHUB_API_KEY)
 
 linux:
 	GOOS=linux GOARCH=amd64 go build -o goaws_linux_amd64  app/cmd/goaws.go

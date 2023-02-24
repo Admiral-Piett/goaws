@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/Admiral-Piett/goaws/app"
 )
 
 func TestListQueues_POST_NoQueues(t *testing.T) {

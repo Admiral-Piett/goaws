@@ -1,4 +1,4 @@
-module github.com/p4tin/goaws
+module github.com/Admiral-Piett/goaws
 
 go 1.12
 

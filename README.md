@@ -1,7 +1,7 @@
 # GoAws
 [![Build Status](https://travis-ci.org/p4tin/goaws.svg?branch=master)](https://travis-ci.org/p4tin/goaws)
 
-You are always welcome to [tweet me](https://twitter.com/gocodecloud) or [buy me a coffee](https://www.paypal.me/p4tin)
+You are always welcome to [tweet the creator in chief](https://twitter.com/gocodecloud) or [buy him a coffee](https://www.paypal.me/p4tin)
 
 Written in Go this is a clone of the AWS SQS/SNS systems.  This system is designed to emulate SQS and SNS in a local environment so developers can test their interfaces without having to connect to the AWS Cloud and possibly incurring the expense, or even worse actually write to production topics/queues by mistake.  If you see any problems or would like to see a new feature, please open an issue here in github.  As well, I will logon to Gitter so we can discuss your deployment issues or the weather.
 
@@ -71,7 +71,7 @@ Here is a list of the APIs:
 
 # Installation
 
-    go get github.com/p4tin/goaws/...
+    git clone git@github.com:Admiral-Piett/goaws.git
 
 ## Build and Run (Standalone)
 
@@ -97,7 +97,7 @@ Here is a list of the APIs:
 
 You can test that your installation is working correctly in one of two ways:
 
- 1.  Usign the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
+ 1.  Using the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
 
  2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 

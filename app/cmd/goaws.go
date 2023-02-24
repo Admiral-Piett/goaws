@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/Admiral-Piett/goaws/app"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/p4tin/goaws/app/conf"
-	"github.com/p4tin/goaws/app/gosqs"
-	"github.com/p4tin/goaws/app/router"
+	"github.com/Admiral-Piett/goaws/app/conf"
+	"github.com/Admiral-Piett/goaws/app/gosqs"
+	"github.com/Admiral-Piett/goaws/app/router"
 )
 
 func main() {
