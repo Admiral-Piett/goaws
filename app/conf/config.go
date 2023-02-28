@@ -11,9 +11,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/Admiral-Piett/goaws/app"
+	"github.com/Admiral-Piett/goaws/app/common"
 	"github.com/ghodss/yaml"
-	"github.com/p4tin/goaws/app"
-	"github.com/p4tin/goaws/app/common"
 )
 
 var envs map[string]app.Environment

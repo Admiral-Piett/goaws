@@ -3,7 +3,7 @@ package common
 import (
 	"testing"
 
-	"github.com/p4tin/goaws/app"
+	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 )
 
