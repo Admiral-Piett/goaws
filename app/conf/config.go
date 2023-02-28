@@ -22,7 +22,7 @@ func LoadYamlConfig(filename string, env string) []string {
 	ports := []string{"4100"}
 
 	if filename == "" {
-		filename, _ = filepath.Abs("./conf/goaws.yaml")
+		filename, _ = filepath.Abs("./app/conf/goaws.yaml")
 	}
 	log.Warnf("Loading config file: %s", filename)
 	yamlFile, err := ioutil.ReadFile(filename)
