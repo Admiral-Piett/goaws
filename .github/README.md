@@ -85,11 +85,14 @@ Here is a list of the APIs:
 
 ## Run (Docker Version)
 
-    Get it
+    Version >= v0.3.2
+        docker pull admiralpiett/goaws
+
+    Version <= v0.3.1
         docker pull pafortin/goaws
 
     run
-        docker run -d --name goaws -p 4100:4100 pafortin/goaws
+        docker run -d --name goaws -p 4100:4100 admiralpiett/goaws
 
 
 
