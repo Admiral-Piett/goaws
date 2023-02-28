@@ -41,11 +41,14 @@ builds:
         goarm: 7
 
 dockers:
-  -
+  - use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: goreleaser.dockerfile
     image_templates:
-      - "pafortin/goaws"
-      - "docker.io/pafortin/goaws:{{ .Tag }}"
-      - "docker.io/pafortin/goaws:latest"
+      - "admiralpiett/goaws"
+      - "admiralpiett/goaws:{{ .Tag }}"
+      - "admiralpiett/goaws:latest"
     extra_files:
       - app/conf/goaws.yaml
 
