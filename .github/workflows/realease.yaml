@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "New Build Tag"
+        description: "New Build Tag (eg. 0.0.1)"
         required: true
 
 jobs:
