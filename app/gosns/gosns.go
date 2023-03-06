@@ -656,7 +656,7 @@ func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) 
 	//responds in the range of 200-499. Response codes outside that range will
 	//trigger the Subscription's retry policy.
 	//https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html
-	if res.StatusCode < 200 || res.statusCode > 499 {
+	if res.StatusCode < 200 || res.StatusCode > 499 {
 		log.WithFields(log.Fields{
 			"statusCode": res.StatusCode,
 			"status":     res.Status,
