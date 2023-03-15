@@ -1939,6 +1939,153 @@ func TestSendMessage_POST_DelaySeconds(t *testing.T) {
 	}
 }
 
+func TestGetQueueAttributes_GetAllAttributes(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "get-queue-attributes")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// get queue attributes
+	req, err = http.NewRequest("GET", "/queue/get-queue-attributes?Action=GetQueueAttributes&AttributeName.1=All", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(GetQueueAttributes).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	resp := app.GetQueueAttributesResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+
+	hasAttribute := func(attrs []app.Attribute, name string) bool { 
+			for _, attr := range attrs {
+				if attr.Name == name {
+					return true
+				}
+			}
+			return false
+		}
+
+
+	ok := hasAttribute(resp.Result.Attrs, "VisibilityTimeout") &&
+		hasAttribute(resp.Result.Attrs, "DelaySeconds") &&
+		hasAttribute(resp.Result.Attrs, "ReceiveMessageWaitTimeSeconds") &&
+		hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessages") &&
+		hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessagesNotVisible") &&
+		hasAttribute(resp.Result.Attrs, "CreatedTimestamp") &&
+		hasAttribute(resp.Result.Attrs, "LastModifiedTimestamp") &&
+		hasAttribute(resp.Result.Attrs, "QueueArn") &&
+		hasAttribute(resp.Result.Attrs, "RedrivePolicy")
+
+	if !ok {
+		t.Fatal("handler should return all attributes")
+	}
+
+	done <- struct{}{}
+}
+
+func TestGetQueueAttributes_GetSelectedAttributes(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "get-queue-attributes")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// get queue attributes
+	req, err = http.NewRequest("GET", "/queue/get-queue-attributes?Action=GetQueueAttributes&AttributeName.1=ApproximateNumberOfMessages&AttributeName.2=ApproximateNumberOfMessagesNotVisible&AttributeName.2=ApproximateNumberOfMessagesNotVisible", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(GetQueueAttributes).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	resp := app.GetQueueAttributesResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+
+	hasAttribute := func(attrs []app.Attribute, name string) bool { 
+			for _, attr := range attrs {
+				if attr.Name == name {
+					return true
+				}
+			}
+			return false
+		}
+
+
+	ok := hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessages") &&
+		hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessagesNotVisible")
+
+	if !ok {
+		t.Fatal("handler should return requested attributes")
+	}
+
+	ok = !(hasAttribute(resp.Result.Attrs, "VisibilityTimeout") ||
+		hasAttribute(resp.Result.Attrs, "DelaySeconds") ||
+		hasAttribute(resp.Result.Attrs, "ReceiveMessageWaitTimeSeconds") ||
+		hasAttribute(resp.Result.Attrs, "CreatedTimestamp") ||
+		hasAttribute(resp.Result.Attrs, "LastModifiedTimestamp") ||
+		hasAttribute(resp.Result.Attrs, "QueueArn") ||
+		hasAttribute(resp.Result.Attrs, "RedrivePolicy"))
+
+	if !ok {
+		t.Fatal("handler should return only requested attributes")
+	}
+
+	done <- struct{}{}
+}
+
 // waitTimeout waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.
 // credits: https://stackoverflow.com/questions/32840687/timeout-for-waitgroup-wait

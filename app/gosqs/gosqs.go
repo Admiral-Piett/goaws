@@ -866,7 +866,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 			attribs = append(attribs, attr)
 		}
 		if include_attr("DelaySeconds") {
-			attr = app.Attribute{Name: "DelaySeconds", Value: strconv.Itoa(queue.DelaySecs)}
+			attr := app.Attribute{Name: "DelaySeconds", Value: strconv.Itoa(queue.DelaySecs)}
 			attribs = append(attribs, attr)
 		}
 		if include_attr("ReceiveMessageWaitTimeSeconds") {

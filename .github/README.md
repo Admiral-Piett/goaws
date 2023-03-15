@@ -14,7 +14,7 @@ All SNS/SQS APIs have been implemented except:
 Here is a list of the APIs:
  - [x] ListQueues
  - [x] CreateQueue
- - [x] GetQueueAttributes (Always returns all attributes - unsupporterd arttributes are mocked)
+ - [x] GetQueueAttributes (unsupported attributes are mocked)
  - [x] GetQueueUrl
  - [x] SendMessage
  - [x] SendMessageBatch
