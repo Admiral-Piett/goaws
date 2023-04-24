@@ -1,10 +1,11 @@
 package conf
 
 import (
-    "github.com/stretchr/testify/assert"
-    "testing"
-
     "github.com/Admiral-Piett/goaws/app"
+    "github.com/stretchr/testify/assert"
+    "os"
+    "testing"
+    "time"
 )
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
@@ -153,5 +154,63 @@ func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
     for _, expectedName := range expectedTopics {
         _, ok := topics[expectedName]
         assert.True(t, ok)
+    }
+}
+
+func TestConfig_HotReloadConfigFile(t *testing.T) {
+    env := "Local"
+    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+
+    //start a watcher goroutine
+    go StartWatcher("./mock-data/mock-config.yaml", env)
+    time.Sleep(5 * time.Second)
+
+    if port[0] != "4100" {
+        t.Errorf("Expected port number 4100 but got %s\n", port)
+    }
+
+    //backup mock-config.yaml
+    backupFile, err := os.ReadFile("./mock-data/mock-config.yaml")
+    if err != nil {
+        t.Errorf("Error backuping mock-config.yaml: %v\n", err)
+    }
+
+    //read mock-updated-config.yaml
+    updatedFile, err := os.ReadFile("./mock-data/mock-updated-config.yaml")
+    if err != nil {
+        t.Errorf("Error reading mock-updated-config.yaml: %v\n", err)
+    }
+
+    //write updatedFile on mock-config.yaml
+    err = os.WriteFile("./mock-data/mock-config.yaml", updatedFile, 0644)
+    if err != nil {
+        t.Errorf("Error updating mock-config.yaml: %v\n", err)
+    }
+
+    time.Sleep(5 * time.Second)
+
+    //make tests checks
+    numQueues := len(envs[env].Queues)
+    if numQueues != 5 {
+        t.Errorf("Expected five queues to be in the environment but got %d\n", numQueues)
+    }
+    numQueues = len(app.SyncQueues.Queues)
+    if numQueues != 8 {
+        t.Errorf("Expected eight queues to be in the sqs topics but got %d\n", numQueues)
+    }
+
+    numTopics := len(envs[env].Topics)
+    if numTopics != 3 {
+        t.Errorf("Expected three topics to be in the environment but got %d\n", numTopics)
+    }
+    numTopics = len(app.SyncTopics.Topics)
+    if numTopics != 3 {
+        t.Errorf("Expected three topics to be in the sns topics but got %d\n", numTopics)
+    }
+
+    //restore mock-config.yaml
+    err = os.WriteFile("./mock-data/mock-config.yaml", backupFile, 0644)
+    if err != nil {
+        t.Errorf("Error updating mock-config.yaml: %v\n", err)
     }
 }
