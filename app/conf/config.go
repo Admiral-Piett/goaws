@@ -127,14 +127,13 @@ func StartWatcher(filename string, env string) {
 						time.Sleep(2 * time.Second)
 						_, err := os.Stat(filename)
 						if err == nil {
-							StartWatcher(filename, env)
+							log.Infof("file created: %s", filename)
+							defer StartWatcher(filename, env)
 							close(quit)
 							break
 						}
 					}
-
-				}
-				if !event.Has(fsnotify.Write) {
+				} else if !event.Has(fsnotify.Write) {
 					//discard non-Write events
 					continue
 				}
