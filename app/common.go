@@ -20,12 +20,13 @@ type EnvQueue struct {
 	ReceiveMessageWaitTimeSeconds int
 	RedrivePolicy                 string
 	MaximumMessageSize            int
+	VisibilityTimeout             int
 }
 
 type EnvQueueAttributes struct {
 	VisibilityTimeout             int
 	ReceiveMessageWaitTimeSeconds int
-	MaximumMessageSize						int
+	MaximumMessageSize            int
 }
 
 type Environment struct {
@@ -41,7 +42,7 @@ type Environment struct {
 	Topics                 []EnvTopic
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes
-	RandomLatency		   RandomLatency
+	RandomLatency          RandomLatency
 }
 
 var CurrentEnvironment Environment

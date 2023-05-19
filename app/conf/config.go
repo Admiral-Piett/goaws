@@ -104,13 +104,18 @@ func LoadYamlConfig(filename string, env string) []string {
         if queue.ReceiveMessageWaitTimeSeconds == 0 {
             queue.ReceiveMessageWaitTimeSeconds = app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
         }
+
         if queue.MaximumMessageSize == 0 {
             queue.MaximumMessageSize = app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize
         }
 
+        if queue.VisibilityTimeout == 0 {
+            queue.VisibilityTimeout = app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout
+        }
+
         app.SyncQueues.Queues[queue.Name] = &app.Queue{
             Name:                queue.Name,
-            TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+            TimeoutSecs:         queue.VisibilityTimeout,
             Arn:                 queueArn,
             URL:                 queueUrl,
             ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
