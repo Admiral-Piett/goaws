@@ -47,9 +47,23 @@ dockers:
     image_templates:
       - "admiralpiett/goaws"
       - "admiralpiett/goaws:{{ .Tag }}"
+      - "admiralpiett/goaws:{{ .Tag }}-amd64"
+      - "admiralpiett/goaws:latest-amd64"
       - "admiralpiett/goaws:latest"
     extra_files:
       - app/conf/goaws.yaml
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - goos: linux
+    goarch: arm64
+    dockerfile: goreleaser.dockerfile
+    image_templates:
+      - "admiralpiett/goaws:{{ .Tag }}-arm64"
+      - "admiralpiett/goaws:latest-arm64"
+    extra_files:
+      - app/conf/goaws.yaml
+    build_flag_templates:
+      - "--platform=linux/arm64"
 
 archives:
   - id: archive_names
