@@ -50,6 +50,15 @@ dockers:
       - "admiralpiett/goaws:latest"
     extra_files:
       - app/conf/goaws.yaml
+  - goos: linux
+    goarch: arm64
+    dockerfile: goreleaser.dockerfile
+    image_templates:
+      - "admiralpiett/goaws"
+      - "admiralpiett/goaws:{{ .Tag }}"
+      - "admiralpiett/goaws:latest"
+    extra_files:
+      - app/conf/goaws.yaml
 
 archives:
   - id: archive_names
