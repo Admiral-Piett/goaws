@@ -18,8 +18,10 @@ import (
 func main() {
 	var filename string
 	var debug bool
+	var hotReload bool
 	flag.StringVar(&filename, "config", "", "config file location + name")
 	flag.BoolVar(&debug, "debug", false, "debug log level (default Warning)")
+	flag.BoolVar(&hotReload, "hot-reload", false, "enable hot reload of config file for creation of new sqs queues and sns topics (default false)")
 	flag.Parse()
 
 	log.SetFormatter(&log.JSONFormatter{})
@@ -52,6 +54,11 @@ func main() {
 
 	quit := make(chan struct{}, 0)
 	go gosqs.PeriodicTasks(1*time.Second, quit)
+
+	//start config watcher
+	if hotReload {
+		go conf.StartWatcher(filename, env)
+	}
 
 	if len(portNumbers) == 1 {
 		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])

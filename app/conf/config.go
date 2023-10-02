@@ -3,7 +3,9 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
+
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,12 +15,14 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/fsnotify/fsnotify"
 	"github.com/ghodss/yaml"
 )
 
 var envs map[string]app.Environment
 
 func LoadYamlConfig(filename string, env string) []string {
+
 	ports := []string{"4100"}
 
 	if filename == "" {
@@ -79,8 +83,144 @@ func LoadYamlConfig(filename string, env string) []string {
 		app.CurrentEnvironment.Port = "4100"
 	}
 
-	app.SyncQueues.Lock()
+	err = createSqsQueues(env)
+	if err != nil {
+		return ports
+	}
+
+	err = createSNSTopics(env)
+	if err != nil {
+		return ports
+	}
+
+	return ports
+}
+
+func StartWatcher(filename string, env string) {
+	quit := make(chan struct{})
+	//create watcher
+	if filename == "" {
+		filename, _ = filepath.Abs("./app/conf/goaws.yaml")
+	}
+	log.Infof("Starting watcher on file: %v", filename)
+
+	watcher, err := fsnotify.NewWatcher()
+	defer watcher.Close()
+
+	if err != nil {
+		log.Errorf("err: %s", err)
+	}
+
+	// Start listening for events.
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Has(fsnotify.Remove) {
+					//wait for file recreation
+					//REMOVE are used in k8s environment by configmap
+					for {
+						log.Infof("Waiting for file to be created: %s", filename)
+						time.Sleep(2 * time.Second)
+						_, err := os.Stat(filename)
+						if err == nil {
+							log.Infof("file created: %s", filename)
+							defer StartWatcher(filename, env)
+							close(quit)
+							break
+						}
+					}
+				} else if !event.Has(fsnotify.Write) {
+					//discard non-Write events
+					continue
+				}
+				log.Infof("Reloading config file: %s", filename)
+
+				yamlFile, err := os.ReadFile(filename)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return
+				}
+
+				err = yaml.Unmarshal(yamlFile, &envs)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return
+				}
+
+				log.Infoln("Load new SQS config:")
+				err = createSqsQueues(env)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return
+				}
+				log.Infoln("Load new SNS config:")
+				err = createSNSTopics(env)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					log.Errorf("err: %s", err)
+					return
+				}
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	//add watcher
+	log.Debugf("Started watcher to filename: %s", filename)
+	err = watcher.Add(filename)
+	if err != nil {
+		log.Errorf("err: %s", err)
+	}
+
+	//block goroutine until end of main execution
+	<-quit
+
+}
+
+func createSNSTopics(env string) error {
 	app.SyncTopics.Lock()
+	for _, topic := range envs[env].Topics {
+		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
+
+		newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
+		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
+
+		for _, subs := range topic.Subscriptions {
+			var newSub *app.Subscription
+			if strings.Contains(subs.Protocol, "http") {
+				newSub = createHttpSubscription(subs)
+			} else {
+				//Queue does not exist yet, create it.
+				newSub = createSqsSubscription(subs, topicArn)
+			}
+			if subs.FilterPolicy != "" {
+				filterPolicy := &app.FilterPolicy{}
+				err := json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
+				if err != nil {
+					log.Errorf("err: %s", err)
+					return err
+				}
+				newSub.FilterPolicy = filterPolicy
+			}
+
+			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
+		}
+		app.SyncTopics.Topics[topic.Name] = newTopic
+	}
+	app.SyncTopics.Unlock()
+	return nil
+}
+
+func createSqsQueues(env string) error {
+	app.SyncQueues.Lock()
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
 			"/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
@@ -117,45 +257,13 @@ func LoadYamlConfig(filename string, env string) []string {
 			err := setQueueRedrivePolicy(app.SyncQueues.Queues, q, queue.RedrivePolicy)
 			if err != nil {
 				log.Errorf("err: %s", err)
-				return ports
+				return err
 			}
 		}
-
-	}
-
-	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
-
-		newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
-		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
-
-		for _, subs := range topic.Subscriptions {
-			var newSub *app.Subscription
-			if strings.Contains(subs.Protocol, "http") {
-				newSub = createHttpSubscription(subs)
-			} else {
-				//Queue does not exist yet, create it.
-				newSub = createSqsSubscription(subs, topicArn)
-			}
-			if subs.FilterPolicy != "" {
-				filterPolicy := &app.FilterPolicy{}
-				err = json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
-				if err != nil {
-					log.Errorf("err: %s", err)
-					return ports
-				}
-				newSub.FilterPolicy = filterPolicy
-			}
-
-			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
-		}
-		app.SyncTopics.Topics[topic.Name] = newTopic
 	}
 
 	app.SyncQueues.Unlock()
-	app.SyncTopics.Unlock()
-
-	return ports
+	return nil
 }
 
 func createHttpSubscription(configSubscription app.EnvSubsciption) *app.Subscription {
