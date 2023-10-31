@@ -503,9 +503,10 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var batchMessageIdToMessageBody map[string]string
-	var batchMessageIdToMessageStructure map[string]string
-	var batchMessageIdToMessageAttributes map[string]map[string]app.MessageAttributeValue
+	batchMessageIdToMessageBody := make(map[string]string, 10)
+	batchMessageIdToMessageStructure := make(map[string]string, 10)
+	batchMessageIdToMessageAttributes := make(map[string]map[string]app.MessageAttributeValue, 10)
+	batchMessageIdToSubject := make(map[string]string, 10)
 
 	for memberIndex := 1; true; memberIndex++ {
 		if memberIndex > 10 {
@@ -513,11 +514,13 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		thisMessageFormKey := "PublishBatchRequestEntries.member." + strconv.Itoa(memberIndex)
-		if req.FormValue(thisMessageFormKey) == "" {
-			break
-		}
 
 		batchMessageId := req.FormValue(thisMessageFormKey + ".Id")
+		if batchMessageId == "" {
+			// This is a required field, its absence likely indicates there are no further entries.
+			// TODO: how to tell the difference in case this is validation failure?
+			break
+		}
 		if _, ok := batchMessageIdToMessageBody[batchMessageId]; ok {
 			createErrorResponse(w, req, "BatchEntryIdsNotDistinct")
 			return
@@ -525,6 +528,7 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 
 		thisMessageBody := req.FormValue(thisMessageFormKey + ".Message")
 		thisMessageStructure := req.FormValue(thisMessageFormKey + ".MessageStructure")
+		thisMessageSubject := req.FormValue(thisMessageFormKey + ".Subject")
 
 		thisMessageAttributes := make(map[string]app.MessageAttributeValue)
 
@@ -544,11 +548,11 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 			for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
 				value := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.%s", thisMessageFormKey, i, valueKey))
 				if value != "" {
-					attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+					thisMessageAttributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
 				}
 			}
 
-			if _, ok := attributes[name]; !ok {
+			if _, ok := thisMessageAttributes[name]; !ok {
 				log.Warnf("StringValue or BinaryValue of %s.MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", thisMessageFormKey, name)
 			}
 		}
@@ -556,6 +560,7 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 		batchMessageIdToMessageBody[batchMessageId] = thisMessageBody
 		batchMessageIdToMessageStructure[batchMessageId] = thisMessageStructure
 		batchMessageIdToMessageAttributes[batchMessageId] = thisMessageAttributes
+		batchMessageIdToSubject[batchMessageId] = thisMessageSubject
 	}
 
 	if len(batchMessageIdToMessageBody) == 0 {
@@ -564,16 +569,17 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	successfulEntries := []app.PublishBatchResultEntry{}
-	failedEntries := []app.PublishBatchErrorEntry{}
+	failedEntries := []app.BatchResultErrorEntry{}
 	for batchMessageId, messageBody := range batchMessageIdToMessageBody {
 		messageStructure := batchMessageIdToMessageStructure[batchMessageId]
 		messageAttributes := batchMessageIdToMessageAttributes[batchMessageId]
+		subject := batchMessageIdToSubject[batchMessageId]
 		for _, sub := range topic.Subscriptions {
-			switch app.Protocol(subs.Protocol) {
+			switch app.Protocol(sub.Protocol) {
 			case app.ProtocolSQS:
-				if err := publishSQS(subs, messageBody, messageAttributes, subject, topicArn, topicName, messageStructure); err != nil {
+				if err := publishSQS(sub, messageBody, messageAttributes, subject, topicArn, topicName, messageStructure); err != nil {
 					er := app.SnsErrors[err.Error()]
-					failedEntries = append(failedEntries, app.PublishBatchErrorEntry{
+					failedEntries = append(failedEntries, app.BatchResultErrorEntry{
 						Code:        er.Code,
 						Id:          batchMessageId,
 						Message:     er.Message,
@@ -589,7 +595,7 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 			case app.ProtocolHTTP:
 				fallthrough
 			case app.ProtocolHTTPS:
-				publishHTTP(subs, messageBody, messageAttributes, subject, topicArn)
+				publishHTTP(sub, messageBody, messageAttributes, subject, topicArn)
 				msgId, _ := common.NewUUID()
 				successfulEntries = append(successfulEntries, app.PublishBatchResultEntry{
 					Id:        batchMessageId,
@@ -603,8 +609,8 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 	respStruct := app.PublishBatchResponse{
 		"https://sns.amazonaws.com/doc/2010-03-31/",
 		app.PublishBatchResult{
-			Successful: app.PublishBatchResultEntries{Member: successfulEntries},
-			Failed:     app.PublishBatchErrorEntries{Member: failedEntries},
+			Successful: app.PublishBatchSuccessful{SuccessEntries: successfulEntries},
+			Failed:     app.PublishBatchFailed{ErrorEntries: failedEntries},
 		},
 		app.ResponseMetadata{RequestId: uuid},
 	}
