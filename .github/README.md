@@ -65,6 +65,16 @@ Here is a list of the APIs:
  - [x] a command line argument to determine the environment to use in the config file (e.e.: Dev)
  - [x] IN the config file you can create Queues, Topic and Subscription see the example config file in the conf directory
 
+### Example: Passing Configuration to Docker
+```shell
+docker run \
+ --rm \
+ --name=goaws \
+ -v /path/on/host/goaws-config.yaml:/path/in/container/goaws-config.yaml \
+ -p=4100:4100 \
+ admiralpiett/goaws:v0.4.4-arm64 -config /path/in/container/goaws-config.yaml
+```
+
 ## Debug logging can be turned on via a command line flag (e.g.: -debug)
 
 ## Note:  The system does not authenticate or presently use https

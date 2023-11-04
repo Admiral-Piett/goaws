@@ -2,8 +2,8 @@ name: PR-Tests
 on: [pull_request]
 jobs:
 
-  build:
-    name: Build
+  unit-tests:
+    name: Unit Test
     runs-on: ubuntu-latest
     steps:
 
@@ -22,3 +22,31 @@ jobs:
 
     - name: Unit Tests
       run: go test -cover -race ./app/...
+
+  release-test:
+    name: Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.18'
+      - run: go version
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: v1.19.2
+          args: release --snapshot --clean

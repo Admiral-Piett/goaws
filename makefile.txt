@@ -24,5 +24,3 @@ linux:
 docker-release: linux
 	docker build -t pafortin/goaws .
 	docker tag pafortin/goaws pafortin/goaws:$(VERSION)
-
-
