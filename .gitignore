@@ -14,4 +14,4 @@ goaws_linux_amd64
 setenv.sh
 
 .env
-
+goaws-config.yaml
