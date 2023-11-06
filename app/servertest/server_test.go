@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app"
+	"github.com/Admiral-Piett/goaws/app/router"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -19,8 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/gorilla/mux"
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/router"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -153,6 +153,24 @@ func TestSNSRoutes(t *testing.T) {
 	publishResponse, err := client.Publish(publishParams)
 	require.NoError(t, err, "SNS Publish Failed")
 	t.Logf("Succesfully published: %s\n", *publishResponse.MessageId)
+
+	publishBatchParams := &sns.PublishBatchInput{
+		TopicArn: response.TopicArn,
+		PublishBatchRequestEntries: []*sns.PublishBatchRequestEntry{
+			{
+				Id:      aws.String("1"),
+				Message: aws.String("Cool"),
+			},
+			{
+				Id:      aws.String("2"),
+				Message: aws.String("Dog"),
+			},
+		},
+	}
+	publishBatchResponse, err := client.PublishBatch(publishBatchParams)
+	require.NoError(t, err, "SNS PublishBatch Failed")
+	assert.Empty(t, publishBatchResponse.Failed)
+	assert.Length(t, publishBatchResponse.Successful, 2)
 }
 
 func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {
