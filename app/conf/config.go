@@ -8,6 +8,7 @@ import (
     "path/filepath"
     "strconv"
     "strings"
+    "sync"
     "time"
 
     log "github.com/sirupsen/logrus"
@@ -18,200 +19,213 @@ import (
     "github.com/ghodss/yaml"
 )
 
-var envs map[string]app.Environment
+type ConfigLoader struct {
+    configFilename string
+    envTitle       string
+    env            app.Environment
 
-func findDefaultConfig() (string, error) {
-    configPath := ""
+    createQueues func(queues []app.EnvQueue) error
+    createTopics func(topics []app.EnvTopic) error
+
+    Ports []string
+}
+
+func NewConfigLoader(configFilename, envTitle string) *ConfigLoader {
+    loader := &ConfigLoader{
+        envTitle:       envTitle,
+        configFilename: configFilename,
+
+        createQueues: createSQSQueues,
+        createTopics: createSNSTopics,
+    }
+    if loader.configFilename == "" {
+        loader.findDefaultConfig()
+    }
+    loader.loadYamlConfig(envTitle)
+    return loader
+}
+
+func (c *ConfigLoader) findDefaultConfig() {
     root, _ := filepath.Abs(".")
     err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
         if "goaws.yaml" == d.Name() {
-            configPath = path
+            c.configFilename = path
         }
         return nil
     })
-    if err != nil || configPath == "" {
+    if err != nil || c.configFilename == "" {
         log.Warn("Failure to find default config file")
-        return "", err
+        return
     }
-    return configPath, nil
 }
 
-func LoadYamlConfig(filename string, env string) []string {
-    ports := []string{"4100"}
+func (c *ConfigLoader) loadYamlConfig(envTitle string) {
+    c.Ports = []string{"4100"}
 
-    if filename == "" {
-        f, err := findDefaultConfig()
-        if err != nil {
-            return ports
-        }
-        filename = f
-    }
-    log.Infof("Loading config file: %s", filename)
-    yamlFile, err := os.ReadFile(filename)
+    log.Infof("Loading config file: %s", c.configFilename)
+    yamlFile, err := os.ReadFile(c.configFilename)
     if err != nil {
-        return ports
+        return
     }
 
+    var envs map[string]app.Environment
     err = yaml.Unmarshal(yamlFile, &envs)
     if err != nil {
         log.Errorf("err: %v\n", err)
-        return ports
+        return
     }
-    if env == "" {
-        env = "Local"
-    }
-
-    if envs[env].Region == "" {
-        app.CurrentEnvironment.Region = "local"
+    if envTitle == "" {
+        envTitle = "Local"
     }
 
-    app.CurrentEnvironment = envs[env]
+    c.env = envs[envTitle]
 
-    if envs[env].Port != "" {
-        ports = []string{envs[env].Port}
-    } else if envs[env].SqsPort != "" && envs[env].SnsPort != "" {
-        ports = []string{envs[env].SqsPort, envs[env].SnsPort}
-        app.CurrentEnvironment.Port = envs[env].SqsPort
+    if c.env.Region == "" {
+        c.env.Region = "local"
     }
 
-    common.LogMessages = false
-    common.LogFile = "./goaws_messages.log"
+    if c.env.Port != "" {
+        c.Ports = []string{c.env.Port}
+    } else if c.env.SqsPort != "" && c.env.SnsPort != "" {
+        c.Ports = []string{c.env.SqsPort, c.env.SnsPort}
+        c.env.Port = c.env.SqsPort
+    }
 
-    if envs[env].LogToFile == true {
-        common.LogMessages = true
-        if envs[env].LogFile != "" {
-            common.LogFile = envs[env].LogFile
+    if c.env.LogToFile == true {
+        if c.env.LogFile != "" {
+            c.env.LogFile = "./goaws_messages.log"
         }
     }
 
-    if app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout == 0 {
-        app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
+    if c.env.QueueAttributeDefaults.VisibilityTimeout == 0 {
+        c.env.QueueAttributeDefaults.VisibilityTimeout = 30
     }
 
-    if app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize == 0 {
-        app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
+    if c.env.QueueAttributeDefaults.MaximumMessageSize == 0 {
+        c.env.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
     }
 
-    if app.CurrentEnvironment.AccountID == "" {
-        app.CurrentEnvironment.AccountID = "queue"
+    if c.env.AccountID == "" {
+        // QUESTION - @Admiral-Piett - Why `queue` why not `account-id` or something?
+        c.env.AccountID = "queue"
     }
 
-    if app.CurrentEnvironment.Host == "" {
-        app.CurrentEnvironment.Host = "localhost"
-        app.CurrentEnvironment.Port = "4100"
+    if c.env.Host == "" {
+        c.env.Host = "localhost"
+        c.env.Port = "4100"
     }
 
-    err = createSqsQueues(env)
+    // TODO - @Admiral-Piett - make app.CurrentEnvironment a pointer to ConfigLoader.env
+    app.CurrentEnvironment = c.env
+
+    err = c.createQueues(c.env.Queues)
     if err != nil {
-        return ports
+        return
     }
 
-    err = createSNSTopics(env)
+    err = c.createTopics(c.env.Topics)
     if err != nil {
-        return ports
+        return
     }
-
-    return ports
 }
 
-func StartWatcher(filename string, env string) {
-	quit := make(chan struct{})
-	//create watcher
-	if filename == "" {
-        if filename == "" {
-            f, err := findDefaultConfig()
-            if err != nil {
-                return
+func (c *ConfigLoader) StartWatcher(wg *sync.WaitGroup) {
+    // FIXME - Commenting this until we hear from @apavanello
+    //quit := make(chan struct{})
+    log.Infof("Starting watcher on file: %v", c.configFilename)
+
+    // Start listening for events.
+    go func() {
+        watcher, err := fsnotify.NewWatcher()
+        if err != nil {
+            log.Errorf("Hot reload watcher failed to start: %s", err)
+        }
+        err = watcher.Add(c.configFilename)
+        if err != nil {
+            log.Errorf("Could not add %s to hot reload watcher: %s", c.configFilename, err)
+        }
+        wg.Done()
+        for {
+            select {
+            case event, ok := <-watcher.Events:
+                if !ok {
+                    return
+                }
+                // FIXME - Commenting this until we hear from @apavanello
+                //  - https://github.com/Admiral-Piett/goaws/pull/261#discussion_r1391924987
+                //if event.Has(fsnotify.Remove) {
+                //    //wait for file recreation
+                //    //REMOVE are used in k8s environment by configmap
+                //    for {
+                //        log.Infof("Waiting for file to be created: %s", c.configFilename)
+                //        time.Sleep(2 * time.Second)
+                //        _, err := os.Stat(c.configFilename)
+                //        if err == nil {
+                //            log.Infof("file created: %s", c.configFilename)
+                //            defer c.StartWatcher()
+                //            close(quit)
+                //            break
+                //        }
+                //    }
+                //} else
+                // TODO - to avoid loosing watchers on different file ops consider, from the watcher.Add docs:
+                //  - // Instead, watch the parent directory and use Event.Name to filter out files
+                //  you're not interested in. There is an example of this in [cmd/fsnotify/file.go].
+                if !event.Has(fsnotify.Write) {
+                    //discard non-Write events
+                    continue
+                }
+                log.Infof("Reloading config file: %s", c.configFilename)
+
+                yamlFile, err := os.ReadFile(c.configFilename)
+                if err != nil {
+                    log.Errorf("err: %s", err)
+                    return
+                }
+
+                var envs map[string]app.Environment
+                err = yaml.Unmarshal(yamlFile, &envs)
+                if err != nil {
+                    log.Errorf("err: %s", err)
+                    return
+                }
+
+                c.env = envs[c.envTitle]
+                app.CurrentEnvironment = c.env
+
+                log.Infoln("Load new SQS config:")
+                err = c.createQueues(c.env.Queues)
+                if err != nil {
+                    log.Errorf("err: %s", err)
+                    return
+                }
+                log.Infoln("Load new SNS config:")
+                err = c.createTopics(c.env.Topics)
+                if err != nil {
+                    log.Errorf("err: %s", err)
+                    return
+                }
+            case err, ok := <-watcher.Errors:
+                if !ok {
+                    log.Errorf("err: %s", err)
+                    return
+                }
+                log.Println("error:", err)
             }
-            filename = f
         }
-	}
-	log.Infof("Starting watcher on file: %v", filename)
+    }()
 
-	watcher, err := fsnotify.NewWatcher()
-	defer watcher.Close()
+    //add watcher
+    log.Debugf("Started watcher to filename: %s", c.configFilename)
 
-	if err != nil {
-		log.Errorf("err: %s", err)
-	}
-
-	// Start listening for events.
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Has(fsnotify.Remove) {
-					//wait for file recreation
-					//REMOVE are used in k8s environment by configmap
-					for {
-						log.Infof("Waiting for file to be created: %s", filename)
-						time.Sleep(2 * time.Second)
-						_, err := os.Stat(filename)
-						if err == nil {
-							log.Infof("file created: %s", filename)
-							defer StartWatcher(filename, env)
-							close(quit)
-							break
-						}
-					}
-				} else if !event.Has(fsnotify.Write) {
-					//discard non-Write events
-					continue
-				}
-				log.Infof("Reloading config file: %s", filename)
-
-				yamlFile, err := os.ReadFile(filename)
-				if err != nil {
-					log.Errorf("err: %s", err)
-					return
-				}
-
-				err = yaml.Unmarshal(yamlFile, &envs)
-				if err != nil {
-					log.Errorf("err: %s", err)
-					return
-				}
-
-				log.Infoln("Load new SQS config:")
-				err = createSqsQueues(env)
-				if err != nil {
-					log.Errorf("err: %s", err)
-					return
-				}
-				log.Infoln("Load new SNS config:")
-				err = createSNSTopics(env)
-				if err != nil {
-					log.Errorf("err: %s", err)
-					return
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					log.Errorf("err: %s", err)
-					return
-				}
-				log.Println("error:", err)
-			}
-		}
-	}()
-
-	//add watcher
-	log.Debugf("Started watcher to filename: %s", filename)
-	err = watcher.Add(filename)
-	if err != nil {
-		log.Errorf("err: %s", err)
-	}
-
-	//block goroutine until end of main execution
-	<-quit
-
+    // FIXME - Commenting this until we hear from @apavanello
+    //block goroutine until end of main execution
+    //<-quit
 }
 
-func createSNSTopics(env string) error {
+func createSNSTopics(topics []app.EnvTopic) error {
     app.SyncTopics.Lock()
-    for _, topic := range envs[env].Topics {
+    for _, topic := range topics {
         topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
 
         newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
@@ -243,9 +257,11 @@ func createSNSTopics(env string) error {
     return nil
 }
 
-func createSqsQueues(env string) error {
+func createSQSQueues(queues []app.EnvQueue) error {
     app.SyncQueues.Lock()
-    for _, queue := range envs[env].Queues {
+    // reset the queues before we re-populate them
+    app.SyncQueues.Queues = map[string]*app.Queue{}
+    for _, queue := range queues {
         queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
             "/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
         if app.CurrentEnvironment.Region != "" {
@@ -280,7 +296,7 @@ func createSqsQueues(env string) error {
     }
 
     // loop one more time to create queue's RedrivePolicy and assign deadletter queues in case dead letter queue is defined first in the config
-    for _, queue := range envs[env].Queues {
+    for _, queue := range queues {
         q := app.SyncQueues.Queues[queue.Name]
         if queue.RedrivePolicy != "" {
             err := setQueueRedrivePolicy(app.SyncQueues.Queues, q, queue.RedrivePolicy)
@@ -312,6 +328,7 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
                 app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
         }
         queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
+        app.SyncQueues.Lock()
         app.SyncQueues.Queues[configSubscription.QueueName] = &app.Queue{
             Name:                configSubscription.QueueName,
             TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
@@ -323,6 +340,7 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
             EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
             Duplicates:          make(map[string]time.Time),
         }
+        app.SyncQueues.Unlock()
     }
     qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn
     newSub := &app.Subscription{EndPoint: qArn, Protocol: "sqs", TopicArn: topicArn, Raw: configSubscription.Raw}

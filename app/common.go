@@ -45,6 +45,7 @@ type Environment struct {
 	RandomLatency          RandomLatency
 }
 
+// TODO - point to ConfigLoader.env
 var CurrentEnvironment Environment
 
 /*** Common ***/

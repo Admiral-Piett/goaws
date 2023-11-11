@@ -75,7 +75,10 @@ docker run \
  admiralpiett/goaws:v0.4.4-arm64 -config /path/in/container/goaws-config.yaml
 ```
 
-## Debug logging can be turned on via a command line flag (e.g.: -debug)
+### Debug logging can be turned on via a command line flag (eg. `-debug`)
+
+### Hot Reloading of Config can be turned on via command line flag (eg. `-hot-reload`)
+It will reload on the default config if you don't specify a specific file
 
 ## Note:  The system does not authenticate or presently use https
 

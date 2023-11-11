@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -38,7 +39,7 @@ func main() {
 		env = flag.Arg(0)
 	}
 
-	portNumbers := conf.LoadYamlConfig(filename, env)
+	configLoader := conf.NewConfigLoader(filename, env)
 
 	if app.CurrentEnvironment.LogToFile {
 		filename := app.CurrentEnvironment.LogFile
@@ -55,23 +56,26 @@ func main() {
 	quit := make(chan struct{}, 0)
 	go gosqs.PeriodicTasks(1*time.Second, quit)
 
-	//start config watcher
+	//start config watcher, and make sure it's set before serving
 	if hotReload {
-		go conf.StartWatcher(filename, env)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		configLoader.StartWatcher(wg)
+		wg.Wait()
 	}
 
-	if len(portNumbers) == 1 {
-		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])
-		err := http.ListenAndServe("0.0.0.0:"+portNumbers[0], r)
+	if len(configLoader.Ports) == 1 {
+		log.Warnf("GoAws listening on: 0.0.0.0:%s", configLoader.Ports[0])
+		err := http.ListenAndServe("0.0.0.0:"+configLoader.Ports[0], r)
 		log.Fatal(err)
-	} else if len(portNumbers) == 2 {
+	} else if len(configLoader.Ports) == 2 {
 		go func() {
-			log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])
-			err := http.ListenAndServe("0.0.0.0:"+portNumbers[0], r)
+			log.Warnf("GoAws listening on: 0.0.0.0:%s", configLoader.Ports[0])
+			err := http.ListenAndServe("0.0.0.0:"+configLoader.Ports[0], r)
 			log.Fatal(err)
 		}()
-		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[1])
-		err := http.ListenAndServe("0.0.0.0:"+portNumbers[1], r)
+		log.Warnf("GoAws listening on: 0.0.0.0:%s", configLoader.Ports[1])
+		err := http.ListenAndServe("0.0.0.0:"+configLoader.Ports[1], r)
 		log.Fatal(err)
 	} else {
 		log.Fatal("Not enough or too many ports defined to start GoAws.")

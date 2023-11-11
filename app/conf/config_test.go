@@ -2,215 +2,268 @@ package conf
 
 import (
     "github.com/Admiral-Piett/goaws/app"
+    "github.com/Admiral-Piett/goaws/app/fixtures"
+    "github.com/Admiral-Piett/goaws/app/utils"
+    "github.com/mitchellh/copystructure"
     "github.com/stretchr/testify/assert"
     "os"
+    "reflect"
+    "sync"
     "testing"
-    "time"
 )
 
+func TestConfig_NewConfigLoader(t *testing.T) {
+    c := NewConfigLoader("", "Local")
+
+    assert.Contains(t, c.configFilename, "app/conf/goaws.yaml")
+    assert.Equal(t, "Local", c.envTitle)
+    assert.NotEqual(t, app.Environment{}, c.env)
+    assert.Equal(t, []string{"4100"}, c.Ports)
+    assert.Equal(t, reflect.ValueOf(createSQSQueues), reflect.ValueOf(c.createQueues))
+    assert.Equal(t, reflect.ValueOf(createSNSTopics), reflect.ValueOf(c.createTopics))
+}
+
+func TestConfig_NewConfigLoader_usesSpecifiedConfig(t *testing.T) {
+    c := NewConfigLoader("./mock-data/mock-config.yaml", "Local")
+
+    assert.Contains(t, c.configFilename, "mock-data/mock-config.yaml")
+    assert.Equal(t, "Local", c.envTitle)
+    assert.NotEqual(t, app.Environment{}, c.env)
+    assert.Equal(t, []string{"4200"}, c.Ports)
+    assert.Equal(t, reflect.ValueOf(createSQSQueues), reflect.ValueOf(c.createQueues))
+    assert.Equal(t, reflect.ValueOf(createSNSTopics), reflect.ValueOf(c.createTopics))
+}
+
+func TestConfig_FindDefaultConfig_success(t *testing.T) {
+    c := &ConfigLoader{}
+    c.findDefaultConfig()
+
+    assert.Contains(t, c.configFilename, "app/conf/goaws.yaml")
+}
+
+func TestConfig_MissingConfigSetsDefaults(t *testing.T) {
+    defer func() {
+        app.CurrentEnvironment = app.Environment{}
+    }()
+
+    qCallCount := 0
+    qs := func(queues []app.EnvQueue) error {
+        qCallCount += 1
+        return nil
+    }
+    tCallCount := 0
+    ts := func(queues []app.EnvTopic) error {
+        tCallCount += 1
+        return nil
+    }
+    c := &ConfigLoader{
+        configFilename: "./mock-data/mock-config.yaml",
+        createQueues:   qs,
+        createTopics:   ts,
+    }
+
+    c.loadYamlConfig("garbage")
+    assert.Equal(t, []string{"4100"}, c.Ports)
+    assert.Equal(t, fixtures.DEFAULT_ENVIRONMENT, c.env)
+    assert.Equal(t, fixtures.DEFAULT_ENVIRONMENT, app.CurrentEnvironment)
+
+    assert.Equal(t, 1, qCallCount)
+    assert.Equal(t, 1, tCallCount)
+}
+
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
-    env := "NoQueuesOrTopics"
-    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
-    if port[0] != "4100" {
-        t.Errorf("Expected port number 4200 but got %s\n", port)
+    defer func() {
+        app.CurrentEnvironment = app.Environment{}
+    }()
+
+    qCallCount := 0
+    qs := func(queues []app.EnvQueue) error {
+        qCallCount += 1
+        return nil
+    }
+    tCallCount := 0
+    ts := func(queues []app.EnvTopic) error {
+        tCallCount += 1
+        return nil
+    }
+    c := &ConfigLoader{
+        configFilename: "./mock-data/mock-config.yaml",
+        createQueues:   qs,
+        createTopics:   ts,
     }
 
-    numQueues := len(envs[env].Queues)
-    if numQueues != 0 {
-        t.Errorf("Expected zero queues to be in the environment but got %d\n", numQueues)
-    }
-    numQueues = len(app.SyncQueues.Queues)
-    if numQueues != 0 {
-        t.Errorf("Expected zero queues to be in the sqs topics but got %d\n", numQueues)
-    }
+    c.loadYamlConfig("NoQueuesOrTopics")
+    assert.Equal(t, []string{"4100"}, c.Ports)
+    assert.Equal(t, fixtures.NO_QUEUES_NO_TOPICS_ENVIRONEMENT, c.env)
+    assert.Equal(t, fixtures.NO_QUEUES_NO_TOPICS_ENVIRONEMENT, app.CurrentEnvironment)
 
-    numTopics := len(envs[env].Topics)
-    if numTopics != 0 {
-        t.Errorf("Expected zero topics to be in the environment but got %d\n", numTopics)
-    }
-    numTopics = len(app.SyncTopics.Topics)
-    if numTopics != 0 {
-        t.Errorf("Expected zero topics to be in the sns topics but got %d\n", numTopics)
-    }
+    assert.Equal(t, 1, qCallCount)
+    assert.Equal(t, 1, tCallCount)
 }
 
 func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
-    env := "Local"
-    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
-    if port[0] != "4100" {
-        t.Errorf("Expected port number 4100 but got %s\n", port)
+    defer func() {
+        app.CurrentEnvironment = app.Environment{}
+    }()
+
+    qCallCount := 0
+    qs := func(queues []app.EnvQueue) error {
+        qCallCount += 1
+        return nil
+    }
+    tCallCount := 0
+    ts := func(queues []app.EnvTopic) error {
+        tCallCount += 1
+        return nil
+    }
+    c := &ConfigLoader{
+        configFilename: "./mock-data/mock-config.yaml",
+        createQueues:   qs,
+        createTopics:   ts,
     }
 
-    numQueues := len(envs[env].Queues)
-    if numQueues != 4 {
-        t.Errorf("Expected three queues to be in the environment but got %d\n", numQueues)
-    }
-    numQueues = len(app.SyncQueues.Queues)
-    if numQueues != 6 {
-        t.Errorf("Expected five queues to be in the sqs topics but got %d\n", numQueues)
-    }
+    c.loadYamlConfig("Local")
+    assert.Equal(t, []string{"4200"}, c.Ports)
+    assert.Equal(t, fixtures.LOCAL_ENVIRONMENT, c.env)
+    assert.Equal(t, fixtures.LOCAL_ENVIRONMENT, app.CurrentEnvironment)
 
-    numTopics := len(envs[env].Topics)
-    if numTopics != 2 {
-        t.Errorf("Expected two topics to be in the environment but got %d\n", numTopics)
-    }
-    numTopics = len(app.SyncTopics.Topics)
-    if numTopics != 2 {
-        t.Errorf("Expected two topics to be in the sns topics but got %d\n", numTopics)
-    }
-}
-
-func TestConfig_QueueAttributes(t *testing.T) {
-    env := "Local"
-    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
-    if port[0] != "4100" {
-        t.Errorf("Expected port number 4100 but got %s\n", port)
-    }
-
-    receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveWaitTimeSecs
-    if receiveWaitTime != 10 {
-        t.Errorf("Expected local-queue1 Queue to be configured with ReceiveMessageWaitTimeSeconds: 10 but got %d\n", receiveWaitTime)
-    }
-    timeoutSecs := app.SyncQueues.Queues["local-queue1"].TimeoutSecs
-    if timeoutSecs != 10 {
-        t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 10 but got %d\n", timeoutSecs)
-    }
-    maximumMessageSize := app.SyncQueues.Queues["local-queue1"].MaximumMessageSize
-    if maximumMessageSize != 1024 {
-        t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 1024 but got %d\n", maximumMessageSize)
-    }
-
-    if app.SyncQueues.Queues["local-queue1"].DeadLetterQueue != nil {
-        t.Errorf("Expected local-queue1 Queue to be configured without redrive policy\n")
-    }
-    if app.SyncQueues.Queues["local-queue1"].MaxReceiveCount != 0 {
-        t.Errorf("Expected local-queue1 Queue to be configured without redrive policy and therefore MaxReceiveCount: 0 \n")
-    }
-
-    maxReceiveCount := app.SyncQueues.Queues["local-queue3"].MaxReceiveCount
-    if maxReceiveCount != 100 {
-        t.Errorf("Expected local-queue2 Queue to be configured with MaxReceiveCount: 3 from RedrivePolicy but got %d\n", maxReceiveCount)
-    }
-    dlq := app.SyncQueues.Queues["local-queue3"].DeadLetterQueue
-    if dlq == nil {
-        t.Errorf("Expected local-queue3 to have one dead letter queue to redrive to\n")
-    }
-    if dlq.Name != "local-queue3-dlq" {
-        t.Errorf("Expected local-queue3 to have dead letter queue local-queue3-dlq but got %s\n", dlq.Name)
-    }
-    maximumMessageSize = app.SyncQueues.Queues["local-queue2"].MaximumMessageSize
-    if maximumMessageSize != 128 {
-        t.Errorf("Expected local-queue2 Queue to be configured with MaximumMessageSize: 128 but got %d\n", maximumMessageSize)
-    }
-
-    timeoutSecs = app.SyncQueues.Queues["local-queue2"].TimeoutSecs
-    if timeoutSecs != 150 {
-        t.Errorf("Expected local-queue2 Queue to be configured with VisibilityTimeout: 150 but got %d\n", timeoutSecs)
-    }
-}
-
-func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
-    env := "NoQueueAttributeDefaults"
-    LoadYamlConfig("./mock-data/mock-config.yaml", env)
-
-    receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveWaitTimeSecs
-    if receiveWaitTime != 0 {
-        t.Errorf("Expected local-queue1 Queue to be configured with ReceiveMessageWaitTimeSeconds: 0 but got %d\n", receiveWaitTime)
-    }
-    timeoutSecs := app.SyncQueues.Queues["local-queue1"].TimeoutSecs
-    if timeoutSecs != 30 {
-        t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 30 but got %d\n", timeoutSecs)
-    }
-
-    receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs
-    if receiveWaitTime != 20 {
-        t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
-    }
-}
-
-func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
-    expectedQueues := []string{
-        "local-queue1",
-        "local-queue2",
-        "local-queue3",
-        "local-queue4",
-    }
-    expectedTopics := []string{
-        "local-topic1",
-        "sub-topic",
-        "local-topic2",
-        "my_topic",
-    }
-
-    env := "Local"
-    LoadYamlConfig("", env)
-
-    queues := app.SyncQueues.Queues
-    topics := app.SyncTopics.Topics
-    for _, expectedName := range expectedQueues {
-        _, ok := queues[expectedName]
-        assert.True(t, ok)
-    }
-    for _, expectedName := range expectedTopics {
-        _, ok := topics[expectedName]
-        assert.True(t, ok)
-    }
+    assert.Equal(t, 1, qCallCount)
+    assert.Equal(t, 1, tCallCount)
 }
 
 func TestConfig_HotReloadConfigFile(t *testing.T) {
-    env := "Local"
-    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+    defer func() {
+        app.CurrentEnvironment = app.Environment{}
+    }()
 
-    //start a watcher goroutine
-    go StartWatcher("./mock-data/mock-config.yaml", env)
-    time.Sleep(5 * time.Second)
+    wg1 := sync.WaitGroup{}
+    wg1.Add(2)
 
-    if port[0] != "4100" {
-        t.Errorf("Expected port number 4100 but got %s\n", port)
+    qCallCount := 0
+    qs := func(queues []app.EnvQueue) error {
+        qCallCount += 1
+        return nil
+    }
+    tCallCount := 0
+    ts := func(queues []app.EnvTopic) error {
+        tCallCount += 1
+        wg1.Done()
+        return nil
+    }
+    c := &ConfigLoader{
+        configFilename: "./mock-data/mock-hotreload-config.yaml",
+        createQueues:   qs,
+        createTopics:   ts,
     }
 
-    //backup mock-config.yaml
-    backupFile, err := os.ReadFile("./mock-data/mock-config.yaml")
+    // Overwrite this file to make sure it's ready for the test
+    configBackup, _ := os.ReadFile("./mock-data/mock-config.yaml")
+    err := os.WriteFile(c.configFilename, configBackup, 0644)
     if err != nil {
-        t.Errorf("Error backuping mock-config.yaml: %v\n", err)
+        t.Errorf("Pre-write to %s failed", c.configFilename)
     }
 
-    //read mock-updated-config.yaml
-    updatedFile, err := os.ReadFile("./mock-data/mock-updated-config.yaml")
+    c.loadYamlConfig("Local")
+    assert.Equal(t, []string{"4200"}, c.Ports)
+    assert.Equal(t, fixtures.LOCAL_ENVIRONMENT, c.env)
+    assert.Equal(t, fixtures.LOCAL_ENVIRONMENT, app.CurrentEnvironment)
+
+    assert.Equal(t, 1, qCallCount)
+    assert.Equal(t, 1, tCallCount)
+
+    wg2 := &sync.WaitGroup{}
+    wg2.Add(1)
+    c.StartWatcher(wg2)
+    wg2.Wait()
+
+    configOverwrite := []byte("Local:\n  Host: not-localhost\n")
+    err = os.WriteFile(c.configFilename, configOverwrite, 0644)
     if err != nil {
-        t.Errorf("Error reading mock-updated-config.yaml: %v\n", err)
+        t.Errorf("Overwrite to %s failed", c.configFilename)
     }
 
-    //write updatedFile on mock-config.yaml
-    err = os.WriteFile("./mock-data/mock-config.yaml", updatedFile, 0644)
+    wg1.Wait()
+
+    assert.Equal(t, 2, qCallCount)
+    assert.Equal(t, 2, tCallCount)
+
+    err = os.WriteFile(c.configFilename, configBackup, 0644)
     if err != nil {
-        t.Errorf("Error updating mock-config.yaml: %v\n", err)
-    }
-
-    time.Sleep(5 * time.Second)
-
-    //make tests checks
-    numQueues := len(envs[env].Queues)
-    if numQueues != 5 {
-        t.Errorf("Expected five queues to be in the environment but got %d\n", numQueues)
-    }
-    numQueues = len(app.SyncQueues.Queues)
-    if numQueues != 8 {
-        t.Errorf("Expected eight queues to be in the sqs topics but got %d\n", numQueues)
-    }
-
-    numTopics := len(envs[env].Topics)
-    if numTopics != 3 {
-        t.Errorf("Expected three topics to be in the environment but got %d\n", numTopics)
-    }
-    numTopics = len(app.SyncTopics.Topics)
-    if numTopics != 3 {
-        t.Errorf("Expected three topics to be in the sns topics but got %d\n", numTopics)
-    }
-
-    //restore mock-config.yaml
-    err = os.WriteFile("./mock-data/mock-config.yaml", backupFile, 0644)
-    if err != nil {
-        t.Errorf("Error updating mock-config.yaml: %v\n", err)
+        t.Errorf("Reset write to %s failed", c.configFilename)
     }
 }
+
+func TestConfig_createSNSTopics(t *testing.T) {
+    utils.ResetAppTopics()
+    utils.ResetAppQueues()
+    defer func() {
+        utils.ResetAppTopics()
+        utils.ResetAppQueues()
+    }()
+
+    err := createSNSTopics(fixtures.LOCAL_ENVIRONMENT.Topics)
+
+    assert.Nil(t, err)
+
+    utils.AssertTopicsMatchFixture(t, fixtures.LOCAL_APP_TOPICS)
+    // These are created since they are the target of subscriptions
+    utils.AssertQueuesMatchFixture(t, fixtures.LOCAL_APP_QUEUES)
+}
+
+func TestConfig_createSNSTopics_invalidFilterPolicyReturnsError(t *testing.T) {
+    dupe, err := copystructure.Copy(fixtures.LOCAL_ENVIRONMENT.Topics)
+    if err != nil {
+        t.Error(err.Error())
+    }
+    topics, _ := dupe.([]app.EnvTopic)
+    topics[0].Subscriptions[0].FilterPolicy = "{garbage]"
+
+    err = createSNSTopics(topics)
+
+    assert.Error(t, err)
+}
+
+//func TestConfig_createSqsQueues(t *testing.T){
+//    expectedQueues := []string{
+//        "local-queue1",
+//        "local-queue2",
+//        "local-queue3",
+//        "local-queue4",
+//        "local-queue5",
+//        "local-queue3-dlq",
+//    }
+//
+//    resetAppQueues()
+//    defer func() {
+//        resetAppQueues()
+//        SQS_QUEUE_LOADER = createSQSQueues
+//    }()
+//
+//    // Silo these requests for this method only, so we know exactly what we're doing
+//    yamlLoaderSqsQueuesLoaderCallCount := 0
+//    SQS_QUEUE_LOADER = func(env string) error {
+//        yamlLoaderSqsQueuesLoaderCallCount += 1
+//        return nil
+//    }
+//
+//    env := "Local"
+//    port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+//
+//    err := createSQSQueues(env)
+//
+//    assert.Nil(t, err)
+//    assert.Equal(t, "4100", port[0])
+//    assert.Equal(t, 1, yamlLoaderSqsQueuesLoaderCallCount)
+//
+//    queues := app.SyncQueues.Queues
+//    assert.Equal(t, 6, len(queues))
+//    for _, expectedName := range expectedQueues {
+//        _, ok := queues[expectedName]
+//        assert.True(t, ok)
+//    }
+//}
+//
+// TODO - @Admiral-Piett - Flesh out createSQSQueues tests
+// TODO - @Admiral-Piett - Flesh out createHttpSubscription tests
+// TODO - @Admiral-Piett - Flesh out createSqsSubscription tests
+// TODO - @Admiral-Piett - Flesh out setQueueRedrivePolicy tests

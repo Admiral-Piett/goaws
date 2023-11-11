@@ -1,7 +1,7 @@
 Local:                              # Environment name that can be passed on the command line
   #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
   Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
-  Port: 4100                        # port to listen on.
+  Port: 4200                        # port to listen on.
   Region: us-east-1
   AccountId: "100010001000"
   LogMessages: true                 # Log messages (true/false)
