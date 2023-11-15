@@ -1,34 +1,35 @@
-Local:                              # Environment name that can be passed on the command line
+Local: # Environment name that can be passed on the command line
   #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
-  Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
-  Port: 4100                        # port to listen on.
+  Host: localhost # hostname of the goaws system  (for docker-compose this is the tag name of the container)
+  Port: 4100 # port to listen on.
   Region: us-east-1
   AccountId: "100010001000"
-  LogMessages: true                 # Log messages (true/false)
-  LogFile: ./goaws_messages.log     # Log filename (for message logging
-  QueueAttributeDefaults:           # default attributes for all queues
-    VisibilityTimeout: 10              # message visibility timeout
-    ReceiveMessageWaitTimeSeconds: 10  # receive message max wait time
-    MaximumMessageSize: 1024           # maximum message size (bytes)
-  Queues:                           # List of queues to create at startup
-    - Name: local-queue1                # Queue name
-    - Name: local-queue2                # Queue name
+  LogMessages: true # Log messages (true/false)
+  LogFile: ./goaws_messages.log # Log filename (for message logging
+  QueueAttributeDefaults: # default attributes for all queues
+    VisibilityTimeout: 10 # message visibility timeout
+    ReceiveMessageWaitTimeSeconds: 10 # receive message max wait time
+    MaximumMessageSize: 1024 # maximum message size (bytes)
+  Queues: # List of queues to create at startup
+    - Name: local-queue1 # Queue name
+    - Name: local-queue2 # Queue name
       ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
-      MaximumMessageSize: 128           # Queue maximum message size (bytes)
-    - Name: local-queue3                # Queue name
-      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:000000000000:local-queue3-dlq"}'  
-    - Name: local-queue3-dlq            # Queue name      
-  Topics:                           # List of topic to create at startup
-    - Name: local-topic1            # Topic name - with some Subscriptions
-      Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)
-        - QueueName: local-queue4   # Queue name
-          Raw: false                # Raw message delivery (true/false)
-        - QueueName: local-queue5   # Queue name
-          Raw: true                 # Raw message delivery (true/false)
+      MaximumMessageSize: 128 # Queue maximum message size (bytes)
+      VisibilityTimeout: 150 # Queue visibility timeout
+    - Name: local-queue3 # Queue name
+      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:000000000000:local-queue3-dlq"}'
+    - Name: local-queue3-dlq # Queue name
+  Topics: # List of topic to create at startup
+    - Name: local-topic1 # Topic name - with some Subscriptions
+      Subscriptions: # List of Subscriptions to create for this topic (queues will be created as required)
+        - QueueName: local-queue4 # Queue name
+          Raw: false # Raw message delivery (true/false)
+        - QueueName: local-queue5 # Queue name
+          Raw: true # Raw message delivery (true/false)
           FilterPolicy: '{"foo":["bar"]}' # Subscription's FilterPolicy, json like a string
-    - Name: local-topic2            # Topic name - no Subscriptions
+    - Name: local-topic2 # Topic name - no Subscriptions
 
-NoQueuesOrTopics:                   # Another environment
+NoQueuesOrTopics: # Another environment
   Host: localhost
   Port: 4100
   LogMessages: true
