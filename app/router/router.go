@@ -8,9 +8,9 @@ import (
 
 	"fmt"
 
-	"github.com/gorilla/mux"
 	sns "github.com/Admiral-Piett/goaws/app/gosns"
 	sqs "github.com/Admiral-Piett/goaws/app/gosqs"
+	"github.com/gorilla/mux"
 )
 
 // New returns a new router
@@ -55,6 +55,7 @@ var routingTable = map[string]http.HandlerFunc{
 	"ListSubscriptions":         sns.ListSubscriptions,
 	"Unsubscribe":               sns.Unsubscribe,
 	"Publish":                   sns.Publish,
+	"PublishBatch":              sns.PublishBatch,
 }
 
 func health(w http.ResponseWriter, req *http.Request) {
