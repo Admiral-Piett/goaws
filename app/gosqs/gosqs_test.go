@@ -1983,15 +1983,14 @@ func TestGetQueueAttributes_GetAllAttributes(t *testing.T) {
 		t.Fatalf("unexpected unmarshal error: %s", err)
 	}
 
-	hasAttribute := func(attrs []app.Attribute, name string) bool { 
-			for _, attr := range attrs {
-				if attr.Name == name {
-					return true
-				}
+	hasAttribute := func(attrs []app.Attribute, name string) bool {
+		for _, attr := range attrs {
+			if attr.Name == name {
+				return true
 			}
-			return false
 		}
-
+		return false
+	}
 
 	ok := hasAttribute(resp.Result.Attrs, "VisibilityTimeout") &&
 		hasAttribute(resp.Result.Attrs, "DelaySeconds") &&
@@ -2054,15 +2053,14 @@ func TestGetQueueAttributes_GetSelectedAttributes(t *testing.T) {
 		t.Fatalf("unexpected unmarshal error: %s", err)
 	}
 
-	hasAttribute := func(attrs []app.Attribute, name string) bool { 
-			for _, attr := range attrs {
-				if attr.Name == name {
-					return true
-				}
+	hasAttribute := func(attrs []app.Attribute, name string) bool {
+		for _, attr := range attrs {
+			if attr.Name == name {
+				return true
 			}
-			return false
 		}
-
+		return false
+	}
 
 	ok := hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessages") &&
 		hasAttribute(resp.Result.Attrs, "ApproximateNumberOfMessagesNotVisible")
