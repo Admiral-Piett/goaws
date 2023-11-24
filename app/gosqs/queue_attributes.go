@@ -28,7 +28,7 @@ var (
 
 // validateAndSetQueueAttributes applies the requested queue attributes to the given
 // queue.
-// TODO Currently it only supports VisibilityTimeout, RedrivePolicy and ReceiveMessageWaitTimeSeconds  attributes.
+// TODO Currently it only supports VisibilityTimeout, MaximumMessageSize, DelaySeconds, RedrivePolicy and ReceiveMessageWaitTimeSeconds  attributes.
 func validateAndSetQueueAttributes(q *app.Queue, u url.Values) error {
 	attr := extractQueueAttributes(u)
 	visibilityTimeout, _ := strconv.Atoi(attr["VisibilityTimeout"])

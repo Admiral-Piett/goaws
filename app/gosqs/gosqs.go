@@ -11,9 +11,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gorilla/mux"
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/gorilla/mux"
 )
 
 func init() {
@@ -296,10 +296,6 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 			if keySegments[2] == "MessageBody" {
 				sendEntries[keyIndex-1].MessageBody = v[0]
-			}
-
-			if keySegments[2] == "MessageGroupId" {
-				sendEntries[keyIndex-1].MessageGroupId = v[0]
 			}
 
 			if keySegments[2] == "MessageGroupId" {
@@ -826,7 +822,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	// Retrieve FormValues required
 	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
 
-	attribute_names := map[string]bool {}
+	attribute_names := map[string]bool{}
 
 	for field, value := range req.Form {
 		if strings.HasPrefix(field, "AttributeName.") {
@@ -846,7 +842,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		}
 		return false
 	}
-	
+
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)

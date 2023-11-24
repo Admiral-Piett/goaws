@@ -108,9 +108,12 @@ docker run \
 
 ## Testing your installation
 
+### Postman Environment: [LINK](..%2Fpostman%2FGoAWS%20Local.postman_environment.json)
+### Postman Collection: [LINK](https://api.postman.com/collections/4714469-2b32c9da-aad4-4e9e-baee-6c11be6798a3?access_key=PMAT-01HG1KVFDXGGKH62KT141MBC0Z)
+
 You can test that your installation is working correctly in one of two ways:
 
- 1.  Using the postman collection, use this [link to import it](https://www.getpostman.com/collections/091386eae8c70588348e).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
+ 1.  Using the postman collection, use this [link to import it](https://api.postman.com/collections/4714469-2b32c9da-aad4-4e9e-baee-6c11be6798a3?access_key=PMAT-01HG1KVFDXGGKH62KT141MBC0Z).  As well the Environment variable for the collection should be set as follows:  URL = http://localhost:4100/.
 
  2. by using the AWS cli tools ([download link](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)) here are some samples, you can refer to the [aws cli tools docs](http://docs.aws.amazon.com/cli/latest/reference/) for further information.
 
