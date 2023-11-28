@@ -19,7 +19,8 @@ func main() {
 	var filename string
 	var debug bool
 	flag.StringVar(&filename, "config", "", "config file location + name")
-	flag.BoolVar(&debug, "debug", false, "debug log level (default Warning)")
+	flag.BoolVar(&debug, "debug", false, "set debug log level")
+	flag.StringVar(&loglevel, "loglevel", "info", "log level (default info)")
 	flag.Parse()
 
 	log.SetFormatter(&log.JSONFormatter{})
@@ -28,7 +29,13 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
-		log.SetLevel(log.InfoLevel)
+		level, err := log.ParseLevel(loglevel)
+		if err != nil {
+			log.SetLevel(log.InfoLevel)
+			log.Warnf("Failed to parse loglevel %v, defaulting to info", loglevel)
+		} else {
+			log.SetLevel(level)
+		}
 	}
 
 	env := "Local"
