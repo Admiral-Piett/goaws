@@ -18,6 +18,7 @@ import (
 func main() {
 	var filename string
 	var debug bool
+	var loglevel string
 	flag.StringVar(&filename, "config", "", "config file location + name")
 	flag.BoolVar(&debug, "debug", false, "set debug log level")
 	flag.StringVar(&loglevel, "loglevel", "info", "log level (default info)")
