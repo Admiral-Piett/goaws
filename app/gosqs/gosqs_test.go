@@ -147,11 +147,11 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 }
 
-type CreateQueueRequest struct {
-	QueueName          string `json: QueueName`
-	VisibilityTimeout  int    `json: VisibilityTimeout`
-	MaximumMessageSize int    `json: MaximumMessageSize`
-}
+// type CreateQueueRequest struct {
+// 	QueueName          string `json: QueueName`
+// 	VisibilityTimeout  int    `json: VisibilityTimeout`
+// 	MaximumMessageSize int    `json: MaximumMessageSize`
+// }
 
 func TestCreateQueuehandler_POST_CreateQueue_aws_json(t *testing.T) {
 	queueName := "UnitTestQueue1"
