@@ -147,18 +147,13 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	}
 }
 
-// type CreateQueueRequest struct {
-// 	QueueName          string `json: QueueName`
-// 	VisibilityTimeout  int    `json: VisibilityTimeout`
-// 	MaximumMessageSize int    `json: MaximumMessageSize`
-// }
-
 func TestCreateQueuehandler_POST_CreateQueue_aws_json(t *testing.T) {
 	queueName := "UnitTestQueue1"
 	requestObj := new(CreateQueueRequest)
 	requestObj.QueueName = queueName
-	requestObj.VisibilityTimeout = 60
-	requestObj.MaximumMessageSize = 2048
+	requestObj.Attributes = map[string]string{}
+	requestObj.Attributes["VisibilityTimeout"] = "60"
+	requestObj.Attributes["MaximumMessageSize"] = "2048"
 	requestJson, _ := json.Marshal(requestObj)
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
