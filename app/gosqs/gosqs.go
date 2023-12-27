@@ -1,6 +1,7 @@
 package gosqs
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -114,9 +115,45 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+type CreateQueueRequest struct {
+	QueueName          string `json: QueueName`
+	VisibilityTimeout  int    `json: VisibilityTimeout`
+	MaximumMessageSize int    `json: MaximumMessageSize`
+}
+
+type Attributes map[string]string
+
+func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool, CreateQueueRequest, Attributes) {
+	requestBody := new(CreateQueueRequest)
+	attributes := map[string]string{}
+
+	byJson := false
+
+	switch req.Header.Get("Content-Type") {
+	case "application/x-amz-json-1.0":
+		//Read body data to parse json
+		decoder := json.NewDecoder(req.Body)
+		err := decoder.Decode(&requestBody)
+		if err != nil {
+			panic(err)
+		}
+		// TODO: parse from json, and find actual attribute format in aws-json protocol.
+		attributes["VisibilityTimeout"] = "60"
+		attributes["MaximumMessageSize"] = "2048"
+		byJson = true
+	default:
+		requestBody.QueueName = req.FormValue("QueueName")
+		attributes = extractQueueAttributes(req.Form)
+	}
+
+	return byJson, *requestBody, attributes
+}
+
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	queueName := req.FormValue("QueueName")
+	byJson, requestBody, attr := parseCreateQueueRequestBody(w, req)
+
+	queueName := requestBody.QueueName
 
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
 		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
@@ -139,9 +176,16 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
 			Duplicates:          make(map[string]time.Time),
 		}
-		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
-			createErrorResponse(w, req, err.Error())
-			return
+		if byJson {
+			if err := validateAndSetQueueAttributesJson(queue, attr); err != nil {
+				createErrorResponse(w, req, err.Error())
+				return
+			}
+		} else {
+			if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+				createErrorResponse(w, req, err.Error())
+				return
+			}
 		}
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue
