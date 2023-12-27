@@ -116,17 +116,17 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 }
 
 type CreateQueueRequest struct {
-	QueueName          string `json: QueueName`
-	VisibilityTimeout  int    `json: VisibilityTimeout`
-	MaximumMessageSize int    `json: MaximumMessageSize`
+	QueueName  string            `json: QueueName`
+	Attributes map[string]string `json: Attributes`
+	Tags       map[string]string `json: Tags`
 }
 
 type Attributes map[string]string
 
-func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool, CreateQueueRequest, Attributes) {
+func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool, CreateQueueRequest) {
 	requestBody := new(CreateQueueRequest)
-	attributes := map[string]string{}
 
+	// Should remove this flag after validateAndSetQueueAttributes was updated
 	byJson := false
 
 	switch req.Header.Get("Content-Type") {
@@ -137,21 +137,18 @@ func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool
 		if err != nil {
 			panic(err)
 		}
-		// TODO: parse from json, and find actual attribute format in aws-json protocol.
-		attributes["VisibilityTimeout"] = "60"
-		attributes["MaximumMessageSize"] = "2048"
 		byJson = true
 	default:
 		requestBody.QueueName = req.FormValue("QueueName")
-		attributes = extractQueueAttributes(req.Form)
+		requestBody.Attributes = extractQueueAttributes(req.Form)
 	}
 
-	return byJson, *requestBody, attributes
+	return byJson, *requestBody
 }
 
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	byJson, requestBody, attr := parseCreateQueueRequestBody(w, req)
+	byJson, requestBody := parseCreateQueueRequestBody(w, req)
 
 	queueName := requestBody.QueueName
 
@@ -177,7 +174,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			Duplicates:          make(map[string]time.Time),
 		}
 		if byJson {
-			if err := validateAndSetQueueAttributesJson(queue, attr); err != nil {
+			if err := validateAndSetQueueAttributesJson(queue, requestBody.Attributes); err != nil {
 				createErrorResponse(w, req, err.Error())
 				return
 			}
