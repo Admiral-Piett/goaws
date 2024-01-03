@@ -1,6 +1,8 @@
 package router
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -82,6 +84,28 @@ func TestIndexServerhandler_POST_GoodRequest_With_URL(t *testing.T) {
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
+	New().ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
+
+func TestIndexServerhandler_POST_GoodRequest_With_URL_And_Aws_Json_Protocol(t *testing.T) {
+	json, _ := json.Marshal(map[string]string{
+		"QueueName": "local-queue1",
+	})
+	req, err := http.NewRequest("POST", "/100010001000/local-queue1", bytes.NewBuffer(json))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Amz-Target", "AmazonSQS.CreateQueue")
+	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
+
+	rr := httptest.NewRecorder()
+
 	New().ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
