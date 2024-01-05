@@ -1,8 +1,11 @@
 package gosqs
 
 import (
+	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -97,7 +100,7 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
 	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
 	respStruct.Result.QueueUrl = make([]string, 0)
-	queueNamePrefix := req.FormValue("QueueNamePrefix")
+	queueNamePrefix := parseRequestAttribute(req, "QueueNamePrefix")
 
 	log.Println("Listing Queues")
 	for _, queue := range app.SyncQueues.Queues {
@@ -114,9 +117,145 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+type CreateQueueRequest struct {
+	QueueName  string            `json: QueueName`
+	Attributes map[string]string `json: Attributes`
+	Tags       map[string]string `json: Tags`
+}
+
+type Attributes map[string]string
+
+func isAmzJson1Request(req *http.Request) bool {
+	switch req.Header.Get("Content-Type") {
+	case "application/x-amz-json-1.0":
+		return true
+	default:
+		return false
+	}
+}
+
+// parseRequestAttribute parses a request's body depending on its Content-Type. This will support parsing both form parameters
+// and new JSON encoded request bodies. It's not extremely efficient, but this implementation is generic and should work without
+// a massive refactor of this library.
+func parseRequestAttribute(req *http.Request, attributeName string) string {
+	if isAmzJson1Request(req) {
+		data := map[string]any{}
+		//Read body data to parse json
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			log.Errorf("Failed to read request body. err: %+v", err)
+			return ""
+		}
+
+		// Repopulate body for subsequent attribute parses (this isn't particularly efficient, but is backwards compatible.
+		req.Body = io.NopCloser(bytes.NewReader(body))
+
+		// Parse body into map so we can extract our target attribute
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+			log.Errorf("unable to parse json request body for attribute: %s. err: %+v", attributeName, err)
+			return ""
+		}
+
+		// If attribute is missing, log err, if not, return the value
+		value, ok := data[attributeName]
+		if !ok {
+			log.Debugf("Attribute missing: %s. It was likely an optional attribute.", attributeName)
+		}
+
+		// Convert result type to string. (We could have parsed an int or bool)
+		return fmt.Sprintf("%s", value)
+
+	} else {
+		return req.FormValue(attributeName)
+	}
+}
+
+// parseRequestAttributeAny parses a request's body depending on its Content-Type. This will support parsing both form parameters
+// and new JSON encoded request bodies. Json encoded bodies are converted to the old format for backwards compatible processing
+func parseRequestDataAsValues(req *http.Request) url.Values {
+	if isAmzJson1Request(req) {
+		response := map[string][]string{}
+		data := map[string]any{}
+		//Read body data to parse json
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			log.Errorf("Failed to read request body. err: %+v", err)
+			return response
+		}
+
+		// Repopulate body for subsequent attribute parses (this isn't particularly efficient, but is backwards compatible.
+		req.Body = io.NopCloser(bytes.NewReader(body))
+
+		// Parse body into url.Values
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+			log.Errorf("unable to parse json request body: err: %+v", err)
+			return response
+		}
+
+		cnt := 1
+		for k, v := range data {
+			strVal, isString := v.(string)
+			if isString {
+				response[k] = []string{strVal}
+			} else if k == "Attributes" {
+				attrs, ok := data[k].(map[string]string)
+				if !ok {
+					log.Errorf("Unable to convert attributes: %+v", data[k])
+					continue
+				}
+				// Convert attributes to old format that is expected by other parsers
+				for attrName, _ := range attrs {
+					response[fmt.Sprintf("Attribute.%d.Name", cnt)] = []string{attrName}
+					response[fmt.Sprintf("Attribute.%d.Value", cnt)] = []string{attrs[attrName]}
+				}
+			} else {
+				// convert all other maps to root form
+				other, ok := data[k].(map[string]string)
+				if !ok {
+					log.Errorf("Unable to convert other: %+v", data[k])
+					continue
+				}
+				// Convert attributes to old format that is expected by other parsers
+				for otherK, _ := range other {
+					response[otherK] = []string{other[otherK]}
+				}
+			}
+		}
+
+		return response
+
+	} else {
+		if err := req.ParseForm(); err != nil {
+			log.Errorf("Failed to parse request form.")
+		}
+		return req.Form
+	}
+}
+
+func writeResponse[T any](w http.ResponseWriter, req *http.Request, response T) {
+	// if is this is a JSon request, encode response as json
+	if isAmzJson1Request(req) {
+		enc := json.NewEncoder(w)
+		err := enc.Encode(response)
+		if err != nil {
+			log.Printf("error encoding json response: %v\n", err)
+		}
+		return
+	}
+
+	// otherwise write legacy XML response
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(response); err != nil {
+		log.Printf("error encoding xml response: %v\n", err)
+	}
+}
+
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	queueName := req.FormValue("QueueName")
+	queueName := parseRequestAttribute(req, "QueueName")
 
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
 		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
@@ -139,7 +278,7 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
 			Duplicates:          make(map[string]time.Time),
 		}
-		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+		if err := validateAndSetQueueAttributes(queue, parseRequestDataAsValues(req)); err != nil {
 			createErrorResponse(w, req, err.Error())
 			return
 		}
@@ -148,23 +287,21 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 		app.SyncQueues.Unlock()
 	}
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	respStruct := app.CreateQueueResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result:   app.CreateQueueResult{QueueUrl: queueUrl},
+		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct.CreateQueueResult = respStruct.Result
+	writeResponse(w, req, respStruct)
 }
 
 func SendMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
-	messageBody := req.FormValue("MessageBody")
-	messageGroupID := req.FormValue("MessageGroupId")
-	messageDeduplicationID := req.FormValue("MessageDeduplicationId")
+	messageBody := parseRequestAttribute(req, "MessageBody")
+	messageGroupID := parseRequestAttribute(req, "MessageGroupId")
+	messageDeduplicationID := parseRequestAttribute(req, "MessageDeduplicationId")
 	messageAttributes := extractMessageAttributes(req, "")
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
 	queueName := ""
 	if queueUrl == "" {
@@ -189,7 +326,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	delaySecs := app.SyncQueues.Queues[queueName].DelaySecs
-	if mv := req.FormValue("DelaySeconds"); mv != "" {
+	if mv := parseRequestAttribute(req, "DelaySeconds"); mv != "" {
 		delaySecs, _ = strconv.Atoi(mv)
 	}
 
@@ -235,11 +372,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	writeResponse(w, req, respStruct)
 }
 
 type SendEntry struct {
@@ -252,9 +385,8 @@ type SendEntry struct {
 
 func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -271,7 +403,7 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	sendEntries := []SendEntry{}
 
-	for k, v := range req.Form {
+	for k, v := range parseRequestDataAsValues(req) {
 		keySegments := strings.Split(k, ".")
 		if keySegments[0] == "SendMessageBatchRequestEntry" {
 			if len(keySegments) < 3 {
@@ -366,33 +498,29 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respStruct := app.SendMessageBatchResponse{
-		"http://queue.amazonaws.com/doc/2012-11-05/",
-		app.SendMessageBatchResult{Entry: sentEntries},
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result:   app.SendMessageBatchResult{Entry: sentEntries},
+		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+	respStruct.SendMessageBatchResult = respStruct.Result
 
-	enc := xml.NewEncoder(w)
-	enc.Indent(" ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	writeResponse(w, req, respStruct)
 }
 
 func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
 
 	waitTimeSeconds := 0
-	wts := req.FormValue("WaitTimeSeconds")
+	wts := parseRequestAttribute(req, "WaitTimeSeconds")
 	if wts != "" {
 		waitTimeSeconds, _ = strconv.Atoi(wts)
 	}
 	maxNumberOfMessages := 1
-	mom := req.FormValue("MaxNumberOfMessages")
+	mom := parseRequestAttribute(req, "MaxNumberOfMessages")
 	if mom != "" {
 		maxNumberOfMessages, _ = strconv.Atoi(mom)
 	}
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
 	queueName := ""
 	if queueUrl == "" {
@@ -444,7 +572,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		}
 
 	}
-	log.Println("Getting Message from Queue:", queueName)
 
 	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
@@ -498,11 +625,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
 	app.SyncQueues.Unlock() // Unlock the Queues
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	writeResponse(w, req, respStruct)
 }
 
 func numberOfHiddenMessagesInQueue(queue app.Queue) int {
@@ -519,7 +642,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	vars := mux.Vars(req)
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		queueName = vars["queueName"]
@@ -527,8 +650,8 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		uriSegments := strings.Split(queueUrl, "/")
 		queueName = uriSegments[len(uriSegments)-1]
 	}
-	receiptHandle := req.FormValue("ReceiptHandle")
-	visibilityTimeout, err := strconv.Atoi(req.FormValue("VisibilityTimeout"))
+	receiptHandle := parseRequestAttribute(req, "ReceiptHandle")
+	visibilityTimeout, err := strconv.Atoi(parseRequestAttribute(req, "VisibilityTimeout"))
 	if err != nil {
 		createErrorResponse(w, req, "ValidationError")
 		return
@@ -579,13 +702,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		"http://queue.amazonaws.com/doc/2012-11-05/",
 		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
 
-	enc := xml.NewEncoder(w)
-	enc.Indent(" ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-		createErrorResponse(w, req, "GeneralError")
-		return
-	}
+	writeResponse(w, req, respStruct)
 }
 
 type DeleteEntry struct {
@@ -597,9 +714,8 @@ type DeleteEntry struct {
 
 func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -611,7 +727,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	deleteEntries := []DeleteEntry{}
 
-	for k, v := range req.Form {
+	for k, v := range parseRequestDataAsValues(req) {
 		keySegments := strings.Split(k, ".")
 		if keySegments[0] == "DeleteMessageBatchRequestEntry" {
 			keyIndex, err := strconv.Atoi(keySegments[1])
@@ -671,9 +787,10 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respStruct := app.DeleteMessageBatchResponse{
-		"http://queue.amazonaws.com/doc/2012-11-05/",
-		app.DeleteMessageBatchResult{Entry: deletedEntries, Error: notFoundEntries},
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result:   app.DeleteMessageBatchResult{Entry: deletedEntries, Error: notFoundEntries},
+		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+	respStruct.DeleteMessageBatchResult = respStruct.Result
 
 	enc := xml.NewEncoder(w)
 	enc.Indent(" ", "    ")
@@ -687,10 +804,10 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 
 	// Retrieve FormValues required
-	receiptHandle := req.FormValue("ReceiptHandle")
+	receiptHandle := parseRequestAttribute(req, "ReceiptHandle")
 
 	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -739,7 +856,7 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 
 	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -755,12 +872,9 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Unlock()
 
 	// Create, encode/xml and send response
-	respStruct := app.DeleteQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	respStruct := app.DeleteQueueResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct.DeleteQueueUrlResult = app.DeleteQueueUrlResult{QueueUrl: queueUrl}
+	writeResponse(w, req, respStruct)
 }
 
 func PurgeQueue(w http.ResponseWriter, req *http.Request) {
@@ -768,7 +882,7 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 
 	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
 	uriSegments := strings.Split(queueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
@@ -798,18 +912,16 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	//
 	//// Retrieve FormValues required
-	queueName := req.FormValue("QueueName")
+	queueName := parseRequestAttribute(req, "QueueName")
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
 		url := queue.URL
 		log.Println("Get Queue URL:", queueName)
 		// Create, encode/xml and send response
 		result := app.GetQueueUrlResult{QueueUrl: url}
-		respStruct := app.GetQueueUrlResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
+		respStruct := app.GetQueueUrlResponse{
+			Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: result, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct.GetQueueUrlResult = result
+		writeResponse(w, req, respStruct)
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
@@ -820,11 +932,11 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	// Sent response type
 	w.Header().Set("Content-Type", "application/xml")
 	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
 	attribute_names := map[string]bool{}
 
-	for field, value := range req.Form {
+	for field, value := range parseRequestDataAsValues(req) {
 		if strings.HasPrefix(field, "AttributeName.") {
 			attribute_names[value[0]] = true
 		}
@@ -900,12 +1012,12 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		}
 
 		result := app.GetQueueAttributesResult{Attrs: attribs}
-		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
+		respStruct := app.GetQueueAttributesResponse{
+			Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+			Result:   result,
+			Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct.GetQueueAttributesResult = result
+		writeResponse(w, req, respStruct)
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
@@ -917,7 +1029,7 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	// Sent response type
 	w.Header().Set("Content-Type", "application/xml")
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
 	queueName := ""
 	if queueUrl == "" {
@@ -931,18 +1043,14 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	log.Println("Set Queue Attributes:", queueName)
 	app.SyncQueues.Lock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
-		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+		if err := validateAndSetQueueAttributes(queue, parseRequestDataAsValues(req)); err != nil {
 			createErrorResponse(w, req, err.Error())
 			app.SyncQueues.Unlock()
 			return
 		}
 
 		respStruct := app.SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
+		writeResponse(w, req, respStruct)
 	} else {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
@@ -979,6 +1087,8 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
 		MessageAttributes:      msgMttrs,
 		Attributes:             attrs,
+		JSONMessageAttributes:  attrsMap, // Todo: this is not correct and should be a different format and should be msgMttrs
+		JSONAttributes:         attrsMap,
 	}
 }
 
@@ -998,12 +1108,10 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	respStruct := app.ErrorResponse{
 		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
 		RequestId: "00000000-0000-0000-0000-000000000000",
+		Message:   er.Message,
+		Type:      er.Type,
 	}
 
 	w.WriteHeader(er.HttpError)
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	writeResponse(w, req, respStruct)
 }

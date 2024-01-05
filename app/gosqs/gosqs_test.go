@@ -1,7 +1,9 @@
 package gosqs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
@@ -110,6 +112,57 @@ func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
 	form.Add("Attribute.2.Name", "MaximumMessageSize")
 	form.Add("Attribute.2.Value", "2048")
 	req.PostForm = form
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(CreateQueue)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the response body is what we expect.
+	expected := queueName
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+	expectedQueue := &app.Queue{
+		Name:               queueName,
+		URL:                "http://://" + queueName,
+		Arn:                "arn:aws:sqs:::" + queueName,
+		TimeoutSecs:        60,
+		MaximumMessageSize: 2048,
+		Duplicates:         make(map[string]time.Time),
+	}
+	actualQueue := app.SyncQueues.Queues[queueName]
+	if !reflect.DeepEqual(expectedQueue, actualQueue) {
+		t.Fatalf("expected %+v, got %+v", expectedQueue, actualQueue)
+	}
+}
+
+func TestCreateQueuehandler_POST_CreateQueue_aws_json(t *testing.T) {
+	queueName := "UnitTestQueue1"
+	requestObj := new(CreateQueueRequest)
+	requestObj.QueueName = queueName
+	requestObj.Attributes = map[string]string{}
+	requestObj.Attributes["VisibilityTimeout"] = "60"
+	requestObj.Attributes["MaximumMessageSize"] = "2048"
+	requestJson, _ := json.Marshal(requestObj)
+	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
+	// pass 'nil' as the third parameter.
+	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(requestJson))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Amz-Target", "AmazonSQS.CreateQueue")
+	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()

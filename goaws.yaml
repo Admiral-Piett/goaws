@@ -5,7 +5,7 @@ Local:                              # Environment name that can be passed on the
   # yopa and (fage-sns + face-sqs).  If both ways are in the config file on the one "Port" will be used by GoAws
   Port: 4100                        # port to listen on.
   # SqsPort: 9324                     # alterante Sqs Port
-  # SnsPort: 9292                     # alternate Sns Port
+  SnsPort: 4101                     # alternate Sns Port
   Region: us-east-1
   AccountId: "100010001000"
   LogToFile: false                 # Log messages (true/false)
@@ -17,49 +17,13 @@ Local:                              # Environment name that can be passed on the
     MaximumMessageSize: 262144         # maximum message size (bytes)
   Queues:                           # List of queues to create at startup
     - Name: replication              # Queue name
-    - Name: local-queue2                # Queue name
-      ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
-    - Name: local-queue3                # Queue name
-      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:local-queue3-dlq"}'
-    - Name: local-queue3-dlq            # Queue name
+      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:replication-dlq"}'
+    - Name: replication-dlq          # Queue name
   Topics:                           # List of topic to create at startup
-    - Name: local-topic1            # Topic name - with some Subscriptions
+    - Name: replication            # Topic name - with some Subscriptions
       Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)
-        - QueueName: local-queue3   # Queue name
+        - QueueName: replication   # Queue name
           Raw: false                # Raw message delivery (true/false)
-        - QueueName: local-queue4   # Queue name
-          Raw: true                 # Raw message delivery (true/false)
-          #FilterPolicy: '{"foo": ["bar"]}' # Subscription's FilterPolicy, json object as a string
-    - Name: local-topic2            # Topic name - no Subscriptions
-    - Name: local-topic3            # Topic name - http subscription
-      Subscriptions:
-        - Protocol: https
-          EndPoint: https://enkrogwitfcgi.x.pipedream.net
-          TopicArn: arn:aws:sns:us-east-1:100010001000:local-topic2
-          FilterPolicy: '{"event": ["my_event"]}'
-          Raw: true
-    - Name: local-topic4
   RandomLatency:                    # Parameters for introducing random latency into message queuing
     Min: 0                          # Desired latency in milliseconds, if min and max are zero, no latency will be applied.
     Max: 0                          # Desired latency in milliseconds
-
-Dev:                                # Another environment
-  Host: localhost
-  Port: 4100
-  # SqsPort: 9324
-  # SnsPort: 9292
-  AccountId: "794373491471"
-  LogToFile: false
-  LogFile: ./goaws_messages.log
-  Queues:
-    - Name: dev-queue1
-    - Name: dev-queue2
-  Topics:
-    - Name: dev-topic1
-      Subscriptions:
-        - QueueName: dev-queue3
-          Raw: false
-        - QueueName: dev-queue4
-          Raw: true
-    - Name: dev-topic2
-

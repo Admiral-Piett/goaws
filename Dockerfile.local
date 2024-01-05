@@ -1,0 +1,13 @@
+FROM 713408432298.dkr.ecr.us-west-2.amazonaws.com/dev/zendesk/dockerhub-images/golang:1.20.2-buster
+
+ARG ARTIFACTORY_USERNAME
+ARG ARTIFACTORY_API_KEY
+
+ENV GOPROXY=https://$ARTIFACTORY_USERNAME:$ARTIFACTORY_API_KEY@zdrepo.jfrog.io/zdrepo/api/go/zen-go
+ENV GOARCH=amd64
+ENV GOOS=linux
+ENV CGO_ENABLED=0
+
+WORKDIR /app
+ADD build build
+ADD goaws.yaml goaws.yaml

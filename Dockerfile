@@ -18,7 +18,7 @@ WORKDIR /app
 
 COPY --from=build /go/src/github.com/Admiral-Piett/goaws/goaws ./goaws
 
-COPY app/conf/goaws.yaml ./conf/
+COPY --from=build /go/src/github.com/Admiral-Piett/goaws/app/conf/goaws.yaml ./conf/
 
 EXPOSE 4100
-ENTRYPOINT ["./goaws"]
+ENTRYPOINT ["./app/goaws"]

@@ -49,7 +49,7 @@ var CurrentEnvironment Environment
 
 /*** Common ***/
 type ResponseMetadata struct {
-	RequestId string `xml:"RequestId"`
+	RequestId string `xml:"RequestId" json:"RequestId"`
 }
 
 /*** Error Responses ***/
@@ -62,6 +62,8 @@ type ErrorResult struct {
 type ErrorResponse struct {
 	Result    ErrorResult `xml:"Error"`
 	RequestId string      `xml:"RequestId"`
+	Message   string      `json:"message"`
+	Type      string      `json:"__type"`
 }
 
 type RandomLatency struct {
