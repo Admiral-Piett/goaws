@@ -61,3 +61,18 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *app.ResultMessageA
 		Value: v,
 	}
 }
+
+func getMessageAttributeJSONResult(a *app.MessageAttributeValue) *app.ResultJSONMessageAttributeValue {
+	result := &app.ResultJSONMessageAttributeValue{DataType: a.DataType}
+
+	switch a.DataType {
+	case "Binary":
+		result.BinaryValue = a.Value
+	case "String":
+		result.StringValue = a.Value
+	case "Number":
+		result.StringValue = a.Value
+	}
+
+	return result
+}

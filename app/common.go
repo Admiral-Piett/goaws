@@ -49,7 +49,7 @@ var CurrentEnvironment Environment
 
 /*** Common ***/
 type ResponseMetadata struct {
-	RequestId string `xml:"RequestId" json:"RequestId"`
+	RequestId string `xml:"RequestId"`
 }
 
 /*** Error Responses ***/

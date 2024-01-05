@@ -95,7 +95,6 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 }
 
 func ListQueues(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
 	respStruct := app.ListQueuesResponse{}
 	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
 	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
@@ -163,7 +162,25 @@ func parseRequestAttribute(req *http.Request, attributeName string) string {
 			log.Debugf("Attribute missing: %s. It was likely an optional attribute.", attributeName)
 		}
 
-		// Convert result type to string. (We could have parsed an int or bool)
+		// check for int
+		intVal, isInt := value.(int)
+		if isInt {
+			return strconv.Itoa(intVal)
+		}
+
+		// float
+		floatVal, isFloat := value.(float64)
+		if isFloat {
+			return strconv.FormatFloat(floatVal, 'f', -1, 64)
+
+		}
+
+		// bool
+		boolVal, isBool := value.(bool)
+		if isBool {
+			return strconv.FormatBool(boolVal)
+		}
+
 		return fmt.Sprintf("%s", value)
 
 	} else {
@@ -237,6 +254,10 @@ func parseRequestDataAsValues(req *http.Request) url.Values {
 func writeResponse[T any](w http.ResponseWriter, req *http.Request, response T) {
 	// if is this is a JSon request, encode response as json
 	if isAmzJson1Request(req) {
+		w.Header().Set("Content-Type", "application/x-amz-json-1.0")
+		body, _ := json.Marshal(response)
+		log.Printf("Returning body: %s", string(body))
+
 		enc := json.NewEncoder(w)
 		err := enc.Encode(response)
 		if err != nil {
@@ -245,6 +266,7 @@ func writeResponse[T any](w http.ResponseWriter, req *http.Request, response T) 
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/xml")
 	// otherwise write legacy XML response
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
@@ -254,7 +276,6 @@ func writeResponse[T any](w http.ResponseWriter, req *http.Request, response T) 
 }
 
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
 	queueName := parseRequestAttribute(req, "QueueName")
 
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
@@ -295,14 +316,12 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 }
 
 func SendMessage(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
 	messageBody := parseRequestAttribute(req, "MessageBody")
 	messageGroupID := parseRequestAttribute(req, "MessageGroupId")
 	messageDeduplicationID := parseRequestAttribute(req, "MessageDeduplicationId")
 	messageAttributes := extractMessageAttributes(req, "")
 
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
-
 	queueName := ""
 	if queueUrl == "" {
 		vars := mux.Vars(req)
@@ -330,7 +349,6 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		delaySecs, _ = strconv.Atoi(mv)
 	}
 
-	log.Println("Putting Message in Queue:", queueName)
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
 		msg.MessageAttributes = messageAttributes
@@ -384,8 +402,6 @@ type SendEntry struct {
 }
 
 func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
@@ -507,8 +523,6 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 }
 
 func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-
 	waitTimeSeconds := 0
 	wts := parseRequestAttribute(req, "WaitTimeSeconds")
 	if wts != "" {
@@ -537,7 +551,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var messages []*app.ResultMessage
-	//	respMsg := ResultMessage{}
 	respStruct := app.ReceiveMessageResponse{}
 
 	if waitTimeSeconds == 0 {
@@ -612,17 +625,19 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 		//		respMsg = ResultMessage{MessageId: messages.Uuid, ReceiptHandle: messages.ReceiptHandle, MD5OfBody: messages.MD5OfMessageBody, Body: messages.MessageBody, MD5OfMessageAttributes: messages.MD5OfMessageAttributes}
 		respStruct = app.ReceiveMessageResponse{
-			"http://queue.amazonaws.com/doc/2012-11-05/",
-			app.ReceiveMessageResult{
+			Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
+			Result: app.ReceiveMessageResult{
 				Message: messages,
 			},
-			app.ResponseMetadata{
+			Metadata: app.ResponseMetadata{
 				RequestId: "00000000-0000-0000-0000-000000000000",
 			},
 		}
+		respStruct.ReceiveMessageResult = respStruct.Result
 	} else {
 		log.Println("No messages in Queue:", queueName)
 		respStruct = app.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct.ReceiveMessageResult = respStruct.Result
 	}
 	app.SyncQueues.Unlock() // Unlock the Queues
 	writeResponse(w, req, respStruct)
@@ -639,7 +654,6 @@ func numberOfHiddenMessagesInQueue(queue app.Queue) int {
 }
 
 func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
 	vars := mux.Vars(req)
 
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
@@ -713,8 +727,6 @@ type DeleteEntry struct {
 }
 
 func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
 	if queueUrl == "" {
@@ -800,9 +812,6 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 }
 
 func DeleteMessage(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
 	// Retrieve FormValues required
 	receiptHandle := parseRequestAttribute(req, "ReceiptHandle")
 
@@ -852,9 +861,6 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 }
 
 func DeleteQueue(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
 	// Retrieve FormValues required
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 	queueName := ""
@@ -878,9 +884,6 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 }
 
 func PurgeQueue(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
 	// Retrieve FormValues required
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
@@ -908,8 +911,6 @@ func PurgeQueue(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
 	//
 	//// Retrieve FormValues required
 	queueName := parseRequestAttribute(req, "QueueName")
@@ -929,8 +930,7 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
+
 	// Retrieve FormValues required
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
@@ -1026,8 +1026,6 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 }
 
 func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
 
 	queueUrl := getQueueFromPath(parseRequestAttribute(req, "QueueUrl"), req.URL.String())
 
@@ -1079,15 +1077,21 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 		})
 	}
 
+	jsonMessageAttributes := map[string]*app.ResultJSONMessageAttributeValue{}
+	for _, attr := range m.MessageAttributes {
+		jsonMessageAttributes[attr.Name] = getMessageAttributeJSONResult(&attr)
+	}
+
 	return &app.ResultMessage{
 		MessageId:              m.Uuid,
 		Body:                   m.MessageBody,
 		ReceiptHandle:          m.ReceiptHandle,
 		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
+		JSONBody:               string(m.MessageBody),
 		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
 		MessageAttributes:      msgMttrs,
 		Attributes:             attrs,
-		JSONMessageAttributes:  attrsMap, // Todo: this is not correct and should be a different format and should be msgMttrs
+		JSONMessageAttributes:  jsonMessageAttributes,
 		JSONAttributes:         attrsMap,
 	}
 }

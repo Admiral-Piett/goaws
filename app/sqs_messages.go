@@ -6,9 +6,9 @@ type ListQueuesResult struct {
 }
 
 type ListQueuesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListQueuesResult `xml:"ListQueuesResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `xml:"xmlns,attr" json:"-"`
+	Result   ListQueuesResult `xml:"ListQueuesResult" json:"-"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata" json:"-"`
 	ListQueuesResult
 }
 
@@ -18,9 +18,9 @@ type CreateQueueResult struct {
 }
 
 type CreateQueueResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   CreateQueueResult `xml:"CreateQueueResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+	Xmlns    string            `xml:"xmlns,attr" json:"-"`
+	Result   CreateQueueResult `xml:"CreateQueueResult" json:"-"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata" json:"-"`
 	CreateQueueResult
 }
 
@@ -34,24 +34,25 @@ type SendMessageResult struct {
 }
 
 type SendMessageResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   SendMessageResult `xml:"SendMessageResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+	Xmlns    string            `xml:"xmlns,attr" json:"-"`
+	Result   SendMessageResult `xml:"SendMessageResult" json:"-"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata" json:"-"`
 	SendMessageResult
 }
 
 /*** Receive Message Response */
 
 type ResultMessage struct {
-	MessageId              string                    `xml:"MessageId,omitempty" json:"MessageId,omitempty"`
-	ReceiptHandle          string                    `xml:"ReceiptHandle,omitempty" json:"ReceiptHandle,omitempty"`
-	MD5OfBody              string                    `xml:"MD5OfBody,omitempty" json:"MD5OfBody,omitempty"`
-	Body                   []byte                    `xml:"Body,omitempty" json:"Body,omitempty"`
-	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty" json:"MD5OfMessageAttributes,omitempty"`
-	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
-	Attributes             []*ResultAttribute        `xml:"Attribute,omitempty"`
-	JSONAttributes         map[string]string         `json:"Attributes,omitempty"`
-	JSONMessageAttributes  map[string]string         `json:"MessageAttributes,omitempty"` // Todo: currentlly truncated and not mapped.
+	MessageId              string                                      `xml:"MessageId,omitempty" json:"MessageId,omitempty"`
+	ReceiptHandle          string                                      `xml:"ReceiptHandle,omitempty" json:"ReceiptHandle,omitempty"`
+	MD5OfBody              string                                      `xml:"MD5OfBody,omitempty" json:"MD5OfBody,omitempty"`
+	Body                   []byte                                      `xml:"Body,omitempty" json:"-"`
+	JSONBody               string                                      `json:"Body,omitempty"`
+	MD5OfMessageAttributes string                                      `xml:"MD5OfMessageAttributes,omitempty" json:"MD5OfMessageAttributes,omitempty"`
+	MessageAttributes      []*ResultMessageAttribute                   `xml:"MessageAttribute,omitempty" json:"-"`
+	Attributes             []*ResultAttribute                          `xml:"Attribute,omitempty" json:"-"`
+	JSONAttributes         map[string]string                           `json:"Attributes,omitempty"`
+	JSONMessageAttributes  map[string]*ResultJSONMessageAttributeValue `json:"MessageAttributes,omitempty"`
 }
 
 type ResultMessageAttributeValue struct {
@@ -65,31 +66,39 @@ type ResultMessageAttribute struct {
 	Value *ResultMessageAttributeValue `xml:"Value,omitempty" json:"Value,omitempty"`
 }
 
+type ResultJSONMessageAttributeValue struct {
+	DataType         string   `json:"DataType"`
+	BinaryListValues []any    `json:"BinaryListValues"`
+	BinaryValue      any      `json:"BinaryValue"`
+	StringListValues []string `json:"StringListValues"`
+	StringValue      string   `json:"StringValue"`
+}
+
 type ResultAttribute struct {
 	Name  string `xml:"Name,omitempty" json:"Name,omitempty"`
 	Value string `xml:"Value,omitempty" json:"Value,omitempty"`
 }
 
 type ReceiveMessageResult struct {
-	Message  []*ResultMessage `xml:"Message,omitempty"`
-	Messages []*ResultMessage `json:"Message"`
+	Message []*ResultMessage `xml:"Message,omitempty" json:"Messages"`
 }
 
 type ReceiveMessageResponse struct {
-	Xmlns    string               `xml:"xmlns,attr"`
-	Result   ReceiveMessageResult `xml:"ReceiveMessageResult" json:"ReceiveMessageResult"`
-	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
+	Xmlns    string               `xml:"xmlns,attr" json:"-"`
+	Result   ReceiveMessageResult `xml:"ReceiveMessageResult" json:"-"`
+	Metadata ResponseMetadata     `xml:"ResponseMetadata" json:"-"`
+	ReceiveMessageResult
 }
 
 type ChangeMessageVisibilityResult struct {
-	Xmlns    string           `xml:"xmlns,attr" json:""`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `xml:"xmlns,attr" json:"-"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata" json:"-"`
 }
 
 /*** Delete Message Response */
 type DeleteMessageResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `xml:"xmlns,attr,omitempty" json:"-"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty" json:"-"`
 }
 
 // Delete Queue
@@ -98,8 +107,8 @@ type DeleteQueueUrlResult struct {
 }
 
 type DeleteQueueResponse struct {
-	Xmlns                string           `xml:"xmlns,attr,omitempty"`
-	Metadata             ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns                string           `xml:"xmlns,attr,omitempty" json:"-"`
+	Metadata             ResponseMetadata `xml:"ResponseMetadata,omitempty" json:"-"`
 	DeleteQueueUrlResult `json:"QueueUrl,omitempty"`
 }
 
@@ -142,16 +151,16 @@ type SendMessageBatchResult struct {
 
 /*** Delete Message Batch Response */
 type SendMessageBatchResponse struct {
-	Xmlns    string                 `xml:"xmlns,attr,omitempty" json:""`
-	Result   SendMessageBatchResult `xml:"SendMessageBatchResult"`
-	Metadata ResponseMetadata       `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                 `xml:"xmlns,attr,omitempty" json:"-"`
+	Result   SendMessageBatchResult `xml:"SendMessageBatchResult" json:"-"`
+	Metadata ResponseMetadata       `xml:"ResponseMetadata,omitempty" json:"-"`
 	SendMessageBatchResult
 }
 
 /*** Purge Queue Response */
 type PurgeQueueResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty" json:""`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `xml:"xmlns,attr,omitempty" json:"-"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty" json:"-"`
 }
 
 /*** Get Queue Url Response */
@@ -160,9 +169,9 @@ type GetQueueUrlResult struct {
 }
 
 type GetQueueUrlResponse struct {
-	Xmlns    string            `xml:"xmlns,attr,omitempty"`
-	Result   GetQueueUrlResult `xml:"GetQueueUrlResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string            `xml:"xmlns,attr,omitempty" json:"-"`
+	Result   GetQueueUrlResult `xml:"GetQueueUrlResult" json:"-"`
+	Metadata ResponseMetadata  `xml:"ResponseMetadata,omitempty" json:"-"`
 	GetQueueUrlResult
 }
 
@@ -180,12 +189,12 @@ type GetQueueAttributesResult struct {
 
 type GetQueueAttributesResponse struct {
 	Xmlns    string                   `xml:"xmlns,attr,omitempty" json:""`
-	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult"`
-	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
+	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult" json:"-"`
+	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty" json:"-"`
 	GetQueueAttributesResult
 }
 
 type SetQueueAttributesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty" json:""`
+	Xmlns    string           `xml:"xmlns,attr,omitempty" json:"-"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }
