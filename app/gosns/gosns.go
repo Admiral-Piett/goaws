@@ -306,7 +306,7 @@ func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
 	for _, topic := range app.SyncTopics.Topics {
 		for _, sub := range topic.Subscriptions {
 			tar := app.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint}
+				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
 			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
 		}
 	}
@@ -330,7 +330,7 @@ func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
 
 		for _, sub := range topic.Subscriptions {
 			tar := app.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint}
+				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
 			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
 		}
 		SendResponseBack(w, req, respStruct, content)
