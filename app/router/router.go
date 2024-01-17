@@ -1,9 +1,13 @@
 package router
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Admiral-Piett/goaws/app/interfaces"
 
 	log "github.com/sirupsen/logrus"
 
@@ -28,10 +32,41 @@ func New() http.Handler {
 	return r
 }
 
+func encodeResponse(w http.ResponseWriter, req *http.Request, statusCode int, body interfaces.AbstractResponseBody) {
+	protocol := resolveProtocol(req)
+	switch protocol {
+	case AwsJsonProtocol:
+		w.Header().Set("x-amzn-RequestId", body.GetRequestId())
+		w.Header().Set("Content-Type", "application/x-amz-json-1.0")
+		// Stupidly these `WriteHeader` calls have to be here, if they're at the start
+		// they lock the headers, at the end they're ignored.
+		w.WriteHeader(statusCode)
+		err := json.NewEncoder(w).Encode(body.GetResult())
+		if err != nil {
+			log.Errorf("Response Encoding Error: %v\nResponse: %+v", err, body)
+			http.Error(w, "General Error", http.StatusInternalServerError)
+		}
+	case AwsQueryProtocol:
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(statusCode)
+		result, err := xml.Marshal(body)
+		if err != nil {
+			log.Errorf("Response Encoding Error: %v\nResponse: %+v", err, body)
+			http.Error(w, "General Error", http.StatusInternalServerError)
+		}
+		_, _ = w.Write(result)
+	}
+}
+
+// V1 - includes JSON Support (and of course the old XML).
+var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+	"CreateQueue": sqs.CreateQueueV1,
+}
+
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"ListQueues":              sqs.ListQueues,
-	"CreateQueue":             sqs.CreateQueue,
+	"ListQueues": sqs.ListQueues,
+	//"CreateQueue":             sqs.CreateQueue,
 	"GetQueueAttributes":      sqs.GetQueueAttributes,
 	"SetQueueAttributes":      sqs.SetQueueAttributes,
 	"SendMessage":             sqs.SendMessage,
@@ -72,6 +107,13 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 			"action": action,
 			"url":    req.URL,
 		}).Debug("Handling URL request")
+	// If we don't find a match in this table, pass on to the existing flow.
+	jsonFn, ok := routingTableV1[action]
+	if ok {
+		statusCode, responseBody := jsonFn(req)
+		encodeResponse(w, req, statusCode, responseBody)
+		return
+	}
 	fn, ok := routingTable[action]
 	if !ok {
 		log.Println("Bad Request - Action:", action)

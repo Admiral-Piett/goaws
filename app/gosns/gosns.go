@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"bytes"
 	"crypto"
 	"crypto/rand"
@@ -769,8 +771,8 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := app.SnsErrors[err]
-	respStruct := app.ErrorResponse{
-		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+	respStruct := models.ErrorResponse{
+		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
 		RequestId: "00000000-0000-0000-0000-000000000000",
 	}
 
