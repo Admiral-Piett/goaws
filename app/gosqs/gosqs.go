@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/utils"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -116,11 +118,13 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 }
 
 type CreateQueueRequest struct {
-	QueueName  string            `json: QueueName`
-	Attributes map[string]string `json: Attributes`
-	Tags       map[string]string `json: Tags`
+	QueueName  string            `json:"QueueName" schema:"QueueName"`
+	Attributes Attributes        `json:"Attributes" schema:"Attributes"`
+	Tags       map[string]string `json:"Tags" schema:"Tags"`
 }
 
+// TODO - populate for all possible SQS attributes
+// TODO - copy for SNS
 type Attributes map[string]string
 
 func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool, CreateQueueRequest) {
@@ -144,6 +148,58 @@ func parseCreateQueueRequestBody(w http.ResponseWriter, req *http.Request) (bool
 	}
 
 	return byJson, *requestBody
+}
+
+func CreateQueueV1(req *http.Request) (int, interface{}) {
+	requestBody := &CreateQueueRequest{}
+	ok := utils.TransformRequest(requestBody, req)
+	if !ok {
+		log.Error("Invalid Type Requested - CreateQueueV1")
+		return http.StatusInternalServerError, nil
+	}
+	queueName := requestBody.QueueName
+
+	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
+		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	if app.CurrentEnvironment.Region != "" {
+		queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
+			app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	}
+	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
+
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		log.Println("Creating Queue:", queueName)
+		queue := &app.Queue{
+			Name:                queueName,
+			URL:                 queueUrl,
+			Arn:                 queueArn,
+			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
+			IsFIFO:              app.HasFIFOQueueName(queueName),
+			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:          make(map[string]time.Time),
+		}
+		if err := validateAndSetQueueAttributesJson(queue, requestBody.Attributes); err != nil {
+			return createErrorResponseV1(err)
+		}
+		// FIXME - remove this once sure
+		//if byJson {
+		//	if err := validateAndSetQueueAttributesJson(queue, requestBody.Attributes); err != nil {
+		//		return createErrorResponseV1(err)
+		//	}
+		//} else {
+		//	if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+		//		return createErrorResponseV1(err)
+		//	}
+		//}
+		app.SyncQueues.Lock()
+		app.SyncQueues.Queues[queueName] = queue
+		app.SyncQueues.Unlock()
+	}
+
+	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	return http.StatusOK, respStruct
 }
 
 func CreateQueue(w http.ResponseWriter, req *http.Request) {
@@ -1047,4 +1103,13 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 	}
+}
+
+func createErrorResponseV1(err error) (int, app.ErrorResponse) {
+	er := app.SqsErrors[err.Error()]
+	respStruct := app.ErrorResponse{
+		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+		RequestId: "00000000-0000-0000-0000-000000000000",
+	}
+	return er.HttpError, respStruct
 }

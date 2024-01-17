@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/xml"
 	"io"
 	"net/http"
 	"strings"
@@ -28,10 +29,25 @@ func New() http.Handler {
 	return r
 }
 
+func encodeResponse(w http.ResponseWriter, statusCode int, body interface{}) {
+	w.Header().Set("Content-Type", "application/xml")
+	w.WriteHeader(statusCode)
+	// TODO - replace with gorilla/schema
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(body); err != nil {
+		log.Printf("error: %v\n", err)
+	}
+}
+
+var routingTableV1 = map[string]func(r *http.Request) (int, interface{}){
+	"CreateQueue": sqs.CreateQueueV1,
+}
+
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"ListQueues":              sqs.ListQueues,
-	"CreateQueue":             sqs.CreateQueue,
+	"ListQueues": sqs.ListQueues,
+	//"CreateQueue":             sqs.CreateQueue,
 	"GetQueueAttributes":      sqs.GetQueueAttributes,
 	"SetQueueAttributes":      sqs.SetQueueAttributes,
 	"SendMessage":             sqs.SendMessage,
@@ -72,6 +88,13 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 			"action": action,
 			"url":    req.URL,
 		}).Debug("Handling URL request")
+	// If we don't find a match in this table, pass on to the existing flow.
+	jsonFn, ok := routingTableV1[action]
+	if ok {
+		statusCode, responseBody := jsonFn(req)
+		encodeResponse(w, statusCode, responseBody)
+		return
+	}
 	fn, ok := routingTable[action]
 	if !ok {
 		log.Println("Bad Request - Action:", action)

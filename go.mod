@@ -12,6 +12,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/gorilla/schema v1.2.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -22,7 +23,7 @@ require (
 )
 
 retract (
-        v1.1.0
-        v1.1.1
-        v1.1.2
+	v1.1.2
+	v1.1.1
+	v1.1.0
 )
