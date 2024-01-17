@@ -61,71 +61,62 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 }
 
 func TestConfig_QueueAttributes(t *testing.T) {
+	var emptyQueue *app.Queue
 	env := "Local"
 	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
 	if port[0] != "4100" {
 		t.Errorf("Expected port number 4100 but got %s\n", port)
 	}
 
-	receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveWaitTimeSecs
-	if receiveWaitTime != 10 {
-		t.Errorf("Expected local-queue1 Queue to be configured with ReceiveMessageWaitTimeSeconds: 10 but got %d\n", receiveWaitTime)
-	}
-	timeoutSecs := app.SyncQueues.Queues["local-queue1"].TimeoutSecs
-	if timeoutSecs != 10 {
-		t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 10 but got %d\n", timeoutSecs)
-	}
-	maximumMessageSize := app.SyncQueues.Queues["local-queue1"].MaximumMessageSize
-	if maximumMessageSize != 1024 {
-		t.Errorf("Expected local-queue1 Queue to be configured with MaximumMessageSize: 1024 but got %d\n", maximumMessageSize)
-	}
+	assert.Equal(t, 10, app.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds)
+	assert.Equal(t, 10, app.SyncQueues.Queues["local-queue1"].VisibilityTimeout)
+	assert.Equal(t, 1024, app.SyncQueues.Queues["local-queue1"].MaximumMessageSize)
+	assert.Equal(t, emptyQueue, app.SyncQueues.Queues["local-queue1"].DeadLetterQueue)
+	assert.Equal(t, 0, app.SyncQueues.Queues["local-queue1"].MaxReceiveCount)
+	assert.Equal(t, 445600, app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod)
+	assert.Equal(t, 100, app.SyncQueues.Queues["local-queue3"].MaxReceiveCount)
 
-	if app.SyncQueues.Queues["local-queue1"].DeadLetterQueue != nil {
-		t.Errorf("Expected local-queue1 Queue to be configured without redrive policy\n")
-	}
-	if app.SyncQueues.Queues["local-queue1"].MaxReceiveCount != 0 {
-		t.Errorf("Expected local-queue1 Queue to be configured without redrive policy and therefore MaxReceiveCount: 0 \n")
-	}
-
-	maxReceiveCount := app.SyncQueues.Queues["local-queue3"].MaxReceiveCount
-	if maxReceiveCount != 100 {
-		t.Errorf("Expected local-queue2 Queue to be configured with MaxReceiveCount: 3 from RedrivePolicy but got %d\n", maxReceiveCount)
-	}
-	dlq := app.SyncQueues.Queues["local-queue3"].DeadLetterQueue
-	if dlq == nil {
-		t.Errorf("Expected local-queue3 to have one dead letter queue to redrive to\n")
-	}
-	if dlq.Name != "local-queue3-dlq" {
-		t.Errorf("Expected local-queue3 to have dead letter queue local-queue3-dlq but got %s\n", dlq.Name)
-	}
-	maximumMessageSize = app.SyncQueues.Queues["local-queue2"].MaximumMessageSize
-	if maximumMessageSize != 128 {
-		t.Errorf("Expected local-queue2 Queue to be configured with MaximumMessageSize: 128 but got %d\n", maximumMessageSize)
-	}
-
-	timeoutSecs = app.SyncQueues.Queues["local-queue2"].TimeoutSecs
-	if timeoutSecs != 150 {
-		t.Errorf("Expected local-queue2 Queue to be configured with VisibilityTimeout: 150 but got %d\n", timeoutSecs)
-	}
+	assert.Equal(t, "local-queue3-dlq", app.SyncQueues.Queues["local-queue3"].DeadLetterQueue.Name)
+	assert.Equal(t, 128, app.SyncQueues.Queues["local-queue2"].MaximumMessageSize)
+	assert.Equal(t, 150, app.SyncQueues.Queues["local-queue2"].VisibilityTimeout)
+	assert.Equal(t, 245600, app.SyncQueues.Queues["local-queue2"].MessageRetentionPeriod)
 }
 
 func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
 	env := "NoQueueAttributeDefaults"
 	LoadYamlConfig("./mock-data/mock-config.yaml", env)
 
-	receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveWaitTimeSecs
+	receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds
 	if receiveWaitTime != 0 {
 		t.Errorf("Expected local-queue1 Queue to be configured with ReceiveMessageWaitTimeSeconds: 0 but got %d\n", receiveWaitTime)
 	}
-	timeoutSecs := app.SyncQueues.Queues["local-queue1"].TimeoutSecs
+	timeoutSecs := app.SyncQueues.Queues["local-queue1"].VisibilityTimeout
 	if timeoutSecs != 30 {
 		t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 30 but got %d\n", timeoutSecs)
 	}
 
-	receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveWaitTimeSecs
+	receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveMessageWaitTimeSeconds
 	if receiveWaitTime != 20 {
 		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
 	}
+
+	messageRetentionPeriod := app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod
+	if messageRetentionPeriod != 345600 {
+		t.Errorf("Expected local-queue2 Queue to be configured with VisibilityTimeout: 150 but got %d\n", timeoutSecs)
+	}
+}
+
+func TestConfig_invalid_config_resorts_to_default_queue_attributes(t *testing.T) {
+	env := "missing"
+	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+	if port[0] != "4100" {
+		t.Errorf("Expected port number 4100 but got %s\n", port)
+	}
+
+	assert.Equal(t, 262144, app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize)
+	assert.Equal(t, 345600, app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod)
+	assert.Equal(t, 0, app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds)
+	assert.Equal(t, 30, app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout)
 }
 
 func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {

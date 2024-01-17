@@ -3,11 +3,30 @@ package router
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
+
+	"github.com/Admiral-Piett/goaws/app/mocks"
+
+	"github.com/Admiral-Piett/goaws/app/interfaces"
+
+	sns "github.com/Admiral-Piett/goaws/app/gosns"
+
+	sqs "github.com/Admiral-Piett/goaws/app/gosqs"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Admiral-Piett/goaws/app/utils"
 )
+
+func TestMain(m *testing.M) {
+	utils.InitializeDecoders()
+	m.Run()
+}
 
 func TestIndexServerhandler_POST_BadRequest(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
@@ -129,4 +148,171 @@ func TestIndexServerhandler_GET_GoodRequest_Pem_cert(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
+}
+
+func TestEncodeResponse_success_xml(t *testing.T) {
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, false)
+
+	encodeResponse(w, r, http.StatusOK, mocks.BaseResponse{Message: "test"})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	tmp := mocks.BaseResponse{}
+	xml.Unmarshal(w.Body.Bytes(), &tmp)
+	assert.Equal(t, mocks.BaseResponse{Message: "test"}, tmp)
+}
+
+func TestEncodeResponse_success_skips_nil_body_xml(t *testing.T) {
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, false)
+
+	encodeResponse(w, r, http.StatusOK, nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, &bytes.Buffer{}, w.Body)
+}
+
+func TestEncodeResponse_success_json(t *testing.T) {
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, true)
+
+	encodeResponse(w, r, http.StatusOK, mocks.BaseResponse{Message: "test"})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	tmp := mocks.BaseResponse{}
+	json.Unmarshal(w.Body.Bytes(), &tmp)
+	assert.Equal(t, mocks.BaseResponse{Message: "test"}, tmp)
+}
+
+func TestEncodeResponse_success_skips_malformed_body_json(t *testing.T) {
+	mock := mocks.BaseResponse{
+		Message: "test",
+	}
+	mock.MockGetResult = func() interface{} {
+		return make(chan int)
+	}
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, true)
+
+	encodeResponse(w, r, http.StatusOK, mock)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "General Error", strings.TrimSpace(string(w.Body.Bytes())))
+}
+
+func TestActionHandler_v1_json(t *testing.T) {
+	defer func() {
+		routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+			"CreateQueue": sqs.CreateQueueV1,
+		}
+	}()
+
+	mockCalled := false
+	mockFunction := func(req *http.Request) (int, interfaces.AbstractResponseBody) {
+		mockCalled = true
+		return http.StatusOK, mocks.BaseResponse{Message: "response-body"}
+	}
+	routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+		"CreateQueue": mockFunction,
+	}
+
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, true)
+	r.Header.Set("X-Amz-Target", "QueueService.CreateQueue")
+
+	actionHandler(w, r)
+
+	assert.True(t, mockCalled)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	tmp := mocks.BaseResponse{}
+	json.Unmarshal(w.Body.Bytes(), &tmp)
+	assert.Equal(t, mocks.BaseResponse{Message: "response-body"}, tmp)
+}
+
+func TestActionHandler_v1_xml(t *testing.T) {
+	defer func() {
+		routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+			"CreateQueue": sqs.CreateQueueV1,
+		}
+	}()
+
+	mockCalled := false
+	mockFunction := func(req *http.Request) (int, interfaces.AbstractResponseBody) {
+		mockCalled = true
+		return http.StatusOK, mocks.BaseResponse{Message: "response-body"}
+	}
+	routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+		"CreateQueue": mockFunction,
+	}
+
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, false)
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	r.PostForm = form
+
+	actionHandler(w, r)
+
+	assert.True(t, mockCalled)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	tmp := mocks.BaseResponse{}
+	xml.Unmarshal(w.Body.Bytes(), &tmp)
+	assert.Equal(t, mocks.BaseResponse{Message: "response-body"}, tmp)
+}
+
+func TestActionHandler_v0_xml(t *testing.T) {
+	defer func() {
+		routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
+			"CreateQueue": sqs.CreateQueueV1,
+		}
+		routingTable = map[string]http.HandlerFunc{
+			// SQS
+			"ListQueues": sqs.ListQueues,
+			//"CreateQueue":             sqs.CreateQueue,
+			"GetQueueAttributes":      sqs.GetQueueAttributes,
+			"SetQueueAttributes":      sqs.SetQueueAttributes,
+			"SendMessage":             sqs.SendMessage,
+			"SendMessageBatch":        sqs.SendMessageBatch,
+			"ReceiveMessage":          sqs.ReceiveMessage,
+			"DeleteMessage":           sqs.DeleteMessage,
+			"DeleteMessageBatch":      sqs.DeleteMessageBatch,
+			"GetQueueUrl":             sqs.GetQueueUrl,
+			"PurgeQueue":              sqs.PurgeQueue,
+			"DeleteQueue":             sqs.DeleteQueue,
+			"ChangeMessageVisibility": sqs.ChangeMessageVisibility,
+
+			// SNS
+			"ListTopics":                sns.ListTopics,
+			"CreateTopic":               sns.CreateTopic,
+			"DeleteTopic":               sns.DeleteTopic,
+			"Subscribe":                 sns.Subscribe,
+			"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
+			"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
+			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
+			"ListSubscriptions":         sns.ListSubscriptions,
+			"Unsubscribe":               sns.Unsubscribe,
+			"Publish":                   sns.Publish,
+
+			// SNS Internal
+			"ConfirmSubscription": sns.ConfirmSubscription,
+		}
+	}()
+
+	mockCalled := false
+	mockFunction := func(w http.ResponseWriter, req *http.Request) {
+		mockCalled = true
+		w.WriteHeader(http.StatusOK)
+	}
+	routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){}
+	routingTable = map[string]http.HandlerFunc{
+		"CreateQueue": mockFunction,
+	}
+
+	w, r := utils.GenerateRequestInfo("POST", "/url", nil, false)
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	r.PostForm = form
+
+	actionHandler(w, r)
+
+	assert.True(t, mockCalled)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
