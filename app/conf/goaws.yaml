@@ -16,7 +16,7 @@ Local:                              # Environment name that can be passed on the
     ReceiveMessageWaitTimeSeconds: 0   # receive message max wait time
     MaximumMessageSize: 262144         # maximum message size (bytes)
   Queues:                           # List of queues to create at startup
-    - Name: local-queue1                # Queue name
+    - Name: replication              # Queue name
     - Name: local-queue2                # Queue name
       ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
     - Name: local-queue3                # Queue name
