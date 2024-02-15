@@ -21,12 +21,14 @@ type EnvQueue struct {
 	RedrivePolicy                 string
 	MaximumMessageSize            int
 	VisibilityTimeout             int
+	MessageRetentionPeriod        int
 }
 
 type EnvQueueAttributes struct {
 	VisibilityTimeout             int
 	ReceiveMessageWaitTimeSeconds int
 	MaximumMessageSize            int
+	MessageRetentionPeriod        int // seconds
 }
 
 type Environment struct {

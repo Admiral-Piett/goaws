@@ -8,6 +8,12 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/Admiral-Piett/goaws/app/models"
+
+	"github.com/Admiral-Piett/goaws/app/utils"
+
 	"github.com/Admiral-Piett/goaws/app"
 )
 
@@ -26,23 +32,23 @@ var (
 	}
 )
 
-// validateAndSetQueueAttributes applies the requested queue attributes to the given
+// validateAndSetQueueAttributesFromForm applies the requested queue attributes to the given
 // queue.
-// TODO Currently it only supports VisibilityTimeout, MaximumMessageSize, DelaySeconds, RedrivePolicy and ReceiveMessageWaitTimeSeconds  attributes.
-func validateAndSetQueueAttributes(q *app.Queue, u url.Values) error {
-	attr := extractQueueAttributes(u)
+// TODO Currently it only supports VisibilityTimeout, MaximumMessageSize, DelaySeconds, RedrivePolicy and ReceiveMessageWaitTimeSeconds attributes.
+func validateAndSetQueueAttributesFromForm(q *app.Queue, u url.Values) error {
+	attr := utils.ExtractQueueAttributes(u)
 
-	return validateAndSetQueueAttributesJson(q, attr)
+	return validateAndSetQueueAttributes(q, attr)
 }
 
-func validateAndSetQueueAttributesJson(q *app.Queue, attr Attributes) error {
+func validateAndSetQueueAttributes(q *app.Queue, attr map[string]string) error {
 	visibilityTimeout, _ := strconv.Atoi(attr["VisibilityTimeout"])
 	if visibilityTimeout != 0 {
-		q.TimeoutSecs = visibilityTimeout
+		q.VisibilityTimeout = visibilityTimeout
 	}
 	receiveWaitTime, _ := strconv.Atoi(attr["ReceiveMessageWaitTimeSeconds"])
 	if receiveWaitTime != 0 {
-		q.ReceiveWaitTimeSecs = receiveWaitTime
+		q.ReceiveMessageWaitTimeSeconds = receiveWaitTime
 	}
 	maximumMessageSize, _ := strconv.Atoi(attr["MaximumMessageSize"])
 	if maximumMessageSize != 0 {
@@ -85,26 +91,45 @@ func validateAndSetQueueAttributesJson(q *app.Queue, attr Attributes) error {
 	}
 	delaySecs, _ := strconv.Atoi(attr["DelaySeconds"])
 	if delaySecs != 0 {
-		q.DelaySecs = delaySecs
+		q.DelaySeconds = delaySecs
 	}
 
 	return nil
 }
 
-func extractQueueAttributes(u url.Values) map[string]string {
-	attr := map[string]string{}
-	for i := 1; true; i++ {
-		nameKey := fmt.Sprintf("Attribute.%d.Name", i)
-		attrName := u.Get(nameKey)
-		if attrName == "" {
-			break
-		}
-
-		valueKey := fmt.Sprintf("Attribute.%d.Value", i)
-		attrValue := u.Get(valueKey)
-		if attrValue != "" {
-			attr[attrName] = attrValue
-		}
+// TODO - Support:
+//   - attr.MessageRetentionPeriod
+//   - attr.Policy
+//   - attr.RedriveAllowPolicy
+func setQueueAttributesV1(q *app.Queue, attr models.Attributes) error {
+	// FIXME - are there better places to put these bottom-limit validations?
+	if attr.DelaySeconds >= 0 {
+		q.DelaySeconds = attr.DelaySeconds
 	}
-	return attr
+	if attr.MaximumMessageSize >= 0 {
+		q.MaximumMessageSize = attr.MaximumMessageSize
+	}
+	// TODO - bottom limit should be the AWS limits
+	// The following 2 don't support zero values
+	if attr.MessageRetentionPeriod > 0 {
+		q.MessageRetentionPeriod = attr.MessageRetentionPeriod
+	}
+	if attr.ReceiveMessageWaitTimeSeconds > 0 {
+		q.ReceiveMessageWaitTimeSeconds = attr.ReceiveMessageWaitTimeSeconds
+	}
+	if attr.VisibilityTimeout >= 0 {
+		q.VisibilityTimeout = attr.VisibilityTimeout
+	}
+	if attr.RedrivePolicy != (models.RedrivePolicy{}) {
+		arnArray := strings.Split(attr.RedrivePolicy.DeadLetterTargetArn, ":")
+		queueName := arnArray[len(arnArray)-1]
+		deadLetterQueue, ok := app.SyncQueues.Queues[queueName]
+		if !ok {
+			log.Error("Invalid RedrivePolicy Attribute")
+			return fmt.Errorf(ErrInvalidAttributeValue.Type)
+		}
+		q.DeadLetterQueue = deadLetterQueue
+		q.MaxReceiveCount = attr.RedrivePolicy.MaxReceiveCount
+	}
+	return nil
 }
