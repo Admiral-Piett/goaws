@@ -21,4 +21,8 @@ COPY --from=build /go/src/github.com/Admiral-Piett/goaws/goaws ./goaws
 COPY app/conf/goaws.yaml ./conf/
 
 EXPOSE 4100
+
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
+  CMD wget localhost:4100/health -q -O - > /dev/null
+  
 ENTRYPOINT ["./goaws"]
