@@ -36,12 +36,11 @@ func encodeResponse(w http.ResponseWriter, statusCode int, body interface{}) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(body); err != nil {
-		log.Printf("error: %v\n", err)
+		log.Errorf("error: %v\n", err)
 	}
 }
 
 // V1 - includes JSON Support (and of course the old XML).
-// TODO - admiral-piett - delete the old/non-v1 versions.
 var routingTableV1 = map[string]func(r *http.Request) (int, interface{}){
 	"CreateQueue": sqs.CreateQueueV1,
 }

@@ -13,12 +13,12 @@ import (
 	"github.com/gorilla/schema"
 )
 
-var xmlDecoder *schema.Decoder
+var XmlDecoder *schema.Decoder
 var REQUEST_TRANSFORMER = TransformRequest
 
 func InitializeDecoders() {
-	xmlDecoder = schema.NewDecoder()
-	xmlDecoder.IgnoreUnknownKeys(true)
+	XmlDecoder = schema.NewDecoder()
+	XmlDecoder.IgnoreUnknownKeys(true)
 }
 
 // QUESTION - alternately we could have the router.actionHandler method call this, but then our router maps
@@ -40,7 +40,7 @@ func TransformRequest(resultingStruct interfaces.AbstractRequestBody, req *http.
 			log.Debugf("TransformRequest Failure - %s", err.Error())
 			return false
 		}
-		err = xmlDecoder.Decode(resultingStruct, req.PostForm)
+		err = XmlDecoder.Decode(resultingStruct, req.PostForm)
 		if err != nil {
 			log.Debugf("TransformRequest Failure - %s", err.Error())
 			return false

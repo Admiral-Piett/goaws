@@ -1013,7 +1013,7 @@ func createErrorResponseV1(err string) (int, app.ErrorResponse) {
 	er := app.SqsErrors[err]
 	respStruct := app.ErrorResponse{
 		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
-		RequestId: "00000000-0000-0000-0000-000000000000",
+		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
 	}
 	return er.HttpError, respStruct
 }

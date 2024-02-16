@@ -106,9 +106,18 @@ func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
 	}
 }
 
-//func TestConfig_invalid_config_resorts_to_default_attributes(t *testing.T) {
-////	TODO
-//}
+func TestConfig_invalid_config_resorts_to_default_queue_attributes(t *testing.T) {
+	env := "missing"
+	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
+	if port[0] != "4100" {
+		t.Errorf("Expected port number 4100 but got %s\n", port)
+	}
+
+	assert.Equal(t, 262144, app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize)
+	assert.Equal(t, 345600, app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod)
+	assert.Equal(t, 0, app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds)
+	assert.Equal(t, 30, app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout)
+}
 
 func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
 	expectedQueues := []string{

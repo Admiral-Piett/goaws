@@ -2233,6 +2233,21 @@ func TestGetQueueAttributes_GetSelectedAttributes(t *testing.T) {
 	done <- struct{}{}
 }
 
+func TestCreateErrorResponseV1(t *testing.T) {
+	expectedResponse := app.ErrorResponse{
+		Result: app.ErrorResult{
+			Type:    "Not Found",
+			Code:    "AWS.SimpleQueueService.NonExistentQueue",
+			Message: "The specified queue does not exist for this wsdl version.",
+		},
+		RequestId: "00000000-0000-0000-0000-000000000000",
+	}
+	status, response := createErrorResponseV1("QueueNotFound")
+
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, expectedResponse, response)
+}
+
 // waitTimeout waits for the waitgroup for the specified max timeout.
 // Returns true if waiting timed out.
 // credits: https://stackoverflow.com/questions/32840687/timeout-for-waitgroup-wait
