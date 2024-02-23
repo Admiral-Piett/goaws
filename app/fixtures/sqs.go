@@ -31,27 +31,6 @@ var CreateQueueAttributes = models.Attributes{
 	RedriveAllowPolicy: map[string]interface{}{"this-is": "the-redrive-allow-policy"},
 }
 
-//var CreateQueueV1RequestBodyJSON = struct {
-//	QueueName  string `json:"QueueName"`
-//	Action     string `json:"Action"`
-//	Version    string `json:"Version"`
-//	Attributes models.Attributes
-//}{
-//	QueueName:  QueueName,
-//	Action:     "CreateQueue",
-//	Version:    "2012-11-05",
-//	Attributes: CreateQueueAttributes,
-//}
-//
-//var CreateQueueV1RequestXML = url.Values{
-//	"Action":            []string{"CreateQueue"},
-//	"QueueName":         []string{"UnitTestQueue1"},
-//	"Attribute.1.Name":  []string{"VisibilityTimeout"},
-//	"Attribute.1.Value": []string{"60"},
-//	"Attribute.2.Name":  []string{"MaximumMessageSize"},
-//	"Attribute.2.Value": []string{"2048"},
-//}
-
 var CreateQueueResponse = app.CreateQueueResponse{
 	Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
 	Result: app.CreateQueueResult{
