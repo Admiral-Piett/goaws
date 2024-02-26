@@ -640,16 +640,16 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 
 	app.SyncQueues.Lock()
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		for _, deleteEntry := range deleteEntries {
-			for i, msg := range app.SyncQueues.Queues[queueName].Messages {
+		for entryi, deleteEntry := range deleteEntries {
+			for msgi, msg := range app.SyncQueues.Queues[queueName].Messages {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
 					// Unlock messages for the group
 					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
 					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
-					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
+					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:msgi], app.SyncQueues.Queues[queueName].Messages[msgi+1:]...)
 					delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
-					deleteEntry.Deleted = true
+					deleteEntries[entryi].Deleted = true
 					deletedEntry := app.DeleteMessageBatchResultEntry{Id: deleteEntry.Id}
 					deletedEntries = append(deletedEntries, deletedEntry)
 					break
