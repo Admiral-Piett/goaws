@@ -384,9 +384,7 @@ func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	status, _ := SendMessageV1(req)
+	status, response := SendMessageV1(req)
 
 	// Check the status code is what we expect.
 	if status != http.StatusOK {
@@ -394,11 +392,13 @@ func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
 			status, http.StatusOK)
 	}
 
+	sendMessageResponse, ok := response.(app.SendMessageResponse)
+	assert.True(t, ok)
+
 	// Check the response body is what we expect.
-	expected := "MD5OfMessageBody"
-	if !strings.Contains(rr.Body.String(), expected) {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+	if len(sendMessageResponse.Result.MD5OfMessageBody) == 0 {
+		t.Errorf("handler returned unexpected body: got %v",
+			sendMessageResponse.Result)
 	}
 }
 
@@ -418,9 +418,7 @@ func TestSendMessage_MaximumMessageSize_MessageTooBig(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	status, _ := SendMessageV1(req)
+	status, response := SendMessageV1(req)
 
 	// Check the status code is what we expect.
 	if status != http.StatusBadRequest {
@@ -428,11 +426,14 @@ func TestSendMessage_MaximumMessageSize_MessageTooBig(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
+	errorResponse, ok := response.(app.ErrorResponse)
+	assert.True(t, ok)
+
 	// Check the response body is what we expect.
 	expected := "MessageTooBig"
-	if !strings.Contains(rr.Body.String(), expected) {
+	if errorResponse.Result.Type != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+			errorResponse.Result.Type, expected)
 	}
 }
 
@@ -451,9 +452,7 @@ func TestSendQueue_POST_NonExistant(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	status, _ := SendMessageV1(req)
+	status, response := SendMessageV1(req)
 
 	// Check the status code is what we expect.
 	if status != http.StatusBadRequest {
@@ -461,11 +460,14 @@ func TestSendQueue_POST_NonExistant(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
+	errorResponse, ok := response.(app.ErrorResponse)
+	assert.True(t, ok)
+
 	// Check the response body is what we expect.
-	expected := "NonExistentQueue"
-	if !strings.Contains(rr.Body.String(), expected) {
+	expected := "Not Found"
+	if errorResponse.Result.Type != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+			errorResponse.Result.Type, expected)
 	}
 }
 
