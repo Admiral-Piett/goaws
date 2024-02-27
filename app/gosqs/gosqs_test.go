@@ -386,14 +386,10 @@ func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(SendMessage)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
+	status, _ := SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
@@ -424,14 +420,10 @@ func TestSendMessage_MaximumMessageSize_MessageTooBig(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(SendMessage)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
+	status, _ := SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
+	if status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusBadRequest)
 	}
@@ -461,14 +453,10 @@ func TestSendQueue_POST_NonExistant(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(SendMessage)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
+	status, _ := SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
+	if status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusBadRequest)
 	}
@@ -847,7 +835,7 @@ func TestRequeueing_VisibilityTimeoutExpires(t *testing.T) {
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
@@ -963,9 +951,9 @@ func TestRequeueing_ResetVisibilityTimeout(t *testing.T) {
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1116,9 +1104,9 @@ func TestDeadLetterQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1253,9 +1241,9 @@ func TestReceiveMessageWaitTimeEnforced(t *testing.T) {
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1358,9 +1346,9 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1518,8 +1506,8 @@ func TestReceiveMessageDelaySeconds(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
+	status, _ = SendMessageV1(req)
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1646,9 +1634,9 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1668,9 +1656,9 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	req.PostForm = form
 
 	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1818,7 +1806,6 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr := httptest.NewRecorder()
 	status, _ := CreateQueueV1(req)
 
 	assert.Equal(t, status, http.StatusOK)
@@ -1836,11 +1823,10 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1856,11 +1842,10 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1885,7 +1870,6 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr := httptest.NewRecorder()
 	status, _ := CreateQueueV1(req)
 
 	assert.Equal(t, status, http.StatusOK)
@@ -1903,11 +1887,10 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1923,11 +1906,10 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1952,7 +1934,6 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr := httptest.NewRecorder()
 	status, _ := CreateQueueV1(req)
 
 	assert.Equal(t, status, http.StatusOK)
@@ -1972,11 +1953,10 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -1992,11 +1972,10 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+	status, _ = SendMessageV1(req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -2020,7 +1999,6 @@ func TestSendMessage_POST_DelaySeconds(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr := httptest.NewRecorder()
 	status, _ := CreateQueueV1(req)
 
 	assert.Equal(t, status, http.StatusOK)
@@ -2037,9 +2015,8 @@ func TestSendMessage_POST_DelaySeconds(t *testing.T) {
 	form.Add("DelaySeconds", "2")
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
-	rr = httptest.NewRecorder()
-	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusOK {
+	status, _ = SendMessageV1(req)
+	if status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
@@ -2054,7 +2031,7 @@ func TestSendMessage_POST_DelaySeconds(t *testing.T) {
 	form.Add("QueueUrl", "http://localhost:4100/queue/sendmessage-delay")
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
-	rr = httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
@@ -2110,7 +2087,6 @@ func TestGetQueueAttributes_GetAllAttributes(t *testing.T) {
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
-	rr := httptest.NewRecorder()
 	status, _ := CreateQueueV1(req)
 
 	assert.Equal(t, status, http.StatusOK)
@@ -2121,7 +2097,7 @@ func TestGetQueueAttributes_GetAllAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rr = httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 	http.HandlerFunc(GetQueueAttributes).ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {

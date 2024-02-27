@@ -150,3 +150,28 @@ type RedrivePolicy struct {
 	MaxReceiveCount     int    `json:"maxReceiveCount"`
 	DeadLetterTargetArn string `json:"deadLetterTargetArn"`
 }
+
+func NewSendMessageRequest() *SendMessageRequest {
+	return &SendMessageRequest{}
+}
+
+type SendMessageRequest struct {
+	DelaySeconds            int                          `json:"Del1aySeconds" schema:"DelaySeconds"`
+	MessageAttributes       map[string]MessageAttributes `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageBody             string                       `json:"MessageBody" schema:"MessageBody"`
+	MessageDeduplicationId  string                       `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId          string                       `json:"MessageGroupId" schema:"MessageGroupId"`
+	MessageSystemAttributes map[string]MessageAttributes `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"`
+	QueueUrl                string                       `json:"QueueUrl" schema:"QueueUrl"`
+}
+type MessageAttributes struct {
+	BinaryListValues []string `json:"BinaryListValues"`
+	BinaryValue      []string `json:"BinaryValue"`
+	DataType         string   `json:"DataType"`
+	StringListValues []string `json:"StringListValues"`
+	StringValue      []string `json:"StringValue"`
+}
+
+func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
+	// TODO
+}

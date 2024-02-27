@@ -157,15 +157,19 @@ func CreateQueueV1(req *http.Request) (int, interface{}) {
 	return http.StatusOK, respStruct
 }
 
-func SendMessage(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
-	messageBody := req.FormValue("MessageBody")
-	messageGroupID := req.FormValue("MessageGroupId")
-	messageDeduplicationID := req.FormValue("MessageDeduplicationId")
+func SendMessageV1(req *http.Request) (int, interface{}) {
+	requestBody := models.NewSendMessageRequest()
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	if !ok {
+		log.Error("Invalid Request - CreateQueueV1")
+		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+	}
+	messageBody := requestBody.MessageBody
+	messageGroupID := requestBody.MessageGroupId
+	messageDeduplicationID := requestBody.MessageDeduplicationId
 	messageAttributes := extractMessageAttributes(req, "")
 
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
+	queueUrl := getQueueFromPath(requestBody.QueueUrl, req.URL.String())
 
 	queueName := ""
 	if queueUrl == "" {
@@ -178,15 +182,13 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		// Queue does not exist
-		createErrorResponse(w, req, "QueueNotFound")
-		return
+		return createErrorResponseV1("QueueNotFound")
 	}
 
 	if app.SyncQueues.Queues[queueName].MaximumMessageSize > 0 &&
 		len(messageBody) > app.SyncQueues.Queues[queueName].MaximumMessageSize {
 		// Message size is too big
-		createErrorResponse(w, req, "MessageTooBig")
-		return
+		return createErrorResponseV1("MessageTooBig")
 	}
 
 	delaySecs := app.SyncQueues.Queues[queueName].DelaySeconds
@@ -236,11 +238,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
+	return http.StatusOK, respStruct
 }
 
 type SendEntry struct {

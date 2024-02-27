@@ -206,6 +206,7 @@ func TestActionHandler_xml(t *testing.T) {
 	defer func() {
 		routingTableV1 = map[string]func(r *http.Request) (int, interface{}){
 			"CreateQueue": sqs.CreateQueueV1,
+			"SendMessage": sqs.SendMessageV1,
 		}
 		routingTable = map[string]http.HandlerFunc{
 			// SQS
@@ -213,7 +214,6 @@ func TestActionHandler_xml(t *testing.T) {
 			//"CreateQueue":             sqs.CreateQueue,
 			"GetQueueAttributes":      sqs.GetQueueAttributes,
 			"SetQueueAttributes":      sqs.SetQueueAttributes,
-			"SendMessage":             sqs.SendMessage,
 			"SendMessageBatch":        sqs.SendMessageBatch,
 			"ReceiveMessage":          sqs.ReceiveMessage,
 			"DeleteMessage":           sqs.DeleteMessage,
