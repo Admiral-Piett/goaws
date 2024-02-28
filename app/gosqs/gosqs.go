@@ -153,7 +153,11 @@ func CreateQueueV1(req *http.Request) (int, interface{}) {
 		app.SyncQueues.Unlock()
 	}
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+	respStruct := app.CreateQueueResponse{
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result:   app.CreateQueueResult{QueueUrl: queueUrl},
+		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"},
+	}
 	return http.StatusOK, respStruct
 }
 
