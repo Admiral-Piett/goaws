@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"fmt"
 
+	"github.com/Admiral-Piett/goaws/app"
 	sns "github.com/Admiral-Piett/goaws/app/gosns"
 	sqs "github.com/Admiral-Piett/goaws/app/gosqs"
 	"github.com/gorilla/mux"
@@ -36,6 +38,16 @@ func encodeResponse(w http.ResponseWriter, statusCode int, body interface{}) {
 	enc := xml.NewEncoder(w)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(body); err != nil {
+		log.Errorf("error: %v\n", err)
+	}
+}
+
+func encodeResponseJson(w http.ResponseWriter, statusCode int, body interface{}) {
+	w.Header().Set("x-amzn-RequestId", "00000000-0000-0000-0000-000000000000")
+	w.Header().Set("Content-Type", "application/x-amz-json-1.0")
+	w.WriteHeader(statusCode)
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(body.(app.CreateQueueResponse).Result); err != nil {
 		log.Errorf("error: %v\n", err)
 	}
 }
@@ -89,13 +101,21 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 			"action": action,
 			"url":    req.URL,
 		}).Debug("Handling URL request")
+
 	// If we don't find a match in this table, pass on to the existing flow.
 	jsonFn, ok := routingTableV1[action]
 	if ok {
 		statusCode, responseBody := jsonFn(req)
-		encodeResponse(w, statusCode, responseBody)
+		protocol := resolveProtocol(req)
+		switch protocol {
+		case AwsJsonProtocol:
+			encodeResponseJson(w, statusCode, responseBody)
+		case AwsQueryProtocol:
+			encodeResponse(w, statusCode, responseBody)
+		}
 		return
 	}
+
 	fn, ok := routingTable[action]
 	if !ok {
 		log.Println("Bad Request - Action:", action)
@@ -103,7 +123,6 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, "Bad Request")
 		return
 	}
-
 	http.HandlerFunc(fn).ServeHTTP(w, req)
 }
 
