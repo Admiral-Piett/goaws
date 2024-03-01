@@ -468,6 +468,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			msg.ReceiptHandle = msg.Uuid + "#" + uuid
 			msg.ReceiptTime = time.Now().UTC()
 			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			msg.NumberOfReceives++
 
 			if app.SyncQueues.Queues[queueName].IsFIFO {
 				// If we got messages here it means we have not processed it yet, so get next
@@ -959,7 +960,7 @@ func getMessageResult(m *app.Message) *app.ResultMessage {
 	attrsMap := map[string]string{
 		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.UnixNano()/int64(time.Millisecond)),
 		"SenderId":                         app.CurrentEnvironment.AccountID,
-		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
+		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives),
 		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().UnixNano()/int64(time.Millisecond)),
 	}
 
