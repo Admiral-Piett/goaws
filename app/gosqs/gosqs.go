@@ -9,6 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/interfaces"
+
+	"github.com/Admiral-Piett/goaws/app/models"
+
+	"github.com/Admiral-Piett/goaws/app/utils"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -114,9 +120,14 @@ func ListQueues(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func CreateQueue(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-	queueName := req.FormValue("QueueName")
+func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
+	requestBody := models.NewCreateQueueRequest()
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	if !ok {
+		log.Error("Invalid Request - CreateQueueV1")
+		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+	}
+	queueName := requestBody.QueueName
 
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
 		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
@@ -129,31 +140,27 @@ func CreateQueue(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Println("Creating Queue:", queueName)
 		queue := &app.Queue{
-			Name:                queueName,
-			URL:                 queueUrl,
-			Arn:                 queueArn,
-			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
-			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
-			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
-			IsFIFO:              app.HasFIFOQueueName(queueName),
-			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
-			Duplicates:          make(map[string]time.Time),
+			Name:             queueName,
+			URL:              queueUrl,
+			Arn:              queueArn,
+			IsFIFO:           app.HasFIFOQueueName(queueName),
+			EnableDuplicates: app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:       make(map[string]time.Time),
 		}
-		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
-			createErrorResponse(w, req, err.Error())
-			return
+		if err := setQueueAttributesV1(queue, requestBody.Attributes); err != nil {
+			return createErrorResponseV1(err.Error())
 		}
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue
 		app.SyncQueues.Unlock()
 	}
 
-	respStruct := app.CreateQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateQueueResult{QueueUrl: queueUrl}, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+	respStruct := models.CreateQueueResponse{
+		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
+		Result:   models.CreateQueueResult{QueueUrl: queueUrl},
+		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"},
 	}
+	return http.StatusOK, respStruct
 }
 
 func SendMessage(w http.ResponseWriter, req *http.Request) {
@@ -188,7 +195,7 @@ func SendMessage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	delaySecs := app.SyncQueues.Queues[queueName].DelaySecs
+	delaySecs := app.SyncQueues.Queues[queueName].DelaySeconds
 	if mv := req.FormValue("DelaySeconds"); mv != "" {
 		delaySecs, _ = strconv.Atoi(mv)
 	}
@@ -414,7 +421,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 
 	if waitTimeSeconds == 0 {
 		app.SyncQueues.RLock()
-		waitTimeSeconds = app.SyncQueues.Queues[queueName].ReceiveWaitTimeSecs
+		waitTimeSeconds = app.SyncQueues.Queues[queueName].ReceiveMessageWaitTimeSeconds
 		app.SyncQueues.RUnlock()
 	}
 
@@ -467,7 +474,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			}
 			msg.ReceiptHandle = msg.Uuid + "#" + uuid
 			msg.ReceiptTime = time.Now().UTC()
-			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
+			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
 
 			if app.SyncQueues.Queues[queueName].IsFIFO {
 				// If we got messages here it means we have not processed it yet, so get next
@@ -549,7 +556,7 @@ func ChangeMessageVisibility(w http.ResponseWriter, req *http.Request) {
 		queue := app.SyncQueues.Queues[queueName]
 		msgs := queue.Messages
 		if msgs[i].ReceiptHandle == receiptHandle {
-			timeout := app.SyncQueues.Queues[queueName].TimeoutSecs
+			timeout := app.SyncQueues.Queues[queueName].VisibilityTimeout
 			if visibilityTimeout == 0 {
 				msgs[i].ReceiptTime = time.Now().UTC()
 				msgs[i].ReceiptHandle = ""
@@ -858,15 +865,15 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 		// Create, encode/xml and send response
 		attribs := make([]app.Attribute, 0, 0)
 		if include_attr("VisibilityTimeout") {
-			attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.TimeoutSecs)}
+			attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.VisibilityTimeout)}
 			attribs = append(attribs, attr)
 		}
 		if include_attr("DelaySeconds") {
-			attr := app.Attribute{Name: "DelaySeconds", Value: strconv.Itoa(queue.DelaySecs)}
+			attr := app.Attribute{Name: "DelaySeconds", Value: strconv.Itoa(queue.DelaySeconds)}
 			attribs = append(attribs, attr)
 		}
 		if include_attr("ReceiveMessageWaitTimeSeconds") {
-			attr := app.Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: strconv.Itoa(queue.ReceiveWaitTimeSecs)}
+			attr := app.Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: strconv.Itoa(queue.ReceiveMessageWaitTimeSeconds)}
 			attribs = append(attribs, attr)
 		}
 		if include_attr("ApproximateNumberOfMessages") {
@@ -890,6 +897,7 @@ func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 			attribs = append(attribs, attr)
 		}
 
+		// TODO - why do we just return the name and NOT the actual ARN here?
 		deadLetterTargetArn := ""
 		if queue.DeadLetterQueue != nil {
 			deadLetterTargetArn = queue.DeadLetterQueue.Name
@@ -931,7 +939,7 @@ func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
 	log.Println("Set Queue Attributes:", queueName)
 	app.SyncQueues.Lock()
 	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
-		if err := validateAndSetQueueAttributes(queue, req.Form); err != nil {
+		if err := validateAndSetQueueAttributesFromForm(queue, req.Form); err != nil {
 			createErrorResponse(w, req, err.Error())
 			app.SyncQueues.Unlock()
 			return
@@ -995,8 +1003,8 @@ func getQueueFromPath(formVal string, theUrl string) string {
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	er := app.SqsErrors[err]
-	respStruct := app.ErrorResponse{
-		Result:    app.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+	respStruct := models.ErrorResponse{
+		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
 		RequestId: "00000000-0000-0000-0000-000000000000",
 	}
 
@@ -1006,4 +1014,13 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 	}
+}
+
+func createErrorResponseV1(err string) (int, interfaces.AbstractResponseBody) {
+	er := app.SqsErrors[err]
+	respStruct := models.ErrorResponse{
+		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
+		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
+	}
+	return er.HttpError, respStruct
 }

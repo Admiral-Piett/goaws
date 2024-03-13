@@ -3,17 +3,33 @@ package gosqs
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/mitchellh/copystructure"
+
+	"github.com/Admiral-Piett/goaws/app/models"
+
+	"github.com/Admiral-Piett/goaws/app/interfaces"
+
+	"github.com/Admiral-Piett/goaws/app/utils"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Admiral-Piett/goaws/app/fixtures"
+
 	"github.com/Admiral-Piett/goaws/app"
 )
+
+func TestMain(m *testing.M) {
+	utils.InitializeDecoders()
+	m.Run()
+}
 
 func TestListQueues_POST_NoQueues(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
@@ -93,104 +109,263 @@ func TestListQueues_POST_Success(t *testing.T) {
 	}
 }
 
-func TestCreateQueuehandler_POST_CreateQueue(t *testing.T) {
-	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
-	// pass 'nil' as the third parameter.
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
+func TestCreateQueueV1_success(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = fixtures.CreateQueueRequest
+		return true
 	}
 
-	queueName := "UnitTestQueue1"
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "UnitTestQueue1")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "60")
-	form.Add("Attribute.2.Name", "MaximumMessageSize")
-	form.Add("Attribute.2.Value", "2048")
-	req.PostForm = form
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(CreateQueue)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// Check the response body is what we expect.
-	expected := queueName
-	if !strings.Contains(rr.Body.String(), expected) {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
 	expectedQueue := &app.Queue{
-		Name:               queueName,
-		URL:                "http://://" + queueName,
-		Arn:                "arn:aws:sqs:::" + queueName,
-		TimeoutSecs:        60,
-		MaximumMessageSize: 2048,
-		Duplicates:         make(map[string]time.Time),
+		Name: fixtures.QueueName,
+		URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.Host,
+			fixtures.LOCAL_ENVIRONMENT.Port,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		Arn: fmt.Sprintf("arn:aws:sqs:%s:%s:%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		VisibilityTimeout:             5,
+		ReceiveMessageWaitTimeSeconds: 4,
+		DelaySeconds:                  1,
+		MaximumMessageSize:            2,
+		MessageRetentionPeriod:        3,
+		Duplicates:                    make(map[string]time.Time),
 	}
-	actualQueue := app.SyncQueues.Queues[queueName]
-	if !reflect.DeepEqual(expectedQueue, actualQueue) {
-		t.Fatalf("expected %+v, got %+v", expectedQueue, actualQueue)
-	}
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, response := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, fixtures.CreateQueueResponse, response)
+
+	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
+	assert.Equal(t, expectedQueue, actualQueue)
 }
 
-func TestCreateFIFOQueuehandler_POST_CreateQueue(t *testing.T) {
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
+func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
+		c, _ := dupe.(models.CreateQueueRequest)
+		c.Attributes.RedrivePolicy = models.RedrivePolicy{
+			MaxReceiveCount:     100,
+			DeadLetterTargetArn: fmt.Sprintf("arn:aws:sqs:us-east-1:100010001000:%s", fixtures.DeadLetterQueueName),
+		}
+
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = c
+		return true
 	}
 
-	queueName := "UnitTestQueue1.fifo"
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "UnitTestQueue1.fifo")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "60")
-	req.PostForm = form
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(CreateQueue)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+	dlq := &app.Queue{
+		Name: fixtures.DeadLetterQueueName,
 	}
+	app.SyncQueues.Queues[fixtures.DeadLetterQueueName] = dlq
 
-	// Check the response body is what we expect.
-	expected := queueName
-	if !strings.Contains(rr.Body.String(), expected) {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
 	expectedQueue := &app.Queue{
-		Name:        queueName,
-		URL:         "http://://" + queueName,
-		Arn:         "arn:aws:sqs:::" + queueName,
-		TimeoutSecs: 60,
-		IsFIFO:      true,
-		Duplicates:  make(map[string]time.Time),
+		Name: fixtures.QueueName,
+		URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.Host,
+			fixtures.LOCAL_ENVIRONMENT.Port,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		Arn: fmt.Sprintf("arn:aws:sqs:%s:%s:%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		VisibilityTimeout:             5,
+		ReceiveMessageWaitTimeSeconds: 4,
+		DelaySeconds:                  1,
+		MaximumMessageSize:            2,
+		MessageRetentionPeriod:        3,
+		DeadLetterQueue:               dlq,
+		MaxReceiveCount:               100,
+		Duplicates:                    make(map[string]time.Time),
 	}
-	actualQueue := app.SyncQueues.Queues[queueName]
-	if !reflect.DeepEqual(expectedQueue, actualQueue) {
-		t.Fatalf("expected %+v, got %+v", expectedQueue, actualQueue)
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, response := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, fixtures.CreateQueueResponse, response)
+
+	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
+	assert.Equal(t, expectedQueue, actualQueue)
+}
+
+func TestCreateQueueV1_success_with_existing_queue(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = fixtures.CreateQueueRequest
+		return true
 	}
+
+	q := &app.Queue{
+		Name: fixtures.QueueName,
+	}
+	app.SyncQueues.Queues[fixtures.QueueName] = q
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, response := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, fixtures.CreateQueueResponse, response)
+
+	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
+	assert.Equal(t, q, actualQueue)
+}
+
+func TestCreateQueueV1_success_with_no_request_attributes_falls_back_to_default(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
+		c, _ := dupe.(models.CreateQueueRequest)
+		c.Attributes = models.Attributes{}
+
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = c
+		return true
+	}
+
+	expectedQueue := &app.Queue{
+		Name: fixtures.QueueName,
+		URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.Host,
+			fixtures.LOCAL_ENVIRONMENT.Port,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		Arn: fmt.Sprintf("arn:aws:sqs:%s:%s:%s",
+			fixtures.LOCAL_ENVIRONMENT.Region,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		VisibilityTimeout:             0,
+		ReceiveMessageWaitTimeSeconds: 0,
+		DelaySeconds:                  0,
+		MaximumMessageSize:            0,
+		MessageRetentionPeriod:        0,
+		Duplicates:                    make(map[string]time.Time),
+	}
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, response := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, fixtures.CreateQueueResponse, response)
+
+	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
+	assert.Equal(t, expectedQueue, actualQueue)
+}
+
+func TestCreateQueueV1_success_no_configured_region_for_queue_url(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	app.CurrentEnvironment.Region = ""
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
+		c, _ := dupe.(models.CreateQueueRequest)
+		c.Attributes = models.Attributes{}
+
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = c
+		return true
+	}
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, _ := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusOK, code)
+
+	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
+	assert.Equal(t,
+		fmt.Sprintf("http://%s:%s/%s/%s",
+			fixtures.LOCAL_ENVIRONMENT.Host,
+			fixtures.LOCAL_ENVIRONMENT.Port,
+			fixtures.LOCAL_ENVIRONMENT.AccountID,
+			fixtures.QueueName,
+		),
+		actualQueue.URL,
+	)
+}
+
+func TestCreateQueueV1_request_transformer_error(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		return false
+	}
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, _ := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusBadRequest, code)
+}
+
+func TestCreateQueueV1_invalid_dead_letter_queue_error(t *testing.T) {
+	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
+		c, _ := dupe.(models.CreateQueueRequest)
+		c.Attributes.RedrivePolicy = models.RedrivePolicy{
+			MaxReceiveCount:     100,
+			DeadLetterTargetArn: fmt.Sprintf("arn:aws:sqs:us-east-1:100010001000:%s", "garbage"),
+		}
+
+		v := resultingStruct.(*models.CreateQueueRequest)
+		*v = c
+		return true
+	}
+
+	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	code, _ := CreateQueueV1(r)
+
+	assert.Equal(t, http.StatusBadRequest, code)
 }
 
 func TestSendMessage_MaximumMessageSize_Success(t *testing.T) {
@@ -639,21 +814,24 @@ func TestRequeueing_VisibilityTimeoutExpires(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "requeue")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "1")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
+	//form := url.Values{}
+	//form.Add("Action", "CreateQueue")
+	//form.Add("QueueName", "requeue")
+	//form.Add("Attribute.1.Name", "VisibilityTimeout")
+	//form.Add("Attribute.1.Value", "1")
+	//form.Add("Version", "2012-11-05")
+	req.PostForm = url.Values{
+		"Action":            []string{"CreateQueue"},
+		"QueueName":         []string{"requeue"},
+		"Attribute.1.Name":  []string{"VisibilityTimeout"},
+		"Attribute.1.Value": []string{"1"},
+		"Version":           []string{"2012-11-05"},
+	}
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, http.StatusOK, status)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -661,7 +839,7 @@ func TestRequeueing_VisibilityTimeoutExpires(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	form = url.Values{}
+	form := url.Values{}
 	form.Add("Action", "SendMessage")
 	form.Add("QueueUrl", "http://localhost:4100/queue/requeue")
 	form.Add("MessageBody", "1")
@@ -767,12 +945,9 @@ func TestRequeueing_ResetVisibilityTimeout(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -923,12 +1098,9 @@ func TestDeadLetterQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -1034,12 +1206,9 @@ func TestReceiveMessageWaitTimeEnforced(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// receive message ensure delay
 	req, err = http.NewRequest("POST", "/", nil)
@@ -1136,7 +1305,9 @@ func TestReceiveMessage_CanceledByClient(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
+
+	assert.Equal(t, status, http.StatusOK)
 
 	var wg sync.WaitGroup
 	ctx, cancelReceive := context.WithCancel(context.Background())
@@ -1243,7 +1414,9 @@ func TestReceiveMessage_WithConcurrentDeleteQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
+
+	assert.Equal(t, status, http.StatusOK)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
@@ -1329,12 +1502,9 @@ func TestReceiveMessageDelaySeconds(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -1457,12 +1627,9 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -1652,12 +1819,9 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	req, err = http.NewRequest("POST", "/", nil)
 	if err != nil {
@@ -1722,12 +1886,9 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	req, err = http.NewRequest("POST", "/", nil)
 	if err != nil {
@@ -1792,12 +1953,9 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	req, err = http.NewRequest("POST", "/", nil)
 	if err != nil {
@@ -1863,12 +2021,9 @@ func TestSendMessage_POST_DelaySeconds(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// send a message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -1956,12 +2111,9 @@ func TestGetQueueAttributes_GetAllAttributes(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// get queue attributes
 	req, err = http.NewRequest("GET", "/queue/get-queue-attributes?Action=GetQueueAttributes&AttributeName.1=All", nil)
@@ -2026,12 +2178,9 @@ func TestGetQueueAttributes_GetSelectedAttributes(t *testing.T) {
 	req.PostForm = form
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+	status, _ := CreateQueueV1(req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
+	assert.Equal(t, status, http.StatusOK)
 
 	// get queue attributes
 	req, err = http.NewRequest("GET", "/queue/get-queue-attributes?Action=GetQueueAttributes&AttributeName.1=ApproximateNumberOfMessages&AttributeName.2=ApproximateNumberOfMessagesNotVisible&AttributeName.2=ApproximateNumberOfMessagesNotVisible", nil)
@@ -2082,6 +2231,21 @@ func TestGetQueueAttributes_GetSelectedAttributes(t *testing.T) {
 	}
 
 	done <- struct{}{}
+}
+
+func TestCreateErrorResponseV1(t *testing.T) {
+	expectedResponse := models.ErrorResponse{
+		Result: models.ErrorResult{
+			Type:    "Not Found",
+			Code:    "AWS.SimpleQueueService.NonExistentQueue",
+			Message: "The specified queue does not exist for this wsdl version.",
+		},
+		RequestId: "00000000-0000-0000-0000-000000000000",
+	}
+	status, response := createErrorResponseV1("QueueNotFound")
+
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, expectedResponse, response)
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.

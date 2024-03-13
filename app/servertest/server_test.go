@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/utils"
+
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,6 +27,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	utils.InitializeDecoders()
+	m.Run()
+}
 
 func TestNew(t *testing.T) {
 	// Consume address

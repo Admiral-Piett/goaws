@@ -10,12 +10,14 @@ Local:                              # Environment name that can be passed on the
     VisibilityTimeout: 10              # message visibility timeout
     ReceiveMessageWaitTimeSeconds: 10  # receive message max wait time
     MaximumMessageSize: 1024           # maximum message size (bytes)
+    MessageRetentionPeriod: 445600     # time period to retain messages (seconds) NOTE: Functionality not implemented
   Queues:                           # List of queues to create at startup
     - Name: local-queue1                # Queue name
     - Name: local-queue2                # Queue name
       ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
       MaximumMessageSize: 128           # Queue maximum message size (bytes)
       VisibilityTimeout: 150            # Queue visibility timeout
+      MessageRetentionPeriod: 245600
     - Name: local-queue3                # Queue name
       RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:local-queue3-dlq"}'
     - Name: local-queue3-dlq            # Queue name      

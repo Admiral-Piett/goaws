@@ -127,11 +127,11 @@ func TestPublishHandler_POST_FilterPolicyRejectsTheMessage(t *testing.T) {
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queueName
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queueName
 	app.SyncQueues.Queues[queueName] = &app.Queue{
-		Name:        queueName,
-		TimeoutSecs: 30,
-		Arn:         queueArn,
-		URL:         queueUrl,
-		IsFIFO:      app.HasFIFOQueueName(queueName),
+		Name:              queueName,
+		VisibilityTimeout: 30,
+		Arn:               queueArn,
+		URL:               queueUrl,
+		IsFIFO:            app.HasFIFOQueueName(queueName),
 	}
 
 	// We set up a topic with the corresponding Subscription including FilterPolicy
@@ -198,11 +198,11 @@ func TestPublishHandler_POST_FilterPolicyPassesTheMessage(t *testing.T) {
 	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/queue/" + queueName
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":000000000000:" + queueName
 	app.SyncQueues.Queues[queueName] = &app.Queue{
-		Name:        queueName,
-		TimeoutSecs: 30,
-		Arn:         queueArn,
-		URL:         queueUrl,
-		IsFIFO:      app.HasFIFOQueueName(queueName),
+		Name:              queueName,
+		VisibilityTimeout: 30,
+		Arn:               queueArn,
+		URL:               queueUrl,
+		IsFIFO:            app.HasFIFOQueueName(queueName),
 	}
 
 	// We set up a topic with the corresponding Subscription including FilterPolicy

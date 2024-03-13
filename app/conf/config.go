@@ -73,12 +73,20 @@ func LoadYamlConfig(filename string, env string) []string {
 		}
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout == 0 {
+	if app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout <= 0 {
 		app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize == 0 {
+	if app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize <= 0 {
 		app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
+	}
+
+	if app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod <= 0 {
+		app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod = 345600 // 4 days
+	}
+
+	if app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds <= 0 {
+		app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds = 0
 	}
 
 	if app.CurrentEnvironment.AccountID == "" {
@@ -113,16 +121,21 @@ func LoadYamlConfig(filename string, env string) []string {
 			queue.VisibilityTimeout = app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout
 		}
 
+		if queue.MessageRetentionPeriod == 0 {
+			queue.MessageRetentionPeriod = app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod
+		}
+
 		app.SyncQueues.Queues[queue.Name] = &app.Queue{
-			Name:                queue.Name,
-			TimeoutSecs:         queue.VisibilityTimeout,
-			Arn:                 queueArn,
-			URL:                 queueUrl,
-			ReceiveWaitTimeSecs: queue.ReceiveMessageWaitTimeSeconds,
-			MaximumMessageSize:  queue.MaximumMessageSize,
-			IsFIFO:              app.HasFIFOQueueName(queue.Name),
-			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
-			Duplicates:          make(map[string]time.Time),
+			Name:                          queue.Name,
+			VisibilityTimeout:             queue.VisibilityTimeout,
+			Arn:                           queueArn,
+			URL:                           queueUrl,
+			ReceiveMessageWaitTimeSeconds: queue.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:            queue.MaximumMessageSize,
+			MessageRetentionPeriod:        queue.MessageRetentionPeriod,
+			IsFIFO:                        app.HasFIFOQueueName(queue.Name),
+			EnableDuplicates:              app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:                    make(map[string]time.Time),
 		}
 	}
 
@@ -192,15 +205,15 @@ func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn strin
 		}
 		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
 		app.SyncQueues.Queues[configSubscription.QueueName] = &app.Queue{
-			Name:                configSubscription.QueueName,
-			TimeoutSecs:         app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
-			Arn:                 queueArn,
-			URL:                 queueUrl,
-			ReceiveWaitTimeSecs: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
-			MaximumMessageSize:  app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
-			IsFIFO:              app.HasFIFOQueueName(configSubscription.QueueName),
-			EnableDuplicates:    app.CurrentEnvironment.EnableDuplicates,
-			Duplicates:          make(map[string]time.Time),
+			Name:                          configSubscription.QueueName,
+			VisibilityTimeout:             app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+			Arn:                           queueArn,
+			URL:                           queueUrl,
+			ReceiveMessageWaitTimeSeconds: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:            app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
+			IsFIFO:                        app.HasFIFOQueueName(configSubscription.QueueName),
+			EnableDuplicates:              app.CurrentEnvironment.EnableDuplicates,
+			Duplicates:                    make(map[string]time.Time),
 		}
 	}
 	qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn

@@ -11,17 +11,6 @@ type ListQueuesResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
-/*** Create Queue Response */
-type CreateQueueResult struct {
-	QueueUrl string `xml:"QueueUrl"`
-}
-
-type CreateQueueResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   CreateQueueResult `xml:"CreateQueueResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
-}
-
 /*** Send Message Response */
 
 type SendMessageResult struct {
