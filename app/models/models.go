@@ -193,6 +193,69 @@ func (r *GetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
 	}
 }
 
+/*** Send Message Request */
+
+func NewSendMessageRequest() *SendMessageRequest {
+	return &SendMessageRequest{
+		MessageAttributes:       make(map[string]MessageAttributeValue),
+		MessageSystemAttributes: make(map[string]MessageAttributeValue),
+	}
+}
+
+type SendMessageRequest struct {
+	DelaySeconds int `json:"DelaySeconds" schema:"DelaySeconds"`
+	// MessageAttributes is custom attributes that users can add on the message as they like.
+	// Please see: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html#SQS-SendMessage-request-MessageAttributes
+	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageBody            string                           `json:"MessageBody" schema:"MessageBody"`
+	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`
+	// MessageSystemAttributes is custom attributes for AWS services.
+	// Please see: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html#SQS-SendMessage-request-MessageSystemAttributes
+	// On AWS, the only supported attribute is "AWSTraceHeader" that is for AWS X-Ray.
+	// Goaws does not contains X-Ray emulation, so currently MessageSystemAttributes is unsupported.
+	// TODO: Replace with a struct with known attributes "AWSTraceHeader".
+	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"`
+	QueueUrl                string                           `json:"QueueUrl" schema:"QueueUrl"`
+}
+type MessageAttributeValue struct {
+	BinaryListValues []string `json:"BinaryListValues"` // currently unsupported by AWS
+	BinaryValue      string   `json:"BinaryValue"`
+	DataType         string   `json:"DataType"`
+	StringListValues []string `json:"StringListValues"` // currently unsupported by AWS
+	StringValue      string   `json:"StringValue"`
+}
+
+func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
+	for i := 1; true; i++ {
+		nameKey := fmt.Sprintf("MessageAttribute.%d.Name", i)
+		name := values.Get(nameKey)
+		if name == "" {
+			break
+		}
+
+		dataTypeKey := fmt.Sprintf("MessageAttribute.%d.Value.DataType", i)
+		dataType := values.Get(dataTypeKey)
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
+
+		stringValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.StringValue", i))
+		binaryValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.BinaryValue", i))
+
+		r.MessageAttributes[name] = MessageAttributeValue{
+			DataType:    dataType,
+			StringValue: stringValue,
+			BinaryValue: binaryValue,
+		}
+
+		if _, ok := r.MessageAttributes[name]; !ok {
+			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+		}
+	}
+}
+
 // TODO - copy Attributes for SNS
 
 // TODO - there are FIFO attributes and things too

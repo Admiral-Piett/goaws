@@ -1,18 +1,14 @@
 package app
 
-/*** Send Message Response */
-
-type SendMessageResult struct {
-	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
-	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
-	MessageId              string `xml:"MessageId"`
-	SequenceNumber         string `xml:"SequenceNumber"`
+/*** List Queues Response */
+type ListQueuesResult struct {
+	QueueUrl []string `xml:"QueueUrl"`
 }
 
-type SendMessageResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   SendMessageResult `xml:"SendMessageResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+type ListQueuesResponse struct {
+	Xmlns    string           `xml:"xmlns,attr"`
+	Result   ListQueuesResult `xml:"ListQueuesResult"`
+	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
 /*** Receive Message Response */
