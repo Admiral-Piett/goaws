@@ -11,21 +11,6 @@ type ListQueuesResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
-/*** Send Message Response */
-
-type SendMessageResult struct {
-	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
-	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
-	MessageId              string `xml:"MessageId"`
-	SequenceNumber         string `xml:"SequenceNumber"`
-}
-
-type SendMessageResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   SendMessageResult `xml:"SendMessageResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
-}
-
 /*** Receive Message Response */
 
 type ResultMessage struct {
