@@ -63,12 +63,12 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"CreateQueue":        sqs.CreateQueueV1,
 	"ListQueues":         sqs.ListQueuesV1,
 	"GetQueueAttributes": sqs.GetQueueAttributesV1,
+	"SendMessage":        sqs.SendMessageV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
 	"SetQueueAttributes":      sqs.SetQueueAttributes,
-	"SendMessage":             sqs.SendMessage,
 	"SendMessageBatch":        sqs.SendMessageBatch,
 	"ReceiveMessage":          sqs.ReceiveMessage,
 	"DeleteMessage":           sqs.DeleteMessage,
