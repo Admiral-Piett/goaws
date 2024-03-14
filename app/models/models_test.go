@@ -283,3 +283,39 @@ func TestGetQueueAttributesRequest_SetAttributesFromForm_skips_invalid_key_seque
 	assert.Equal(t, 1, len(lqr.AttributeNames))
 	assert.Contains(t, lqr.AttributeNames, "attribute-1")
 }
+
+func TestSendMessageRequest_SetAttributesFromForm_success(t *testing.T) {
+	form := url.Values{}
+	form.Add("MessageAttribute.1.Name", "Attr1")
+	form.Add("MessageAttribute.1.Value.DataType", "String")
+	form.Add("MessageAttribute.1.Value.StringValue", "Value1")
+	form.Add("MessageAttribute.2.Name", "Attr2")
+	form.Add("MessageAttribute.2.Value.DataType", "Binary")
+	form.Add("MessageAttribute.2.Value.BinaryValue", "VmFsdWUy")
+	form.Add("MessageAttribute.3.Name", "")
+	form.Add("MessageAttribute.3.Value.DataType", "String")
+	form.Add("MessageAttribute.3.Value.StringValue", "Value")
+	form.Add("MessageAttribute.4.Name", "Attr4")
+	form.Add("MessageAttribute.4.Value.DataType", "")
+	form.Add("MessageAttribute.4.Value.StringValue", "Value4")
+
+	r := &SendMessageRequest{
+		MessageAttributes:       make(map[string]MessageAttributeValue),
+		MessageSystemAttributes: make(map[string]MessageAttributeValue),
+	}
+	r.SetAttributesFromForm(form)
+
+	assert.Equal(t, 2, len(r.MessageAttributes))
+
+	assert.NotNil(t, r.MessageAttributes["Attr1"])
+	attr1 := r.MessageAttributes["Attr1"]
+	assert.Equal(t, "String", attr1.DataType)
+	assert.Equal(t, "Value1", attr1.StringValue)
+	assert.Equal(t, "", attr1.BinaryValue)
+
+	assert.NotNil(t, r.MessageAttributes["Attr2"])
+	attr2 := r.MessageAttributes["Attr2"]
+	assert.Equal(t, "Binary", attr2.DataType)
+	assert.Equal(t, "", attr2.StringValue)
+	assert.Equal(t, "VmFsdWUy", attr2.BinaryValue)
+}

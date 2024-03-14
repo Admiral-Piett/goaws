@@ -42,7 +42,7 @@ func init() {
 	app.SqsErrors["InvalidVisibilityTimeout"] = err8
 	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
 	app.SqsErrors["MessageNotInFlight"] = err9
-	err10 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageTooBig", Code: "InvalidMessageContents", Message: "The message size exceeds the limit."}
+	err10 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageTooBig", Code: "InvalidParameterValue", Message: "The message size exceeds the limit."}
 	app.SqsErrors["MessageTooBig"] = err10
 	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
 	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
@@ -92,92 +92,6 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 			ticker.Stop()
 			return
 		}
-	}
-}
-
-func SendMessage(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-	req.ParseForm()
-	messageBody := req.FormValue("MessageBody")
-	messageGroupID := req.FormValue("MessageGroupId")
-	messageDeduplicationID := req.FormValue("MessageDeduplicationId")
-	messageAttributes := extractMessageAttributes(req, "")
-
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-
-	queueName := ""
-	if queueUrl == "" {
-		vars := mux.Vars(req)
-		queueName = vars["queueName"]
-	} else {
-		uriSegments := strings.Split(queueUrl, "/")
-		queueName = uriSegments[len(uriSegments)-1]
-	}
-
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		// Queue does not exist
-		createErrorResponse(w, req, "QueueNotFound")
-		return
-	}
-
-	if app.SyncQueues.Queues[queueName].MaximumMessageSize > 0 &&
-		len(messageBody) > app.SyncQueues.Queues[queueName].MaximumMessageSize {
-		// Message size is too big
-		createErrorResponse(w, req, "MessageTooBig")
-		return
-	}
-
-	delaySecs := app.SyncQueues.Queues[queueName].DelaySeconds
-	if mv := req.FormValue("DelaySeconds"); mv != "" {
-		delaySecs, _ = strconv.Atoi(mv)
-	}
-
-	log.Println("Putting Message in Queue:", queueName)
-	msg := app.Message{MessageBody: []byte(messageBody)}
-	if len(messageAttributes) > 0 {
-		msg.MessageAttributes = messageAttributes
-		msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
-	}
-	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-	msg.Uuid, _ = common.NewUUID()
-	msg.GroupID = messageGroupID
-	msg.DeduplicationID = messageDeduplicationID
-	msg.SentTime = time.Now()
-	msg.DelaySecs = delaySecs
-
-	app.SyncQueues.Lock()
-	fifoSeqNumber := ""
-	if app.SyncQueues.Queues[queueName].IsFIFO {
-		fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(messageGroupID)
-	}
-
-	if !app.SyncQueues.Queues[queueName].IsDuplicate(messageDeduplicationID) {
-		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
-	} else {
-		log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", messageDeduplicationID, queueName)
-	}
-
-	app.SyncQueues.Queues[queueName].InitDuplicatation(messageDeduplicationID)
-	app.SyncQueues.Unlock()
-	log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
-
-	respStruct := app.SendMessageResponse{
-		Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result: app.SendMessageResult{
-			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
-			MD5OfMessageBody:       msg.MD5OfMessageBody,
-			MessageId:              msg.Uuid,
-			SequenceNumber:         fifoSeqNumber,
-		},
-		Metadata: app.ResponseMetadata{
-			RequestId: "00000000-0000-0000-0000-000000000000",
-		},
-	}
-
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
 	}
 }
 

@@ -93,3 +93,25 @@ func (r GetQueueAttributesResponse) GetResult() interface{} {
 func (r GetQueueAttributesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Send Message Response */
+type SendMessageResult struct {
+	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
+	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
+	MessageId              string `xml:"MessageId"`
+	SequenceNumber         string `xml:"SequenceNumber"`
+}
+
+type SendMessageResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   SendMessageResult    `xml:"SendMessageResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r SendMessageResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r SendMessageResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
