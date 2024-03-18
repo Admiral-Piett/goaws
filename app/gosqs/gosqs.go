@@ -317,12 +317,14 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
 		return
 	}
+
 	ids := map[string]struct{}{}
-	for _, v := range sendEntries {
+	for i, v := range sendEntries {
 		if _, ok := ids[v.Id]; ok {
 			createErrorResponse(w, req, "BatchEntryIdsNotDistinct")
 			return
 		}
+		sendEntries[i].MessageAttributes = extractMessageAttributes(req, fmt.Sprintf("SendMessageBatchRequestEntry.%d", i+1))
 		ids[v.Id] = struct{}{}
 	}
 

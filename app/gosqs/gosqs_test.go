@@ -585,6 +585,13 @@ func TestSendMessageBatchToFIFOQueue_POST_Success(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
+
+	// Verify the message attributes were set
+	expected = "<MD5OfMessageAttributes>ba056227cfd9533dba1f72ad9816d233</MD5OfMessageAttributes>"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
 }
 
 func TestChangeMessageVisibility_POST_SUCCESS(t *testing.T) {
