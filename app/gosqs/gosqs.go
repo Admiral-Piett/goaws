@@ -317,12 +317,14 @@ func SendMessageBatch(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
 		return
 	}
+
 	ids := map[string]struct{}{}
-	for _, v := range sendEntries {
+	for i, v := range sendEntries {
 		if _, ok := ids[v.Id]; ok {
 			createErrorResponse(w, req, "BatchEntryIdsNotDistinct")
 			return
 		}
+		sendEntries[i].MessageAttributes = extractMessageAttributes(req, fmt.Sprintf("SendMessageBatchRequestEntry.%d", i+1))
 		ids[v.Id] = struct{}{}
 	}
 
@@ -447,6 +449,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 	log.Println("Getting Message from Queue:", queueName)
 
 	app.SyncQueues.Lock() // Lock the Queues
+	groupsToLock := make(map[string]bool)
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		messages = make([]*app.ResultMessage, 0)
@@ -465,9 +468,6 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 			if !msg.IsReadyForReceipt() {
 				continue
 			}
-			msg.ReceiptHandle = msg.Uuid + "#" + uuid
-			msg.ReceiptTime = time.Now().UTC()
-			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 
 			if app.SyncQueues.Queues[queueName].IsFIFO {
 				// If we got messages here it means we have not processed it yet, so get next
@@ -475,12 +475,20 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 					continue
 				}
 				// Otherwise lock messages for group ID
-				app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
+				groupsToLock[msg.GroupID] = true
 			}
+
+			msg.ReceiptHandle = msg.Uuid + "#" + uuid
+			msg.ReceiptTime = time.Now().UTC()
+			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].TimeoutSecs) * time.Second)
 
 			messages = append(messages, getMessageResult(msg))
 
 			numMsg++
+		}
+
+		for groupID := range groupsToLock {
+			app.SyncQueues.Queues[queueName].LockGroup(groupID)
 		}
 
 		//		respMsg = ResultMessage{MessageId: messages.Uuid, ReceiptHandle: messages.ReceiptHandle, MD5OfBody: messages.MD5OfMessageBody, Body: messages.MessageBody, MD5OfMessageAttributes: messages.MD5OfMessageAttributes}
@@ -639,13 +647,13 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	deletedEntries := make([]app.DeleteMessageBatchResultEntry, 0)
 
 	app.SyncQueues.Lock()
+	groupsToCheck := make(map[string]bool)
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
 		for _, deleteEntry := range deleteEntries {
 			for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 				if msg.ReceiptHandle == deleteEntry.ReceiptHandle {
-					// Unlock messages for the group
-					log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
-					app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
+					groupsToCheck[msg.GroupID] = true
+
 					app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 					delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
@@ -657,6 +665,7 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
+	UnlockGroups(queueName, groupsToCheck)
 	app.SyncQueues.Unlock()
 
 	notFoundEntries := make([]app.BatchResultErrorEntry, 0)
@@ -707,12 +716,11 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 	if _, ok := app.SyncQueues.Queues[queueName]; ok {
 		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
-				// Unlock messages for the group
-				log.Printf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
-				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
 				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
 				delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
+
+				UnlockGroup(queueName, msg.GroupID)
 
 				app.SyncQueues.Unlock()
 				// Create, encode/xml and send response
@@ -732,6 +740,24 @@ func DeleteMessage(w http.ResponseWriter, req *http.Request) {
 	app.SyncQueues.Unlock()
 
 	createErrorResponse(w, req, "MessageDoesNotExist")
+}
+
+func UnlockGroups(queueName string, groups map[string]bool) {
+	for groupID := range groups {
+		UnlockGroup(queueName, groupID)
+	}
+}
+
+func UnlockGroup(queueName string, groupID string) {
+	for _, msg := range app.SyncQueues.Queues[queueName].Messages {
+		// Group can only be unlocked if there are no in flight messages for that group
+		if msg.GroupID == groupID && msg.ReceiptHandle != "" {
+			return
+		}
+	}
+
+	log.Printf("FIFO Queue %s unlocking group %s:", queueName, groupID)
+	app.SyncQueues.Queues[queueName].UnlockGroup(groupID)
 }
 
 func DeleteQueue(w http.ResponseWriter, req *http.Request) {
