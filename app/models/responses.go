@@ -43,3 +43,23 @@ func (r CreateQueueResponse) GetResult() interface{} {
 func (r CreateQueueResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** List Queues Response */
+type ListQueuesResult struct {
+	// NOTE: the old XML sdks depend on QueueUrl, and the new JSON ones need QueueUrls
+	QueueUrls []string `json:"QueueUrls" xml:"QueueUrl"`
+}
+
+type ListQueuesResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   ListQueuesResult     `xml:"ListQueuesResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r ListQueuesResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ListQueuesResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
