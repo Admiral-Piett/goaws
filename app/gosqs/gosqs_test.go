@@ -585,6 +585,13 @@ func TestSendMessageBatchToFIFOQueue_POST_Success(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
 	}
+
+	// Verify the message attributes were set
+	expected = "<MD5OfMessageAttributes>ba056227cfd9533dba1f72ad9816d233</MD5OfMessageAttributes>"
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
 }
 
 func TestChangeMessageVisibility_POST_SUCCESS(t *testing.T) {
@@ -1630,6 +1637,296 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 			t.Fatalf("should have received body 2: %s", err)
 		}
 		break
+	}
+
+	done <- struct{}{}
+}
+
+func sendMessageForFifoBatch(t *testing.T, body string, group string) {
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("MessageBody", body)
+	form.Add("MessageGroupId", group)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(SendMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+}
+
+func TestReceivingBatchFromFIFOQueueReturnsMultiple(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "receive-batch.fifo")
+	form.Add("Attribute.1.Name", "VisibilityTimeout")
+	form.Add("Attribute.1.Value", "2")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(CreateQueue).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	// send some messages
+	sendMessageForFifoBatch(t, "1", "GROUP-X")
+	sendMessageForFifoBatch(t, "2", "GROUP-X")
+	sendMessageForFifoBatch(t, "3", "GROUP-X")
+	sendMessageForFifoBatch(t, "4", "GROUP-Y")
+	sendMessageForFifoBatch(t, "5", "GROUP-X")
+	sendMessageForFifoBatch(t, "6", "GROUP-Y")
+	sendMessageForFifoBatch(t, "7", "GROUP-Y")
+
+	// receive message batch
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("MaxNumberOfMessages", "2")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+		t.Fatal("handler should return a message")
+	}
+
+	resp := app.ReceiveMessageResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+	if len(resp.Result.Message) != 2 {
+		t.Fatalf("should have received 2 messages")
+	}
+
+	if string(resp.Result.Message[0].Body) != "1" {
+		t.Fatalf("should have received body 1")
+	}
+	if string(resp.Result.Message[1].Body) != "2" {
+		t.Fatalf("should have received body 2")
+	}
+
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages) != 1 {
+		t.Fatal("there should be only 1 group locked")
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-X"] != 0 {
+		t.Fatal("should have locked GROUP-X")
+	}
+
+	// try to receive another batch and we should get 2 from GROUP-Y
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("MaxNumberOfMessages", "2")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+		t.Fatal("handler should return a message")
+	}
+
+	respTwo := app.ReceiveMessageResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &respTwo)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+	if len(respTwo.Result.Message) != 2 {
+		t.Fatalf("should have received 2 messages")
+	}
+	if string(respTwo.Result.Message[0].Body) != "4" {
+		t.Fatalf("should have received body 4")
+	}
+	if string(respTwo.Result.Message[1].Body) != "6" {
+		t.Fatalf("should have received body 6")
+	}
+
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages) != 2 {
+		t.Fatalf("there should be only 2 groups locked %d", len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages))
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-X"] != 0 {
+		t.Fatal("should have locked GROUP-X")
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-Y"] != 0 {
+		t.Fatal("should have locked GROUP-Y")
+	}
+
+	// remove messages from GROUP-X
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "DeleteMessageBatch")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", resp.Result.Message[0].ReceiptHandle)
+	form.Add("DeleteMessageBatchRequestEntry.2.ReceiptHandle", resp.Result.Message[1].ReceiptHandle)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(DeleteMessageBatch).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].Messages) != 5 {
+		t.Fatalf("there should be only 5 messages in queue, got %d", len(app.SyncQueues.Queues["receive-batch.fifo"].Messages))
+	}
+
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages) != 1 {
+		t.Fatalf("there should be only 1 group locked %d", len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages))
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-Y"] != 0 {
+		t.Fatal("should have locked GROUP-Y")
+	}
+
+	// Receive another batch, should be GROUP-X again
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("MaxNumberOfMessages", "2")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(ReceiveMessage).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	if ok := strings.Contains(rr.Body.String(), "<Message>"); !ok {
+		t.Fatal("handler should return a message")
+	}
+
+	respThree := app.ReceiveMessageResponse{}
+	err = xml.Unmarshal(rr.Body.Bytes(), &respThree)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+	if len(respThree.Result.Message) != 2 {
+		t.Fatalf("should have received 2 messages")
+	}
+	if string(respThree.Result.Message[0].Body) != "3" {
+		t.Fatalf("should have received body 3")
+	}
+	if string(respThree.Result.Message[1].Body) != "5" {
+		t.Fatalf("should have received body 5")
+	}
+
+	// remove only 1 message from GROUP-Y
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "DeleteMessageBatch")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", respTwo.Result.Message[0].ReceiptHandle)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(DeleteMessageBatch).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages) != 2 {
+		t.Fatalf("there should be only 2 groups locked %d", len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages))
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-X"] != 0 {
+		t.Fatal("should have locked GROUP-X")
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-Y"] != 0 {
+		t.Fatal("should have locked GROUP-Y")
+	}
+
+	// Remove second message from GROUP-Y
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "DeleteMessageBatch")
+	form.Add("QueueUrl", "http://localhost:4100/queue/receive-batch.fifo")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", respTwo.Result.Message[1].ReceiptHandle)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(DeleteMessageBatch).ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	if len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages) != 1 {
+		t.Fatalf("there should be only 1 group locked %d", len(app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages))
+	}
+	if app.SyncQueues.Queues["receive-batch.fifo"].FIFOMessages["GROUP-X"] != 0 {
+		t.Fatal("should have locked GROUP-X")
 	}
 
 	done <- struct{}{}

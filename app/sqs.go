@@ -124,11 +124,11 @@ func (q *Queue) IsLocked(groupId string) bool {
 }
 
 func (q *Queue) LockGroup(groupId string) {
-	if _, ok := q.FIFOMessages[groupId]; !ok {
-		q.FIFOMessages = map[string]int{
-			groupId: 0,
-		}
+	if q.FIFOMessages == nil {
+		q.FIFOMessages = map[string]int{}
 	}
+
+	q.FIFOMessages[groupId] = 0
 }
 
 func (q *Queue) UnlockGroup(groupId string) {
