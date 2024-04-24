@@ -226,3 +226,31 @@ func TestRedrivePolicy_UnmarshalJSON_invalid_type_returns_error(t *testing.T) {
 	assert.Equal(t, StringToInt(0), r.MaxReceiveCount)
 	assert.Equal(t, "", r.DeadLetterTargetArn)
 }
+
+func TestNewListQueuesRequest_SetAttributesFromForm(t *testing.T) {
+	form := url.Values{}
+	form.Add("MaxResults", "1")
+	form.Add("NextToken", "next-token")
+	form.Add("QueueNamePrefix", "queue-name-prefix")
+
+	lqr := &ListQueueRequest{}
+	lqr.SetAttributesFromForm(form)
+
+	assert.Equal(t, 1, lqr.MaxResults)
+	assert.Equal(t, "next-token", lqr.NextToken)
+	assert.Equal(t, "queue-name-prefix", lqr.QueueNamePrefix)
+}
+
+func TestNewListQueuesRequest_SetAttributesFromForm_invalid_max_results(t *testing.T) {
+	form := url.Values{}
+	form.Add("MaxResults", "1.0")
+	form.Add("NextToken", "next-token")
+	form.Add("QueueNamePrefix", "queue-name-prefix")
+
+	lqr := &ListQueueRequest{}
+	lqr.SetAttributesFromForm(form)
+
+	assert.Equal(t, 0, lqr.MaxResults)
+	assert.Equal(t, "next-token", lqr.NextToken)
+	assert.Equal(t, "queue-name-prefix", lqr.QueueNamePrefix)
+}

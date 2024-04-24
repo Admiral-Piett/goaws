@@ -48,3 +48,16 @@ NoQueueAttributeDefaults:
     - Name: local-queue1
     - Name: local-queue2
       ReceiveMessageWaitTimeSeconds: 20
+
+BaseUnitTests:
+  #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
+  Host: host                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
+  Port: port                        # port to listen on.
+  Region: region
+  AccountId: accountID
+  LogMessages: true                 # Log messages (true/false)
+  LogFile: ./goaws_messages.log     # Log filename (for message logging
+  Queues: # List of queues to create at startup
+    - Name: unit-queue1                # Queue name
+    - Name: unit-queue2                # Queue name
+    - Name: other-queue1               # Queue name

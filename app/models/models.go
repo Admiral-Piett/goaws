@@ -10,6 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var BASE_XMLNS = "http://queue.amazonaws.com/doc/2012-11-05/"
+var BASE_RESPONSE_METADATA = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
+
 func NewCreateQueueRequest() *CreateQueueRequest {
 	return &CreateQueueRequest{
 		Attributes: Attributes{
@@ -129,6 +132,25 @@ func (r *CreateQueueRequest) SetAttributesFromForm(values url.Values) {
 		}
 	}
 	return
+}
+
+func NewListQueuesRequest() *ListQueueRequest {
+	return &ListQueueRequest{}
+}
+
+type ListQueueRequest struct {
+	MaxResults      int    `json:"MaxResults" schema:"MaxResults"`
+	NextToken       string `json:"NextToken" schema:"NextToken"`
+	QueueNamePrefix string `json:"QueueNamePrefix" schema:"QueueNamePrefix"`
+}
+
+func (r *ListQueueRequest) SetAttributesFromForm(values url.Values) {
+	maxResults, err := strconv.Atoi(values.Get("MaxResults"))
+	if err == nil {
+		r.MaxResults = maxResults
+	}
+	r.NextToken = values.Get("NextToken")
+	r.QueueNamePrefix = values.Get("QueueNamePrefix")
 }
 
 // TODO - copy Attributes for SNS

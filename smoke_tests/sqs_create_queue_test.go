@@ -54,12 +54,12 @@ func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	exp2 := app.ListQueuesResponse{
+	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   app.ListQueuesResult{QueueUrl: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
+		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
 		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
-	r2 := app.ListQueuesResponse{}
+	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, exp2, r2)
 
@@ -85,8 +85,7 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 
 	redriveQueue := "redrive-queue"
 
-	//sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
-	sdkConfig := utils.GenerateLocalProxyConfig(9090)
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 
 	sqsClient := sqs.NewFromConfig(sdkConfig)
@@ -94,7 +93,6 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 		QueueName: &redriveQueue,
 	})
 
-	// TODO - HERE - Sub-Doc attributes not working for some reason?  Check proxyman?
 	sdkResponse, err := sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
 		QueueName: &af.QueueName,
 		Attributes: map[string]string{
@@ -118,12 +116,12 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	exp2 := app.ListQueuesResponse{
+	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   app.ListQueuesResult{QueueUrl: []string{fmt.Sprintf("%s/%s", af.BASE_URL, redriveQueue), fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
+		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/%s", af.BASE_URL, redriveQueue), fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
 		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
-	r2 := app.ListQueuesResponse{}
+	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, exp2, r2)
 
@@ -175,12 +173,12 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	exp2 := app.ListQueuesResponse{
+	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   app.ListQueuesResult{QueueUrl: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
+		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
 		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
-	r2 := app.ListQueuesResponse{}
+	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, exp2, r2)
 
@@ -200,7 +198,6 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 	assert.Equal(t, exp3, r3)
 }
 
-// TODO - fix broken tests
 func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 	server := generateServer()
 	defer func() {
@@ -312,8 +309,6 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 		utils.ResetResources()
 	}()
 
-	utils.InitializeDecoders()
-
 	e := httpexpect.Default(t, server.URL)
 
 	r := e.POST("/").
@@ -338,12 +333,12 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	exp2 := app.ListQueuesResponse{
+	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   app.ListQueuesResult{QueueUrl: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
+		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
 		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
-	r2 := app.ListQueuesResponse{}
+	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, exp2, r2)
 
@@ -364,8 +359,6 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 		server.Close()
 		utils.ResetResources()
 	}()
-
-	utils.InitializeDecoders()
 
 	e := httpexpect.Default(t, server.URL)
 

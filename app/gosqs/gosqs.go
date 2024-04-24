@@ -13,8 +13,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/models"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -95,72 +93,6 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 			return
 		}
 	}
-}
-
-func ListQueues(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/xml")
-	respStruct := app.ListQueuesResponse{}
-	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
-	respStruct.Metadata = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
-	respStruct.Result.QueueUrl = make([]string, 0)
-	queueNamePrefix := req.FormValue("QueueNamePrefix")
-
-	log.Println("Listing Queues")
-	for _, queue := range app.SyncQueues.Queues {
-		app.SyncQueues.Lock()
-		if strings.HasPrefix(queue.Name, queueNamePrefix) {
-			respStruct.Result.QueueUrl = append(respStruct.Result.QueueUrl, queue.URL)
-		}
-		app.SyncQueues.Unlock()
-	}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
-}
-
-func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
-	requestBody := models.NewCreateQueueRequest()
-	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
-	if !ok {
-		log.Error("Invalid Request - CreateQueueV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
-	}
-	queueName := requestBody.QueueName
-
-	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
-		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
-	if app.CurrentEnvironment.Region != "" {
-		queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
-			app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
-	}
-	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
-
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		log.Println("Creating Queue:", queueName)
-		queue := &app.Queue{
-			Name:             queueName,
-			URL:              queueUrl,
-			Arn:              queueArn,
-			IsFIFO:           app.HasFIFOQueueName(queueName),
-			EnableDuplicates: app.CurrentEnvironment.EnableDuplicates,
-			Duplicates:       make(map[string]time.Time),
-		}
-		if err := setQueueAttributesV1(queue, requestBody.Attributes); err != nil {
-			return createErrorResponseV1(err.Error())
-		}
-		app.SyncQueues.Lock()
-		app.SyncQueues.Queues[queueName] = queue
-		app.SyncQueues.Unlock()
-	}
-
-	respStruct := models.CreateQueueResponse{
-		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   models.CreateQueueResult{QueueUrl: queueUrl},
-		Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"},
-	}
-	return http.StatusOK, respStruct
 }
 
 func SendMessage(w http.ResponseWriter, req *http.Request) {

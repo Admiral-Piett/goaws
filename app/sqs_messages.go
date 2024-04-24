@@ -1,16 +1,5 @@
 package app
 
-/*** List Queues Response */
-type ListQueuesResult struct {
-	QueueUrl []string `xml:"QueueUrl"`
-}
-
-type ListQueuesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListQueuesResult `xml:"ListQueuesResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
 /*** Send Message Response */
 
 type SendMessageResult struct {
