@@ -3,8 +3,6 @@ package fixtures
 import (
 	"fmt"
 
-	"github.com/Admiral-Piett/goaws/app"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 )
 
@@ -36,9 +34,20 @@ var CreateQueueResult = models.CreateQueueResult{
 }
 
 var CreateQueueResponse = models.CreateQueueResponse{
-	Xmlns:  "http://queue.amazonaws.com/doc/2012-11-05/",
-	Result: CreateQueueResult,
-	Metadata: app.ResponseMetadata{
-		RequestId: "00000000-0000-0000-0000-000000000000",
+	Xmlns:    models.BASE_XMLNS,
+	Result:   CreateQueueResult,
+	Metadata: models.BASE_RESPONSE_METADATA,
+}
+
+var ListQueuesResult = models.ListQueuesResult{
+	QueueUrls: []string{
+		fmt.Sprintf("%s/%s", BASE_URL, "unit-queue1"),
+		fmt.Sprintf("%s/%s", BASE_URL, "unit-queue2"),
 	},
+}
+
+var ListQueuesResponse = models.ListQueuesResponse{
+	Xmlns:    models.BASE_XMLNS,
+	Result:   ListQueuesResult,
+	Metadata: models.BASE_RESPONSE_METADATA,
 }
