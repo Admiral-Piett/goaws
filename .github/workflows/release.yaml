@@ -9,6 +9,24 @@ on:
         required: true
 
 jobs:
+  tag:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: '0'
+
+      - name: Print Input
+        run: echo "${{ inputs.tag }}"
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.67.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+          WITH_V: true
+          CUSTOM_TAG: "v${{ inputs.tag }}"
+
   goreleaser:
     needs: tag
     runs-on: ubuntu-latest
@@ -44,21 +62,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-
-  tag:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: '0'
-
-      - name: Print Input
-        run: echo "${{ inputs.tag }}"
-
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.55.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-          WITH_V: true
-          CUSTOM_TAG: "v${{ inputs.tag }}"
