@@ -63,3 +63,33 @@ func (r ListQueuesResponse) GetResult() interface{} {
 func (r ListQueuesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Get Queue Attributes ***/
+type Attribute struct {
+	Name  string `xml:"Name,omitempty"`
+	Value string `xml:"Value,omitempty"`
+}
+
+type GetQueueAttributesResult struct {
+	/* VisibilityTimeout, DelaySeconds, ReceiveMessageWaitTimeSeconds, ApproximateNumberOfMessages
+	   ApproximateNumberOfMessagesNotVisible, CreatedTimestamp, LastModifiedTimestamp, QueueArn */
+	Attrs []Attribute `xml:"Attribute,omitempty"`
+}
+
+type GetQueueAttributesResponse struct {
+	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
+	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult"`
+	Metadata app.ResponseMetadata     `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r GetQueueAttributesResponse) GetResult() interface{} {
+	result := map[string]string{}
+	for _, attr := range r.Result.Attrs {
+		result[attr.Name] = attr.Value
+	}
+	return map[string]map[string]string{"Attributes": result}
+}
+
+func (r GetQueueAttributesResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

@@ -60,4 +60,5 @@ BaseUnitTests:
   Queues: # List of queues to create at startup
     - Name: unit-queue1                # Queue name
     - Name: unit-queue2                # Queue name
+      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:other-queue1"}'
     - Name: other-queue1               # Queue name

@@ -129,24 +129,6 @@ type GetQueueUrlResponse struct {
 	Metadata ResponseMetadata  `xml:"ResponseMetadata,omitempty"`
 }
 
-/*** Get Queue Attributes ***/
-type Attribute struct {
-	Name  string `xml:"Name,omitempty"`
-	Value string `xml:"Value,omitempty"`
-}
-
-type GetQueueAttributesResult struct {
-	/* VisibilityTimeout, DelaySeconds, ReceiveMessageWaitTimeSeconds, ApproximateNumberOfMessages
-	   ApproximateNumberOfMessagesNotVisible, CreatedTimestamp, LastModifiedTimestamp, QueueArn */
-	Attrs []Attribute `xml:"Attribute,omitempty"`
-}
-
-type GetQueueAttributesResponse struct {
-	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
-	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult"`
-	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
-}
-
 type SetQueueAttributesResponse struct {
 	Xmlns    string           `xml:"xmlns,attr,omitempty"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
