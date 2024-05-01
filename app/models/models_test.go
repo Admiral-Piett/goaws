@@ -241,7 +241,7 @@ func TestNewListQueuesRequest_SetAttributesFromForm(t *testing.T) {
 	assert.Equal(t, "queue-name-prefix", lqr.QueueNamePrefix)
 }
 
-func TestNewListQueuesRequest_SetAttributesFromForm_invalid_max_results(t *testing.T) {
+func TestListQueuesRequest_SetAttributesFromForm_invalid_max_results(t *testing.T) {
 	form := url.Values{}
 	form.Add("MaxResults", "1.0")
 	form.Add("NextToken", "next-token")
@@ -253,4 +253,33 @@ func TestNewListQueuesRequest_SetAttributesFromForm_invalid_max_results(t *testi
 	assert.Equal(t, 0, lqr.MaxResults)
 	assert.Equal(t, "next-token", lqr.NextToken)
 	assert.Equal(t, "queue-name-prefix", lqr.QueueNamePrefix)
+}
+
+func TestGetQueueAttributesRequest_SetAttributesFromForm(t *testing.T) {
+	form := url.Values{}
+	form.Add("QueueUrl", "queue-url")
+	form.Add("AttributeName.1", "attribute-1")
+	form.Add("AttributeName.2", "attribute-2")
+
+	lqr := &GetQueueAttributesRequest{}
+	lqr.SetAttributesFromForm(form)
+
+	assert.Equal(t, "queue-url", lqr.QueueUrl)
+	assert.Equal(t, 2, len(lqr.AttributeNames))
+	assert.Contains(t, lqr.AttributeNames, "attribute-1")
+	assert.Contains(t, lqr.AttributeNames, "attribute-2")
+}
+
+func TestGetQueueAttributesRequest_SetAttributesFromForm_skips_invalid_key_sequence(t *testing.T) {
+	form := url.Values{}
+	form.Add("QueueUrl", "queue-url")
+	form.Add("AttributeName.1", "attribute-1")
+	form.Add("AttributeName.3", "attribute-3")
+
+	lqr := &GetQueueAttributesRequest{}
+	lqr.SetAttributesFromForm(form)
+
+	assert.Equal(t, "queue-url", lqr.QueueUrl)
+	assert.Equal(t, 1, len(lqr.AttributeNames))
+	assert.Contains(t, lqr.AttributeNames, "attribute-1")
 }
