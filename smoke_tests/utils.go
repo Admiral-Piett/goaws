@@ -24,7 +24,7 @@ func generateServer() *httptest.Server {
 // USAGE:
 //
 //	 //sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
-//		sdkConfig := utils.GenerateLocalProxyConfig(9090)
+//		sdkConfig := GenerateLocalProxyConfig(9090)
 func GenerateLocalProxyConfig(proxyPort int) aws.Config {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{

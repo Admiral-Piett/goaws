@@ -69,7 +69,7 @@ func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	r3 := app.GetQueueAttributesResponse{}
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE, r3)
 }
@@ -116,14 +116,14 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	exp2 := models.ListQueuesResponse{
-		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/%s", af.BASE_URL, redriveQueue), fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
-	}
 	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
-	assert.Equal(t, exp2, r2)
+
+	assert.Equal(t, models.BASE_XMLNS, r2.Xmlns)
+	assert.Equal(t, models.BASE_RESPONSE_METADATA, r2.Metadata)
+	assert.Equal(t, 2, len(r2.Result.QueueUrls))
+	assert.Contains(t, r2.Result.QueueUrls, fmt.Sprintf("%s/%s", af.BASE_URL, redriveQueue))
+	assert.Contains(t, r2.Result.QueueUrls, fmt.Sprintf("%s/new-queue-1", af.BASE_URL))
 
 	r = e.POST("/").
 		WithForm(sf.GetQueueAttributesRequestBodyXML).
@@ -132,12 +132,18 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 		Body().Raw()
 
 	dupe, _ := copystructure.Copy(sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE)
-	exp3, _ := dupe.(app.GetQueueAttributesResponse)
-	exp3.Result.Attrs[0].Value = "5"
-	exp3.Result.Attrs[1].Value = "1"
-	exp3.Result.Attrs[2].Value = "4"
-	exp3.Result.Attrs[8].Value = fmt.Sprintf(`{"maxReceiveCount": "100", "deadLetterTargetArn":"%s"}`, redriveQueue)
-	r3 := app.GetQueueAttributesResponse{}
+	exp3, _ := dupe.(models.GetQueueAttributesResponse)
+	exp3.Result.Attrs[0].Value = "1"
+	exp3.Result.Attrs[1].Value = "2"
+	exp3.Result.Attrs[2].Value = "3"
+	exp3.Result.Attrs[3].Value = "4"
+	exp3.Result.Attrs[4].Value = "5"
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
+		Name:  "RedrivePolicy",
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+	})
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, exp3, r3)
 }
@@ -189,11 +195,15 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 		Body().Raw()
 
 	dupe, _ := copystructure.Copy(sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE)
-	exp3, _ := dupe.(app.GetQueueAttributesResponse)
-	exp3.Result.Attrs[0].Value = "5"
-	exp3.Result.Attrs[1].Value = "1"
-	exp3.Result.Attrs[2].Value = "4"
-	r3 := app.GetQueueAttributesResponse{}
+	exp3, _ := dupe.(models.GetQueueAttributesResponse)
+	exp3.Result.Attrs[0].Value = "1"
+	exp3.Result.Attrs[1].Value = "2"
+	exp3.Result.Attrs[2].Value = "3"
+	exp3.Result.Attrs[3].Value = "4"
+	exp3.Result.Attrs[4].Value = "5"
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, exp3, r3)
 }
@@ -292,12 +302,18 @@ func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 		Body().Raw()
 
 	dupe, _ := copystructure.Copy(sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE)
-	exp3, _ := dupe.(app.GetQueueAttributesResponse)
-	exp3.Result.Attrs[0].Value = "30"
-	exp3.Result.Attrs[1].Value = "1"
-	exp3.Result.Attrs[7].Value = fmt.Sprintf("%s:new-string-queue", af.BASE_ARN)
-	exp3.Result.Attrs[8].Value = "{\"maxReceiveCount\": \"100\", \"deadLetterTargetArn\":\"new-queue-1\"}"
-	r3 := app.GetQueueAttributesResponse{}
+	exp3, _ := dupe.(models.GetQueueAttributesResponse)
+	exp3.Result.Attrs[0].Value = "1"
+	exp3.Result.Attrs[1].Value = "2"
+	exp3.Result.Attrs[2].Value = "3"
+	exp3.Result.Attrs[3].Value = "0"
+	exp3.Result.Attrs[4].Value = "30"
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-string-queue", af.BASE_ARN)
+	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
+		Name:  "RedrivePolicy",
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, af.QueueName),
+	})
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, exp3, r3)
 }
@@ -348,7 +364,7 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	r3 := app.GetQueueAttributesResponse{}
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE, r3)
 }
@@ -383,17 +399,17 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 	r := e.POST("/").
 		WithForm(request).
 		WithFormField("Attribute.1.Name", "VisibilityTimeout").
-		WithFormField("Attribute.1.Value", "1").
+		WithFormField("Attribute.1.Value", "5").
 		WithFormField("Attribute.2.Name", "MaximumMessageSize").
 		WithFormField("Attribute.2.Value", "2").
 		WithFormField("Attribute.3.Name", "DelaySeconds").
-		WithFormField("Attribute.3.Value", "3").
+		WithFormField("Attribute.3.Value", "1").
 		WithFormField("Attribute.4.Name", "MessageRetentionPeriod").
-		WithFormField("Attribute.4.Value", "4").
+		WithFormField("Attribute.4.Value", "3").
 		WithFormField("Attribute.5.Name", "Policy").
 		WithFormField("Attribute.5.Value", "{\"this-is\": \"the-policy\"}").
 		WithFormField("Attribute.6.Name", "ReceiveMessageWaitTimeSeconds").
-		WithFormField("Attribute.6.Value", "5").
+		WithFormField("Attribute.6.Value", "4").
 		WithFormField("Attribute.7.Name", "RedrivePolicy").
 		WithFormField("Attribute.7.Value", fmt.Sprintf("{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"%s:new-queue-1\"}", af.BASE_ARN)).
 		WithFormField("Attribute.8.Name", "RedriveAllowPolicy").
@@ -428,13 +444,18 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 		Body().Raw()
 
 	dupe, _ := copystructure.Copy(sf.BASE_GET_QUEUE_ATTRIBUTES_RESPONSE)
-	exp3, _ := dupe.(app.GetQueueAttributesResponse)
+	exp3, _ := dupe.(models.GetQueueAttributesResponse)
 	exp3.Result.Attrs[0].Value = "1"
-	exp3.Result.Attrs[1].Value = "3"
-	exp3.Result.Attrs[2].Value = "5"
-	exp3.Result.Attrs[7].Value = fmt.Sprintf("%s:new-queue-2", af.BASE_ARN)
-	exp3.Result.Attrs[8].Value = "{\"maxReceiveCount\": \"100\", \"deadLetterTargetArn\":\"new-queue-1\"}"
-	r3 := app.GetQueueAttributesResponse{}
+	exp3.Result.Attrs[1].Value = "2"
+	exp3.Result.Attrs[2].Value = "3"
+	exp3.Result.Attrs[3].Value = "4"
+	exp3.Result.Attrs[4].Value = "5"
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-queue-2", af.BASE_ARN)
+	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
+		Name:  "RedrivePolicy",
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, af.QueueName),
+	})
+	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, exp3, r3)
 }

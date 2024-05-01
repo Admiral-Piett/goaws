@@ -3,24 +3,34 @@ package fixtures
 import (
 	"fmt"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 
 	"github.com/Admiral-Piett/goaws/app"
 )
 
-var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = app.GetQueueAttributesResponse{
+var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = models.GetQueueAttributesResponse{
 	Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/",
-	Result: app.GetQueueAttributesResult{Attrs: []app.Attribute{
-		{
-			Name:  "VisibilityTimeout",
-			Value: "0",
-		},
+	Result: models.GetQueueAttributesResult{Attrs: []models.Attribute{
 		{
 			Name:  "DelaySeconds",
 			Value: "0",
 		},
 		{
+			Name:  "MaximumMessageSize",
+			Value: "0",
+		},
+		{
+			Name:  "MessageRetentionPeriod",
+			Value: "0",
+		},
+		{
 			Name:  "ReceiveMessageWaitTimeSeconds",
+			Value: "0",
+		},
+		{
+			Name:  "VisibilityTimeout",
 			Value: "0",
 		},
 		{
@@ -42,10 +52,6 @@ var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = app.GetQueueAttributesResponse{
 		{
 			Name:  "QueueArn",
 			Value: fmt.Sprintf("%s:new-queue-1", af.BASE_ARN),
-		},
-		{
-			Name:  "RedrivePolicy",
-			Value: "{\"maxReceiveCount\": \"0\", \"deadLetterTargetArn\":\"\"}",
 		},
 	}},
 	Metadata: app.ResponseMetadata{RequestId: REQUEST_ID},

@@ -29,7 +29,7 @@ func TestApplyQueueAttributes(t *testing.T) {
 		u.Add("Attribute.2.Value", "60")
 		u.Add("Attribute.3.Name", "Policy")
 		u.Add("Attribute.4.Name", "RedrivePolicy")
-		u.Add("Attribute.4.Value", `{"maxReceiveCount": "4", "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages"}`)
+		u.Add("Attribute.4.Value", `{"maxReceiveCount":"4", "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages"}`)
 		u.Add("Attribute.5.Name", "ReceiveMessageWaitTimeSeconds")
 		u.Add("Attribute.5.Value", "20")
 		if err := validateAndSetQueueAttributesFromForm(q, u); err != nil {
@@ -50,7 +50,7 @@ func TestApplyQueueAttributes(t *testing.T) {
 		q := &app.Queue{VisibilityTimeout: 30}
 		u := url.Values{}
 		u.Add("Attribute.1.Name", "RedrivePolicy")
-		u.Add("Attribute.1.Value", `{"maxReceiveCount": "4"}`)
+		u.Add("Attribute.1.Value", `{"maxReceiveCount":"4"}`)
 		err := validateAndSetQueueAttributesFromForm(q, u)
 		if err != ErrInvalidParameterValue {
 			t.Fatalf("expected %s, got %s", ErrInvalidParameterValue, err)

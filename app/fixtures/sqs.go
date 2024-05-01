@@ -39,15 +39,54 @@ var CreateQueueResponse = models.CreateQueueResponse{
 	Metadata: models.BASE_RESPONSE_METADATA,
 }
 
-var ListQueuesResult = models.ListQueuesResult{
-	QueueUrls: []string{
-		fmt.Sprintf("%s/%s", BASE_URL, "unit-queue1"),
-		fmt.Sprintf("%s/%s", BASE_URL, "unit-queue2"),
-	},
+var GetQueueAttributesRequest = models.GetQueueAttributesRequest{
+	QueueUrl:       fmt.Sprintf("%s/unit-queue1", BASE_URL),
+	AttributeNames: []string{"All"},
 }
 
-var ListQueuesResponse = models.ListQueuesResponse{
-	Xmlns:    models.BASE_XMLNS,
-	Result:   ListQueuesResult,
+var GetQueueAttributesResponse = models.GetQueueAttributesResponse{
+	Xmlns: models.BASE_XMLNS,
+	Result: models.GetQueueAttributesResult{Attrs: []models.Attribute{
+		models.Attribute{
+			Name:  "DelaySeconds",
+			Value: "0",
+		},
+		models.Attribute{
+			Name:  "MaximumMessageSize",
+			Value: "262144",
+		},
+		models.Attribute{
+			Name:  "MessageRetentionPeriod",
+			Value: "345600",
+		},
+		models.Attribute{
+			Name:  "ReceiveMessageWaitTimeSeconds",
+			Value: "0",
+		},
+		models.Attribute{
+			Name:  "VisibilityTimeout",
+			Value: "30",
+		},
+		models.Attribute{
+			Name:  "ApproximateNumberOfMessages",
+			Value: "0",
+		},
+		models.Attribute{
+			Name:  "ApproximateNumberOfMessagesNotVisible",
+			Value: "0",
+		},
+		models.Attribute{
+			Name:  "CreatedTimestamp",
+			Value: "0000000000",
+		},
+		models.Attribute{
+			Name:  "LastModifiedTimestamp",
+			Value: "0000000000",
+		},
+		models.Attribute{
+			Name:  "QueueArn",
+			Value: "arn:aws:sqs:region:accountID:unit-queue1",
+		},
+	}},
 	Metadata: models.BASE_RESPONSE_METADATA,
 }

@@ -60,13 +60,13 @@ func encodeResponse(w http.ResponseWriter, req *http.Request, statusCode int, bo
 
 // V1 - includes JSON Support (and of course the old XML).
 var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
-	"CreateQueue": sqs.CreateQueueV1,
-	"ListQueues":  sqs.ListQueuesV1,
+	"CreateQueue":        sqs.CreateQueueV1,
+	"ListQueues":         sqs.ListQueuesV1,
+	"GetQueueAttributes": sqs.GetQueueAttributesV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"GetQueueAttributes":      sqs.GetQueueAttributes,
 	"SetQueueAttributes":      sqs.SetQueueAttributes,
 	"SendMessage":             sqs.SendMessage,
 	"SendMessageBatch":        sqs.SendMessageBatch,

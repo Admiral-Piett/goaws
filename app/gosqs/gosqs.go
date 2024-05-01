@@ -383,7 +383,7 @@ func ReceiveMessage(w http.ResponseWriter, req *http.Request) {
 		}
 
 	}
-	log.Println("Getting Message from Queue:", queueName)
+	log.Debugf("Getting Message from Queue:%s", queueName)
 
 	app.SyncQueues.Lock() // Lock the Queues
 	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
@@ -753,104 +753,6 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
 		createErrorResponse(w, req, "QueueNotFound")
 	}
-}
-
-func GetQueueAttributes(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-
-	attribute_names := map[string]bool{}
-
-	for field, value := range req.Form {
-		if strings.HasPrefix(field, "AttributeName.") {
-			attribute_names[value[0]] = true
-		}
-	}
-
-	include_attr := func(a string) bool {
-		if len(attribute_names) == 0 {
-			return true
-		}
-		if _, ok := attribute_names[a]; ok {
-			return true
-		}
-		if _, ok := attribute_names["All"]; ok {
-			return true
-		}
-		return false
-	}
-
-	queueName := ""
-	if queueUrl == "" {
-		vars := mux.Vars(req)
-		queueName = vars["queueName"]
-	} else {
-		uriSegments := strings.Split(queueUrl, "/")
-		queueName = uriSegments[len(uriSegments)-1]
-	}
-
-	log.Println("Get Queue Attributes:", queueName)
-	app.SyncQueues.RLock()
-	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
-		// Create, encode/xml and send response
-		attribs := make([]app.Attribute, 0, 0)
-		if include_attr("VisibilityTimeout") {
-			attr := app.Attribute{Name: "VisibilityTimeout", Value: strconv.Itoa(queue.VisibilityTimeout)}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("DelaySeconds") {
-			attr := app.Attribute{Name: "DelaySeconds", Value: strconv.Itoa(queue.DelaySeconds)}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("ReceiveMessageWaitTimeSeconds") {
-			attr := app.Attribute{Name: "ReceiveMessageWaitTimeSeconds", Value: strconv.Itoa(queue.ReceiveMessageWaitTimeSeconds)}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("ApproximateNumberOfMessages") {
-			attr := app.Attribute{Name: "ApproximateNumberOfMessages", Value: strconv.Itoa(len(queue.Messages))}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("ApproximateNumberOfMessagesNotVisible") {
-			attr := app.Attribute{Name: "ApproximateNumberOfMessagesNotVisible", Value: strconv.Itoa(numberOfHiddenMessagesInQueue(*queue))}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("CreatedTimestamp") {
-			attr := app.Attribute{Name: "CreatedTimestamp", Value: "0000000000"}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("LastModifiedTimestamp") {
-			attr := app.Attribute{Name: "LastModifiedTimestamp", Value: "0000000000"}
-			attribs = append(attribs, attr)
-		}
-		if include_attr("QueueArn") {
-			attr := app.Attribute{Name: "QueueArn", Value: queue.Arn}
-			attribs = append(attribs, attr)
-		}
-
-		// TODO - why do we just return the name and NOT the actual ARN here?
-		deadLetterTargetArn := ""
-		if queue.DeadLetterQueue != nil {
-			deadLetterTargetArn = queue.DeadLetterQueue.Name
-		}
-		if include_attr("RedrivePolicy") {
-			attr := app.Attribute{Name: "RedrivePolicy", Value: fmt.Sprintf(`{"maxReceiveCount": "%d", "deadLetterTargetArn":"%s"}`, queue.MaxReceiveCount, deadLetterTargetArn)}
-			attribs = append(attribs, attr)
-		}
-
-		result := app.GetQueueAttributesResult{Attrs: attribs}
-		respStruct := app.GetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
-	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req, "QueueNotFound")
-	}
-	app.SyncQueues.RUnlock()
 }
 
 func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {

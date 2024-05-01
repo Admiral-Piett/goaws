@@ -13,6 +13,23 @@ import (
 var BASE_XMLNS = "http://queue.amazonaws.com/doc/2012-11-05/"
 var BASE_RESPONSE_METADATA = app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}
 
+var AVAILABLE_QUEUE_ATTRIBUTES = map[string]bool{
+	"DelaySeconds":                          true,
+	"MaximumMessageSize":                    true,
+	"MessageRetentionPeriod":                true,
+	"Policy":                                true,
+	"ReceiveMessageWaitTimeSeconds":         true,
+	"VisibilityTimeout":                     true,
+	"RedrivePolicy":                         true,
+	"RedriveAllowPolicy":                    true,
+	"ApproximateNumberOfMessages":           true,
+	"ApproximateNumberOfMessagesDelayed":    true,
+	"ApproximateNumberOfMessagesNotVisible": true,
+	"CreatedTimestamp":                      true,
+	"LastModifiedTimestamp":                 true,
+	"QueueArn":                              true,
+}
+
 func NewCreateQueueRequest() *CreateQueueRequest {
 	return &CreateQueueRequest{
 		Attributes: Attributes{
@@ -151,6 +168,29 @@ func (r *ListQueueRequest) SetAttributesFromForm(values url.Values) {
 	}
 	r.NextToken = values.Get("NextToken")
 	r.QueueNamePrefix = values.Get("QueueNamePrefix")
+}
+
+// TODO - test models and responses
+func NewGetQueueAttributesRequest() *GetQueueAttributesRequest {
+	return &GetQueueAttributesRequest{}
+}
+
+type GetQueueAttributesRequest struct {
+	QueueUrl       string   `json:"QueueUrl"`
+	AttributeNames []string `json:"AttributeNames"`
+}
+
+func (r *GetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
+	r.QueueUrl = values.Get("QueueUrl")
+	// TODO - test me
+	for i := 1; true; i++ {
+		attrKey := fmt.Sprintf("AttributeName.%d", i)
+		attrValue := values.Get(attrKey)
+		if attrValue == "" {
+			break
+		}
+		r.AttributeNames = append(r.AttributeNames, attrValue)
+	}
 }
 
 // TODO - copy Attributes for SNS
