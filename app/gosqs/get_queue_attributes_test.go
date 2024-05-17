@@ -23,7 +23,7 @@ func TestGetQueueAttributesV1_success_all(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = fixtures.GetQueueAttributesRequest
 		return true
@@ -43,7 +43,7 @@ func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T)
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = models.GetQueueAttributesRequest{
 			QueueUrl: "unit-queue1",
@@ -65,7 +65,7 @@ func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = models.GetQueueAttributesRequest{
 			QueueUrl:       "unit-queue2",
@@ -98,7 +98,7 @@ func TestGetQueueAttributesV1_success_specific_fields(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = models.GetQueueAttributesRequest{
 			QueueUrl:       fmt.Sprintf("%s/unit-queue1", fixtures.BASE_URL),
@@ -130,7 +130,7 @@ func TestGetQueueAttributesV1_request_transformer_error(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		return false
 	}
 
@@ -145,7 +145,7 @@ func TestGetQueueAttributesV1_missing_queue_url_in_request_returns_error(t *test
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = models.GetQueueAttributesRequest{
 			QueueUrl:       "",
@@ -165,7 +165,7 @@ func TestGetQueueAttributesV1_missing_queue_returns_error(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetQueueAttributesRequest)
 		*v = fixtures.GetQueueAttributesRequest
 		return true

@@ -158,7 +158,6 @@ func (r *ListQueueRequest) SetAttributesFromForm(values url.Values) {
 	r.QueueNamePrefix = values.Get("QueueNamePrefix")
 }
 
-// TODO - test models and responses
 func NewGetQueueAttributesRequest() *GetQueueAttributesRequest {
 	return &GetQueueAttributesRequest{}
 }
@@ -182,7 +181,6 @@ func (r *GetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
 }
 
 /*** Send Message Request */
-
 func NewSendMessageRequest() *SendMessageRequest {
 	return &SendMessageRequest{
 		MessageAttributes:       make(map[string]MessageAttributeValue),
@@ -242,6 +240,118 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
 		}
 	}
+}
+
+func NewSetQueueAttributesRequest() *SetQueueAttributesRequest {
+	return &SetQueueAttributesRequest{}
+}
+
+type SetQueueAttributesRequest struct {
+	QueueUrl   string     `json:"QueueUrl"`
+	Attributes Attributes `json:"Attributes"`
+}
+
+func (r *SetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
+	r.QueueUrl = values.Get("QueueUrl")
+	// TODO - could we share with CreateQueueRequest?
+	for i := 1; true; i++ {
+		nameKey := fmt.Sprintf("Attribute.%d.Name", i)
+		attrName := values.Get(nameKey)
+		if attrName == "" {
+			break
+		}
+
+		valueKey := fmt.Sprintf("Attribute.%d.Value", i)
+		attrValue := values.Get(valueKey)
+		if attrValue == "" {
+			continue
+		}
+		switch attrName {
+		case "DelaySeconds":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.DelaySeconds = StringToInt(tmp)
+		case "MaximumMessageSize":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.MaximumMessageSize = StringToInt(tmp)
+		case "MessageRetentionPeriod":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.MessageRetentionPeriod = StringToInt(tmp)
+		case "Policy":
+			var tmp map[string]interface{}
+			err := json.Unmarshal([]byte(attrValue), &tmp)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.Policy = tmp
+		case "ReceiveMessageWaitTimeSeconds":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.ReceiveMessageWaitTimeSeconds = StringToInt(tmp)
+		case "VisibilityTimeout":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.VisibilityTimeout = StringToInt(tmp)
+		case "RedrivePolicy":
+			tmp := RedrivePolicy{}
+			var decodedPolicy struct {
+				MaxReceiveCount     interface{} `json:"maxReceiveCount"`
+				DeadLetterTargetArn string      `json:"deadLetterTargetArn"`
+			}
+			err := json.Unmarshal([]byte(attrValue), &decodedPolicy)
+			if err != nil || decodedPolicy.DeadLetterTargetArn == "" {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			// Support both int and string types (historic processing), set a default of 10 if not provided.
+			// Go will default into float64 for interface{} types when parsing numbers
+			receiveCount, ok := decodedPolicy.MaxReceiveCount.(float64)
+			if !ok {
+				receiveCount = 10
+				t, ok := decodedPolicy.MaxReceiveCount.(string)
+				if ok {
+					r, err := strconv.ParseFloat(t, 64)
+					if err == nil {
+						receiveCount = r
+					} else {
+						log.Debugf("Failed to parse form attribute (maxReceiveCount) - %s: %s", attrName, attrValue)
+					}
+				} else {
+					log.Debugf("Failed to parse form attribute (maxReceiveCount) - %s: %s", attrName, attrValue)
+				}
+			}
+			tmp.MaxReceiveCount = StringToInt(receiveCount)
+			tmp.DeadLetterTargetArn = decodedPolicy.DeadLetterTargetArn
+			r.Attributes.RedrivePolicy = tmp
+		case "RedriveAllowPolicy":
+			var tmp map[string]interface{}
+			err := json.Unmarshal([]byte(attrValue), &tmp)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.RedriveAllowPolicy = tmp
+		}
+	}
+	return
 }
 
 // TODO - copy Attributes for SNS

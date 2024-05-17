@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO - figure out a better way to handle the wait time in these tests.  Maybe in the smoke tests alone
+// if there's nothing else?
 func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
@@ -25,6 +27,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	q := &app.Queue{
 		Name:                          "waiting-queue",
 		ReceiveMessageWaitTimeSeconds: 2,
+		//MaximumMessageSize:            262144,
 	}
 	app.SyncQueues.Queues["waiting-queue"] = q
 
@@ -34,12 +37,12 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	}, true)
 
 	start := time.Now()
-	status, _ := ReceiveMessageV1(r)
+	status, response := ReceiveMessageV1(r)
 	elapsed := time.Since(start)
 
 	assert.Equal(t, http.StatusOK, status)
 	if elapsed < 2*time.Second {
-		t.Fatal("handler didn't wait ReceiveMessageWaitTimeSeconds")
+		t.Fatalf("handler didn't wait ReceiveMessageWaitTimeSeconds %s", response)
 	}
 
 	// mock sending a message

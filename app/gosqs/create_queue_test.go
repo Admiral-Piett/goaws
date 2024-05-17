@@ -22,32 +22,10 @@ func TestCreateQueueV1_success(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.CreateQueueRequest)
 		*v = fixtures.CreateQueueRequest
 		return true
-	}
-
-	expectedQueue := &app.Queue{
-		Name: fixtures.QueueName,
-		URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
-			fixtures.LOCAL_ENVIRONMENT.Region,
-			fixtures.LOCAL_ENVIRONMENT.Host,
-			fixtures.LOCAL_ENVIRONMENT.Port,
-			fixtures.LOCAL_ENVIRONMENT.AccountID,
-			fixtures.QueueName,
-		),
-		Arn: fmt.Sprintf("arn:aws:sqs:%s:%s:%s",
-			fixtures.LOCAL_ENVIRONMENT.Region,
-			fixtures.LOCAL_ENVIRONMENT.AccountID,
-			fixtures.QueueName,
-		),
-		VisibilityTimeout:             5,
-		ReceiveMessageWaitTimeSeconds: 4,
-		DelaySeconds:                  1,
-		MaximumMessageSize:            2,
-		MessageRetentionPeriod:        3,
-		Duplicates:                    make(map[string]time.Time),
 	}
 
 	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
@@ -57,7 +35,7 @@ func TestCreateQueueV1_success(t *testing.T) {
 	assert.Equal(t, fixtures.CreateQueueResponse, response)
 
 	actualQueue := app.SyncQueues.Queues[fixtures.QueueName]
-	assert.Equal(t, expectedQueue, actualQueue)
+	assert.Equal(t, fixtures.FullyPopulatedQueue, actualQueue)
 }
 
 func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
@@ -67,7 +45,7 @@ func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
 		c.Attributes.RedrivePolicy = models.RedrivePolicy{
@@ -126,7 +104,7 @@ func TestCreateQueueV1_success_with_existing_queue(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.CreateQueueRequest)
 		*v = fixtures.CreateQueueRequest
 		return true
@@ -154,7 +132,7 @@ func TestCreateQueueV1_success_with_no_request_attributes_falls_back_to_default(
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
 		c.Attributes = models.Attributes{}
@@ -204,7 +182,7 @@ func TestCreateQueueV1_success_no_configured_region_for_queue_url(t *testing.T) 
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
 		c.Attributes = models.Attributes{}
@@ -238,7 +216,7 @@ func TestCreateQueueV1_request_transformer_error(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		return false
 	}
 
@@ -255,7 +233,7 @@ func TestCreateQueueV1_invalid_dead_letter_queue_error(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
 		c.Attributes.RedrivePolicy = models.RedrivePolicy{

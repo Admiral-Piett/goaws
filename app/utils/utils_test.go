@@ -20,10 +20,22 @@ func TestTransformRequest_success_json(t *testing.T) {
 
 	mock := &mocks.MockRequestBody{}
 
-	ok := TransformRequest(mock, r)
+	ok := TransformRequest(mock, r, false)
 
 	assert.True(t, ok)
 	assert.Equal(t, "mock-value", mock.RequestFieldStr)
+	assert.False(t, mock.SetAttributesFromFormCalled)
+}
+
+func TestTransformRequest_success_json_empty_request_accepted(t *testing.T) {
+	_, r := GenerateRequestInfo("POST", "url", nil, true)
+
+	mock := &mocks.MockRequestBody{}
+
+	ok := TransformRequest(mock, r, true)
+
+	assert.True(t, ok)
+	//assert.Equal(t, "mock-value", mock.RequestFieldStr)
 	assert.False(t, mock.SetAttributesFromFormCalled)
 }
 
@@ -40,7 +52,7 @@ func TestTransformRequest_success_xml(t *testing.T) {
 
 	mock := &mocks.MockRequestBody{}
 
-	ok := TransformRequest(mock, r)
+	ok := TransformRequest(mock, r, false)
 
 	assert.True(t, ok)
 	assert.True(t, mock.SetAttributesFromFormCalled)
@@ -52,7 +64,7 @@ func TestTransformRequest_error_invalid_request_body_json(t *testing.T) {
 
 	mock := &mocks.MockRequestBody{}
 
-	ok := TransformRequest(mock, r)
+	ok := TransformRequest(mock, r, false)
 
 	assert.False(t, ok)
 	assert.Equal(t, "", mock.RequestFieldStr)
@@ -64,7 +76,7 @@ func TestTransformRequest_error_failure_to_parse_form_xml(t *testing.T) {
 
 	mock := &mocks.MockRequestBody{}
 
-	ok := TransformRequest(mock, r)
+	ok := TransformRequest(mock, r, false)
 
 	assert.False(t, ok)
 	assert.False(t, mock.SetAttributesFromFormCalled)
@@ -79,7 +91,7 @@ func TestTransformRequest_error_invalid_request_body_xml(t *testing.T) {
 
 	mock := &mocks.MockRequestBody{}
 
-	ok := TransformRequest(mock, r)
+	ok := TransformRequest(mock, r, false)
 
 	assert.False(t, ok)
 	assert.False(t, mock.SetAttributesFromFormCalled)

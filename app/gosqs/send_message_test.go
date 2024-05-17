@@ -24,7 +24,7 @@ func TestSendMessageV1_Success(t *testing.T) {
 		QueueUrl:    "http://localhost:4200/new-queue-1",
 		MessageBody: "Test Message",
 	}
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SendMessageRequest)
 		*v = sendMessageRequest_success
 		return true
@@ -64,7 +64,7 @@ func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 		QueueUrl:    "http://localhost:4200/new-queue-1",
 		MessageBody: "Test Message",
 	}
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SendMessageRequest)
 		*v = sendMessageRequest_success
 		return true
@@ -106,7 +106,7 @@ func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 		MessageBody:            "Test Message",
 		MessageDeduplicationId: "1",
 	}
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SendMessageRequest)
 		*v = sendMessageRequest_success
 		return true
@@ -144,7 +144,7 @@ func TestSendMessageV1_request_transformer_error(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		return false
 	}
 
@@ -165,7 +165,7 @@ func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 		QueueUrl:    "http://localhost:4200/new-queue-1",
 		MessageBody: "Test Message",
 	}
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SendMessageRequest)
 		*v = sendMessageRequest_success
 		return true
@@ -198,7 +198,7 @@ func TestSendMessageV1_POST_QueueNonExistant(t *testing.T) {
 		QueueUrl:    "http://localhost:4200/new-queue-1",
 		MessageBody: "Test Message",
 	}
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SendMessageRequest)
 		*v = sendMessageRequest_success
 		return true
