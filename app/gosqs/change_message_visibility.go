@@ -15,7 +15,7 @@ import (
 
 func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewChangeMessageVisibilityRequest()
-	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - ChangeMessageVisibilityV1")
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)

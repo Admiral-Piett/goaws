@@ -67,7 +67,7 @@ func Test_ListQueues_json_multiple_queues(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	assert.Contains(t, sdkResponse.QueueUrls, fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName))
+	assert.Contains(t, sdkResponse.QueueUrls, af.QueueUrl)
 	assert.Contains(t, sdkResponse.QueueUrls, fmt.Sprintf("%s/new-queue-2", af.BASE_URL))
 	assert.Contains(t, sdkResponse.QueueUrls, fmt.Sprintf("%s/new-queue-3", af.BASE_URL))
 }
@@ -164,7 +164,7 @@ func Test_ListQueues_xml_multiple_queues(t *testing.T) {
 
 	response := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &response)
-	assert.Contains(t, response.Result.QueueUrls, fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName))
+	assert.Contains(t, response.Result.QueueUrls, af.QueueUrl)
 	assert.Contains(t, response.Result.QueueUrls, fmt.Sprintf("%s/new-queue-2", af.BASE_URL))
 	assert.Contains(t, response.Result.QueueUrls, fmt.Sprintf("%s/new-queue-3", af.BASE_URL))
 }

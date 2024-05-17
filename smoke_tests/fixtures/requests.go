@@ -24,13 +24,23 @@ var GetQueueAttributesRequestBodyXML = struct {
 	Action:     "GetQueueAttributes",
 	Version:    "2012-11-05",
 	Attribute1: "All",
-	QueueUrl:   fmt.Sprintf("%s/new-queue-1", af.BASE_URL),
+	QueueUrl:   af.QueueUrl,
+}
+
+var SetQueueAttributesRequestBodyXML = struct {
+	Action   string `xml:"Action"`
+	Version  string `xml:"Version"`
+	QueueUrl string `xml:"QueueUrl"`
+}{
+	Action:   "SetQueueAttributes",
+	Version:  "2012-11-05",
+	QueueUrl: af.QueueUrl,
 }
 
 var CreateQueueV1RequestBodyJSON = models.CreateQueueRequest{
 	QueueName:  af.QueueName,
 	Version:    "2012-11-05",
-	Attributes: af.CreateQueueAttributes,
+	Attributes: af.QueueAttributes,
 }
 
 var CreateQueueV1RequestXML_NoAttributes = struct {

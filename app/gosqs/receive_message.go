@@ -17,7 +17,7 @@ import (
 
 func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewReceiveMessageRequest()
-	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - ReceiveMessageV1")
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)

@@ -18,7 +18,7 @@ import (
 //	https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ListQueues.html
 func ListQueuesV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewListQueuesRequest()
-	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req, true)
 	if !ok {
 		log.Error("Invalid Request - ListQueuesV1")
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)

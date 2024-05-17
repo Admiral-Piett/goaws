@@ -18,7 +18,7 @@ import (
 
 func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewGetQueueAttributesRequest()
-	ok := utils.REQUEST_TRANSFORMER(requestBody, req)
+	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - GetQueueAttributesV1")
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)

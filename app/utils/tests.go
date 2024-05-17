@@ -35,12 +35,13 @@ func GenerateRequestInfo(method, url string, body interface{}, isJson bool) (*ht
 	var req *http.Request
 	var err error
 	if isJson {
-		if body != nil {
+		// Default request body when none is provided
+		if body == nil {
+			req, err = http.NewRequest(method, url, http.NoBody)
+		} else {
 			b, _ := json.Marshal(body)
 			request_body := bytes.NewBuffer(b)
 			req, err = http.NewRequest(method, url, request_body)
-		} else {
-			req, err = http.NewRequest(method, url, nil)
 		}
 		if err != nil {
 			panic(err)
