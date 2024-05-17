@@ -20,7 +20,7 @@ func TestListQueuesV1_success(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListQueueRequest)
 		*v = models.ListQueueRequest{}
 		return true
@@ -42,7 +42,7 @@ func TestListQueuesV1_success_no_queues(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListQueueRequest)
 		*v = models.ListQueueRequest{}
 		return true
@@ -63,7 +63,7 @@ func TestListQueuesV1_success_with_queue_name_prefix(t *testing.T) {
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListQueueRequest)
 		*v = models.ListQueueRequest{QueueNamePrefix: "other"}
 		return true
@@ -84,7 +84,7 @@ func TestListQueuesV1_success_with_queue_name_prefix_no_matching_queues(t *testi
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListQueueRequest)
 		*v = models.ListQueueRequest{QueueNamePrefix: "garbage"}
 		return true
@@ -99,13 +99,11 @@ func TestListQueuesV1_success_with_queue_name_prefix_no_matching_queues(t *testi
 }
 
 func TestListQueuesV1_request_transformer_error(t *testing.T) {
-	//conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		utils.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
-
-	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		return false
 	}
 

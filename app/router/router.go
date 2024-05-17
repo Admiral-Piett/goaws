@@ -41,7 +41,9 @@ func encodeResponse(w http.ResponseWriter, req *http.Request, statusCode int, bo
 		// Stupidly these `WriteHeader` calls have to be here, if they're at the start
 		// they lock the headers, at the end they're ignored.
 		w.WriteHeader(statusCode)
-
+		if body.GetResult() == nil {
+			return
+		}
 		err := json.NewEncoder(w).Encode(body.GetResult())
 		if err != nil {
 			log.Errorf("Response Encoding Error: %v\nResponse: %+v", err, body)
@@ -64,6 +66,7 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"CreateQueue":             sqs.CreateQueueV1,
 	"ListQueues":              sqs.ListQueuesV1,
 	"GetQueueAttributes":      sqs.GetQueueAttributesV1,
+	"SetQueueAttributes":      sqs.SetQueueAttributesV1,
 	"SendMessage":             sqs.SendMessageV1,
 	"ReceiveMessage":          sqs.ReceiveMessageV1,
 	"ChangeMessageVisibility": sqs.ChangeMessageVisibilityV1,
@@ -72,7 +75,6 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"SetQueueAttributes": sqs.SetQueueAttributes,
 	"SendMessageBatch":   sqs.SendMessageBatch,
 	"DeleteMessageBatch": sqs.DeleteMessageBatch,
 	"GetQueueUrl":        sqs.GetQueueUrl,

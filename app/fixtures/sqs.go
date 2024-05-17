@@ -2,20 +2,46 @@ package fixtures
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/Admiral-Piett/goaws/app"
 
 	"github.com/Admiral-Piett/goaws/app/models"
 )
 
 var QueueName = "new-queue-1"
+var QueueUrl = fmt.Sprintf("%s/%s", BASE_URL, QueueName)
 var DeadLetterQueueName = "dead-letter-queue-1"
+
+var FullyPopulatedQueue = &app.Queue{
+	Name: QueueName,
+	URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
+		LOCAL_ENVIRONMENT.Region,
+		LOCAL_ENVIRONMENT.Host,
+		LOCAL_ENVIRONMENT.Port,
+		LOCAL_ENVIRONMENT.AccountID,
+		QueueName,
+	),
+	Arn: fmt.Sprintf("arn:aws:sqs:%s:%s:%s",
+		LOCAL_ENVIRONMENT.Region,
+		LOCAL_ENVIRONMENT.AccountID,
+		QueueName,
+	),
+	VisibilityTimeout:             5,
+	ReceiveMessageWaitTimeSeconds: 4,
+	DelaySeconds:                  1,
+	MaximumMessageSize:            2,
+	MessageRetentionPeriod:        3,
+	Duplicates:                    make(map[string]time.Time),
+}
 
 var CreateQueueRequest = models.CreateQueueRequest{
 	QueueName:  QueueName,
-	Attributes: CreateQueueAttributes,
+	Attributes: QueueAttributes,
 	Tags:       map[string]string{"my": "tag"},
 }
 
-var CreateQueueAttributes = models.Attributes{
+var QueueAttributes = models.Attributes{
 	DelaySeconds:                  1,
 	MaximumMessageSize:            2,
 	MessageRetentionPeriod:        3,
@@ -89,4 +115,9 @@ var GetQueueAttributesResponse = models.GetQueueAttributesResponse{
 		},
 	}},
 	Metadata: models.BASE_RESPONSE_METADATA,
+}
+
+var SetQueueAttributesRequest = models.SetQueueAttributesRequest{
+	QueueUrl:   fmt.Sprintf("%s/%s", BASE_URL, "unit-queue1"),
+	Attributes: QueueAttributes,
 }

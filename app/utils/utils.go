@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -24,13 +25,16 @@ func InitializeDecoders() {
 // QUESTION - alternately we could have the router.actionHandler method call this, but then our router maps
 // need to track the request type AND the function call.  I think there'd be a lot of interface switching
 // back and forth.
-func TransformRequest(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
+func TransformRequest(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 	switch req.Header.Get("Content-Type") {
 	case "application/x-amz-json-1.0":
 		//Read body data to parse json
 		decoder := json.NewDecoder(req.Body)
 		err := decoder.Decode(resultingStruct)
 		if err != nil {
+			if emptyRequestValid && err == io.EOF {
+				return true
+			}
 			log.Debugf("TransformRequest Failure - %s", err.Error())
 			return false
 		}

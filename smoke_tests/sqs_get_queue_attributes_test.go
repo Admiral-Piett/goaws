@@ -55,9 +55,8 @@ func Test_GetQueueAttributes_json_all(t *testing.T) {
 		Attributes: attributes,
 	})
 
-	queueUrl := fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName)
 	sdkResponse, err := sqsClient.GetQueueAttributes(context.TODO(), &sqs.GetQueueAttributesInput{
-		QueueUrl:       &queueUrl,
+		QueueUrl:       &af.QueueUrl,
 		AttributeNames: []types.QueueAttributeName{"All"},
 	})
 
@@ -93,9 +92,8 @@ func Test_GetQueueAttributes_json_specific_attributes(t *testing.T) {
 		},
 	})
 
-	queueUrl := fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName)
 	sdkResponse, err := sqsClient.GetQueueAttributes(context.TODO(), &sqs.GetQueueAttributesInput{
-		QueueUrl:       &queueUrl,
+		QueueUrl:       &af.QueueUrl,
 		AttributeNames: []types.QueueAttributeName{"DelaySeconds"},
 	})
 
@@ -137,9 +135,8 @@ func Test_GetQueueAttributes_json_missing_attribute_name_returns_all(t *testing.
 		Attributes: attributes,
 	})
 
-	queueUrl := fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName)
 	sdkResponse, err := sqsClient.GetQueueAttributes(context.TODO(), &sqs.GetQueueAttributesInput{
-		QueueUrl: &queueUrl,
+		QueueUrl: &af.QueueUrl,
 	})
 
 	dupe, _ := copystructure.Copy(attributes)
@@ -242,7 +239,7 @@ func Test_GetQueueAttributes_xml_select_attributes(t *testing.T) {
 	}{
 		Action:   "GetQueueAttributes",
 		Version:  "2012-11-05",
-		QueueUrl: fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName),
+		QueueUrl: af.QueueUrl,
 	}
 
 	r := e.POST("/").
@@ -308,7 +305,7 @@ func Test_GetQueueAttributes_xml_missing_attribute_name_returns_all(t *testing.T
 	}{
 		Action:   "GetQueueAttributes",
 		Version:  "2012-11-05",
-		QueueUrl: fmt.Sprintf("%s/%s", af.BASE_URL, af.QueueName),
+		QueueUrl: af.QueueUrl,
 	}
 
 	r := e.POST("/").

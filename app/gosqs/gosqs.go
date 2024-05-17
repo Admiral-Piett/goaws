@@ -415,43 +415,6 @@ func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func SetQueueAttributes(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-
-	queueName := ""
-	if queueUrl == "" {
-		vars := mux.Vars(req)
-		queueName = vars["queueName"]
-	} else {
-		uriSegments := strings.Split(queueUrl, "/")
-		queueName = uriSegments[len(uriSegments)-1]
-	}
-
-	log.Println("Set Queue Attributes:", queueName)
-	app.SyncQueues.Lock()
-	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
-		if err := validateAndSetQueueAttributesFromForm(queue, req.Form); err != nil {
-			createErrorResponse(w, req, err.Error())
-			app.SyncQueues.Unlock()
-			return
-		}
-
-		respStruct := app.SetQueueAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
-	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req, "QueueNotFound")
-	}
-	app.SyncQueues.Unlock()
-}
-
 func getQueueFromPath(formVal string, theUrl string) string {
 	if formVal != "" {
 		return formVal

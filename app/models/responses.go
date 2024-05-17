@@ -223,3 +223,16 @@ func (r DeleteMessageResponse) GetResult() interface{} {
 func (r DeleteMessageResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+type SetQueueAttributesResponse struct {
+	Xmlns    string               `xml:"xmlns,attr,omitempty"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r SetQueueAttributesResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r SetQueueAttributesResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
