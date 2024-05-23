@@ -41,6 +41,7 @@ func encodeResponse(w http.ResponseWriter, req *http.Request, statusCode int, bo
 		// Stupidly these `WriteHeader` calls have to be here, if they're at the start
 		// they lock the headers, at the end they're ignored.
 		w.WriteHeader(statusCode)
+
 		err := json.NewEncoder(w).Encode(body.GetResult())
 		if err != nil {
 			log.Errorf("Response Encoding Error: %v\nResponse: %+v", err, body)
@@ -60,23 +61,23 @@ func encodeResponse(w http.ResponseWriter, req *http.Request, statusCode int, bo
 
 // V1 - includes JSON Support (and of course the old XML).
 var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
-	"CreateQueue":        sqs.CreateQueueV1,
-	"ListQueues":         sqs.ListQueuesV1,
-	"GetQueueAttributes": sqs.GetQueueAttributesV1,
-	"SendMessage":        sqs.SendMessageV1,
+	"CreateQueue":             sqs.CreateQueueV1,
+	"ListQueues":              sqs.ListQueuesV1,
+	"GetQueueAttributes":      sqs.GetQueueAttributesV1,
+	"SendMessage":             sqs.SendMessageV1,
+	"ReceiveMessage":          sqs.ReceiveMessageV1,
+	"ChangeMessageVisibility": sqs.ChangeMessageVisibilityV1,
+	"DeleteMessage":           sqs.DeleteMessageV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"SetQueueAttributes":      sqs.SetQueueAttributes,
-	"SendMessageBatch":        sqs.SendMessageBatch,
-	"ReceiveMessage":          sqs.ReceiveMessage,
-	"DeleteMessage":           sqs.DeleteMessage,
-	"DeleteMessageBatch":      sqs.DeleteMessageBatch,
-	"GetQueueUrl":             sqs.GetQueueUrl,
-	"PurgeQueue":              sqs.PurgeQueue,
-	"DeleteQueue":             sqs.DeleteQueue,
-	"ChangeMessageVisibility": sqs.ChangeMessageVisibility,
+	"SetQueueAttributes": sqs.SetQueueAttributes,
+	"SendMessageBatch":   sqs.SendMessageBatch,
+	"DeleteMessageBatch": sqs.DeleteMessageBatch,
+	"GetQueueUrl":        sqs.GetQueueUrl,
+	"PurgeQueue":         sqs.PurgeQueue,
+	"DeleteQueue":        sqs.DeleteQueue,
 
 	// SNS
 	"ListTopics":                sns.ListTopics,

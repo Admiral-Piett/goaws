@@ -524,7 +524,7 @@ func Publish(w http.ResponseWriter, req *http.Request) {
 	//Create the response
 	msgId, _ := common.NewUUID()
 	uuid, _ := common.NewUUID()
-	respStruct := app.PublishResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.PublishResult{MessageId: msgId}, app.ResponseMetadata{RequestId: uuid}}
+	respStruct := app.PublishResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: app.PublishResult{MessageId: msgId}, Metadata: app.ResponseMetadata{RequestId: uuid}}
 	SendResponseBack(w, req, respStruct, content)
 }
 
@@ -701,7 +701,7 @@ func getMessageAttributesFromRequest(req *http.Request) map[string]app.MessageAt
 		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
 			value := req.FormValue(fmt.Sprintf("MessageAttributes.entry.%d.Value.%s", i, valueKey))
 			if value != "" {
-				attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+				attributes[name] = app.MessageAttributeValue{Name: name, DataType: dataType, Value: value, ValueKey: valueKey}
 			}
 		}
 

@@ -6,18 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/copystructure"
-
-	"github.com/Admiral-Piett/goaws/app/models"
-
-	"github.com/Admiral-Piett/goaws/app/interfaces"
-
-	"github.com/Admiral-Piett/goaws/app/utils"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/Admiral-Piett/goaws/app/fixtures"
-
 	"github.com/Admiral-Piett/goaws/app"
+	"github.com/Admiral-Piett/goaws/app/fixtures"
+	"github.com/Admiral-Piett/goaws/app/interfaces"
+	"github.com/Admiral-Piett/goaws/app/models"
+	"github.com/Admiral-Piett/goaws/app/utils"
+	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateQueueV1_success(t *testing.T) {
