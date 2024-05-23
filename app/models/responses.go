@@ -1,6 +1,12 @@
 package models
 
-import "github.com/Admiral-Piett/goaws/app"
+import (
+	"encoding/json"
+
+	"github.com/Admiral-Piett/goaws/app"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
+)
 
 // NOTE: Every response in here MUST implement the `AbstractResponseBody` interface in order to be used
 //  in `encodeResponse`
@@ -23,6 +29,94 @@ func (r ErrorResponse) GetResult() interface{} {
 
 func (r ErrorResponse) GetRequestId() string {
 	return r.RequestId
+}
+
+/*** Receive Message Response */
+type ReceiveMessageResult struct {
+	Messages []*ResultMessage `json:"Messages" xml:"Message,omitempty"`
+}
+
+type ReceiveMessageResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   ReceiveMessageResult `xml:"ReceiveMessageResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r ReceiveMessageResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ReceiveMessageResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
+type ResultMessage struct {
+	MessageId              string                    `xml:"MessageId,omitempty"`
+	ReceiptHandle          string                    `xml:"ReceiptHandle,omitempty"`
+	MD5OfBody              string                    `xml:"MD5OfBody,omitempty"`
+	Body                   []byte                    `xml:"Body,omitempty"`
+	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty"`
+	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
+	Attributes             []*ResultAttribute        `xml:"Attribute,omitempty"`
+}
+
+// MarshalJSON first converts the ResultMessage to the shape which the SDKs
+// expect. When receiving a response from the JSON API, it apparently expects
+// Attributes and MessageAttributes to be maps, rather than the former slice
+// shape.
+func (r *ResultMessage) MarshalJSON() ([]byte, error) {
+	m := &sqstypes.Message{
+		MessageId:              &r.MessageId,
+		ReceiptHandle:          &r.ReceiptHandle,
+		MD5OfBody:              &r.MD5OfBody,
+		Body:                   aws.String(string(r.Body)),
+		MD5OfMessageAttributes: &r.MD5OfMessageAttributes,
+		Attributes:             map[string]string{},
+		MessageAttributes:      map[string]sqstypes.MessageAttributeValue{},
+	}
+
+	for _, attr := range r.Attributes {
+		m.Attributes[attr.Name] = attr.Value
+	}
+
+	for _, attr := range r.MessageAttributes {
+		m.MessageAttributes[attr.Name] = sqstypes.MessageAttributeValue{
+			DataType:    &attr.Value.DataType,
+			StringValue: &attr.Value.StringValue,
+			BinaryValue: []byte(attr.Value.BinaryValue),
+		}
+	}
+
+	return json.Marshal(m)
+}
+
+type ResultMessageAttributeValue struct {
+	DataType    string `xml:"DataType,omitempty"`
+	StringValue string `xml:"StringValue,omitempty"`
+	BinaryValue string `xml:"BinaryValue,omitempty"`
+}
+
+type ResultMessageAttribute struct {
+	Name  string                       `xml:"Name,omitempty"`
+	Value *ResultMessageAttributeValue `xml:"Value,omitempty"`
+}
+
+type ResultAttribute struct {
+	Name  string `xml:"Name,omitempty"`
+	Value string `xml:"Value,omitempty"`
+}
+
+type ChangeMessageVisibilityResult struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r ChangeMessageVisibilityResult) GetResult() interface{} {
+	return nil
+}
+
+func (r ChangeMessageVisibilityResult) GetRequestId() string {
+	return r.Metadata.RequestId
 }
 
 /*** Create Queue Response */
@@ -113,5 +207,19 @@ func (r SendMessageResponse) GetResult() interface{} {
 }
 
 func (r SendMessageResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
+/*** Delete Message Response */
+type DeleteMessageResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r DeleteMessageResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r DeleteMessageResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }

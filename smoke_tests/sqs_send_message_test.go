@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -55,25 +54,11 @@ func Test_SendMessageV1_json_no_attributes(t *testing.T) {
 	assert.Equal(t, "1", getQueueAttributeOutput.Attributes["ApproximateNumberOfMessages"])
 
 	// Receive message and check attribute
-	receiveMessageBodyXML := struct {
-		Action   string `xml:"Action"`
-		Version  string `xml:"Version"`
-		QueueUrl string `xml:"QueueUrl"`
-	}{
-		Action:   "ReceiveMessage",
-		Version:  "2012-11-05",
-		QueueUrl: *targetQueueUrl,
-	}
-	e := httpexpect.Default(t, server.URL)
-	r := e.POST("/").
-		WithForm(receiveMessageBodyXML).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	r3 := app.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(r), &r3)
-	message := r3.Result.Message[0]
-	assert.Equal(t, targetMessageBody, string(message.Body))
+	r3, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: targetQueueUrl,
+	})
+	message := r3.Messages[0]
+	assert.Equal(t, targetMessageBody, string(*message.Body))
 	assert.Equal(t, 0, len(message.MessageAttributes))
 }
 
@@ -131,34 +116,35 @@ func Test_SendMessageV1_json_with_attributes(t *testing.T) {
 	assert.Equal(t, "1", getQueueAttributeOutput.Attributes["ApproximateNumberOfMessages"])
 
 	// Receive message and check attribute
-	receiveMessageBodyXML := struct {
-		Action   string `xml:"Action"`
-		Version  string `xml:"Version"`
-		QueueUrl string `xml:"QueueUrl"`
-	}{
-		Action:   "ReceiveMessage",
-		Version:  "2012-11-05",
-		QueueUrl: *targetQueueUrl,
-	}
-	e := httpexpect.Default(t, server.URL)
-	r := e.POST("/").
-		WithForm(receiveMessageBodyXML).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	r3 := app.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(r), &r3)
-	message := r3.Result.Message[0]
-	assert.Equal(t, targetMessageBody, string(message.Body))
+	r3, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: targetQueueUrl,
+	})
+	message := r3.Messages[0]
+	assert.Equal(t, targetMessageBody, string(*message.Body))
 	assert.Equal(t, 3, len(message.MessageAttributes))
-	var attr1, attr2, attr3 app.ResultMessageAttribute
-	for _, attr := range message.MessageAttributes {
-		if attr.Name == "attr1" {
-			attr1 = *attr
-		} else if attr.Name == "attr2" {
-			attr2 = *attr
-		} else if attr.Name == "attr3" {
-			attr3 = *attr
+	var attr1, attr2, attr3 models.ResultMessageAttribute
+	for k, attr := range message.MessageAttributes {
+		if k == "attr1" {
+			attr1.Name = k
+			attr1.Value = &models.ResultMessageAttributeValue{
+				DataType:    *attr.DataType,
+				StringValue: *attr.StringValue,
+				BinaryValue: string(attr.BinaryValue),
+			}
+		} else if k == "attr2" {
+			attr2.Name = k
+			attr2.Value = &models.ResultMessageAttributeValue{
+				DataType:    *attr.DataType,
+				StringValue: *attr.StringValue,
+				BinaryValue: string(attr.BinaryValue),
+			}
+		} else if k == "attr3" {
+			attr3.Name = k
+			attr3.Value = &models.ResultMessageAttributeValue{
+				DataType:    *attr.DataType,
+				StringValue: *attr.StringValue,
+				BinaryValue: string(attr.BinaryValue),
+			}
 		}
 	}
 	assert.Equal(t, "attr1", attr1.Name)
@@ -346,12 +332,12 @@ func Test_SendMessageV1_xml_with_attributes(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r4 := app.ReceiveMessageResponse{}
+	r4 := models.ReceiveMessageResponse{}
 	xml.Unmarshal([]byte(r), &r4)
-	message := r4.Result.Message[0]
+	message := r4.Result.Messages[0]
 	assert.Equal(t, "Test Message", string(message.Body))
 	assert.Equal(t, 3, len(message.MessageAttributes))
-	var attr1, attr2, attr3 app.ResultMessageAttribute
+	var attr1, attr2, attr3 models.ResultMessageAttribute
 	for _, attr := range message.MessageAttributes {
 		if attr.Name == "attr1" {
 			attr1 = *attr

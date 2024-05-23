@@ -42,3 +42,49 @@ var CreateQueueV1RequestXML_NoAttributes = struct {
 	Version:   "2012-11-05",
 	QueueName: af.QueueName,
 }
+
+var SendMessageRequestBodyXML = struct {
+	Action      string `xml:"Action"`
+	QueuUrl     string `xml:"QueueUrl"`
+	MessageBody string `xml:"MessageBody"`
+	Version     string `xml:"Version"`
+}{
+	Action:      "SendMessage",
+	QueuUrl:     fmt.Sprintf("%s/new-queue-1", af.BASE_URL),
+	MessageBody: "Hello World",
+	Version:     "2012-11-05",
+}
+
+var ReceiveMessageRequestBodyXML = struct {
+	Action  string `xml:"Action"`
+	QueuUrl string `xml:"QueueUrl"`
+	Version string `xml:"Version"`
+}{
+	Action:  "ReceiveMessage",
+	QueuUrl: fmt.Sprintf("%s/new-queue-1", af.BASE_URL),
+	Version: "2012-11-05",
+}
+
+var ChangeMessageVisibilityRequestBodyXML = struct {
+	Action            string `xml:"Action"`
+	QueuUrl           string `xml:"QueueUrl"`
+	ReceiptHandle     string `xml:"ReceiptHandle"`
+	VisibilityTimeout int    `xml:"VisibilityTimeout"`
+	Version           string `xml:"Version"`
+}{
+	Action:            "ChangeMessageVisibility",
+	QueuUrl:           fmt.Sprintf("%s/new-queue-1", af.BASE_URL),
+	VisibilityTimeout: 2,
+	Version:           "2012-11-05",
+}
+
+var DeleteMessageRequestBodyXML = struct {
+	Action        string `xml:"Action"`
+	QueuUrl       string `xml:"QueueUrl"`
+	ReceiptHandle string `xml:"ReceiptHandle"`
+	Version       string `xml:"Version"`
+}{
+	Action:  "DeleteMessage",
+	QueuUrl: fmt.Sprintf("%s/new-queue-1", af.BASE_URL),
+	Version: "2012-11-05",
+}

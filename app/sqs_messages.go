@@ -11,55 +11,6 @@ type ListQueuesResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
-/*** Receive Message Response */
-
-type ResultMessage struct {
-	MessageId              string                    `xml:"MessageId,omitempty"`
-	ReceiptHandle          string                    `xml:"ReceiptHandle,omitempty"`
-	MD5OfBody              string                    `xml:"MD5OfBody,omitempty"`
-	Body                   []byte                    `xml:"Body,omitempty"`
-	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty"`
-	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
-	Attributes             []*ResultAttribute        `xml:"Attribute,omitempty"`
-}
-
-type ResultMessageAttributeValue struct {
-	DataType    string `xml:"DataType,omitempty"`
-	StringValue string `xml:"StringValue,omitempty"`
-	BinaryValue string `xml:"BinaryValue,omitempty"`
-}
-
-type ResultMessageAttribute struct {
-	Name  string                       `xml:"Name,omitempty"`
-	Value *ResultMessageAttributeValue `xml:"Value,omitempty"`
-}
-
-type ResultAttribute struct {
-	Name  string `xml:"Name,omitempty"`
-	Value string `xml:"Value,omitempty"`
-}
-
-type ReceiveMessageResult struct {
-	Message []*ResultMessage `xml:"Message,omitempty"`
-}
-
-type ReceiveMessageResponse struct {
-	Xmlns    string               `xml:"xmlns,attr"`
-	Result   ReceiveMessageResult `xml:"ReceiveMessageResult"`
-	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
-}
-
-type ChangeMessageVisibilityResult struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
-/*** Delete Message Response */
-type DeleteMessageResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
-}
-
 type DeleteQueueResponse struct {
 	Xmlns    string           `xml:"xmlns,attr,omitempty"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
