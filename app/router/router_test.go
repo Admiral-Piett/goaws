@@ -260,22 +260,22 @@ func TestActionHandler_v1_xml(t *testing.T) {
 func TestActionHandler_v0_xml(t *testing.T) {
 	defer func() {
 		routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
-			"CreateQueue":        sqs.CreateQueueV1,
-			"ListQueues":         sqs.ListQueuesV1,
-			"GetQueueAttributes": sqs.GetQueueAttributesV1,
-			"SendMessage":        sqs.SendMessageV1,
+			"CreateQueue":             sqs.CreateQueueV1,
+			"ListQueues":              sqs.ListQueuesV1,
+			"GetQueueAttributes":      sqs.GetQueueAttributesV1,
+			"SendMessage":             sqs.SendMessageV1,
+			"ReceiveMessage":          sqs.ReceiveMessageV1,
+			"DeleteMessage":           sqs.DeleteMessageV1,
+			"ChangeMessageVisibility": sqs.ChangeMessageVisibilityV1,
 		}
 		routingTable = map[string]http.HandlerFunc{
 			// SQS
-			"SetQueueAttributes":      sqs.SetQueueAttributes,
-			"SendMessageBatch":        sqs.SendMessageBatch,
-			"ReceiveMessage":          sqs.ReceiveMessage,
-			"DeleteMessage":           sqs.DeleteMessage,
-			"DeleteMessageBatch":      sqs.DeleteMessageBatch,
-			"GetQueueUrl":             sqs.GetQueueUrl,
-			"PurgeQueue":              sqs.PurgeQueue,
-			"DeleteQueue":             sqs.DeleteQueue,
-			"ChangeMessageVisibility": sqs.ChangeMessageVisibility,
+			"SetQueueAttributes": sqs.SetQueueAttributes,
+			"SendMessageBatch":   sqs.SendMessageBatch,
+			"DeleteMessageBatch": sqs.DeleteMessageBatch,
+			"GetQueueUrl":        sqs.GetQueueUrl,
+			"PurgeQueue":         sqs.PurgeQueue,
+			"DeleteQueue":        sqs.DeleteQueue,
 
 			// SNS
 			"ListTopics":                sns.ListTopics,

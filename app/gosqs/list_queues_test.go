@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/Admiral-Piett/goaws/app/conf"
-
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -100,6 +99,12 @@ func TestListQueuesV1_success_with_queue_name_prefix_no_matching_queues(t *testi
 }
 
 func TestListQueuesV1_request_transformer_error(t *testing.T) {
+	//conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		utils.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request) (success bool) {
 		return false
 	}

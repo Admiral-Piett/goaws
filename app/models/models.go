@@ -30,18 +30,6 @@ var AVAILABLE_QUEUE_ATTRIBUTES = map[string]bool{
 	"QueueArn":                              true,
 }
 
-func NewCreateQueueRequest() *CreateQueueRequest {
-	return &CreateQueueRequest{
-		Attributes: Attributes{
-			DelaySeconds:                  0,
-			MaximumMessageSize:            StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize),
-			MessageRetentionPeriod:        StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod),
-			ReceiveMessageWaitTimeSeconds: StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds),
-			VisibilityTimeout:             StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout),
-		},
-	}
-}
-
 type CreateQueueRequest struct {
 	QueueName  string            `json:"QueueName" schema:"QueueName"`
 	Attributes Attributes        `json:"Attributes" schema:"Attribute"`
@@ -295,3 +283,55 @@ func (r *RedrivePolicy) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+func NewReceiveMessageRequest() *ReceiveMessageRequest {
+	return &ReceiveMessageRequest{}
+}
+
+type ReceiveMessageRequest struct {
+	QueueUrl                    string   `json:"QueueUrl" schema:"QueueUrl"`
+	AttributeNames              []string `json:"AttributeNames" schema:"AttributeNames"`
+	MessageSystemAttributeNames []string `json:"MessageSystemAttributeNames" schema:"MessageSystemAttributeNames"`
+	MessageAttributeNames       []string `json:"MessageAttributeNames" schema:"MessageAttributeNames"`
+	MaxNumberOfMessages         int      `json:"MaxNumberOfMessages" schema:"MaxNumberOfMessages"`
+	VisibilityTimeout           int      `json:"VisibilityTimeout" schema:"VisibilityTimeout"`
+	WaitTimeSeconds             int      `json:"WaitTimeSeconds" schema:"WaitTimeSeconds"`
+	ReceiveRequestAttemptId     string   `json:"ReceiveRequestAttemptId" schema:"ReceiveRequestAttemptId"`
+}
+
+func (r *ReceiveMessageRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewCreateQueueRequest() *CreateQueueRequest {
+	return &CreateQueueRequest{
+		Attributes: Attributes{
+			DelaySeconds:                  0,
+			MaximumMessageSize:            StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize),
+			MessageRetentionPeriod:        StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod),
+			ReceiveMessageWaitTimeSeconds: StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds),
+			VisibilityTimeout:             StringToInt(app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout),
+		},
+	}
+}
+
+func NewChangeMessageVisibilityRequest() *ChangeMessageVisibilityRequest {
+	return &ChangeMessageVisibilityRequest{}
+}
+
+type ChangeMessageVisibilityRequest struct {
+	QueueUrl          string `json:"QueueUrl" schema:"QueueUrl"`
+	ReceiptHandle     string `json:"ReceiptHandle" schema:"ReceiptHandle"`
+	VisibilityTimeout int    `json:"VisibilityTimeout" schema:"VisibilityTimeout"`
+}
+
+func (r *ChangeMessageVisibilityRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewDeleteMessageRequest() *DeleteMessageRequest {
+	return &DeleteMessageRequest{}
+}
+
+type DeleteMessageRequest struct {
+	QueueUrl      string `json:"QueueUrl" schema:"QueueUrl"`
+	ReceiptHandle string `json:"ReceiptHandle" schema:"ReceiptHandle"`
+}
+
+func (r *DeleteMessageRequest) SetAttributesFromForm(values url.Values) {}
