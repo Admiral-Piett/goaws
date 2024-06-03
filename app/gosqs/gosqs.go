@@ -362,36 +362,6 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func PurgeQueue(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
-	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-
-	uriSegments := strings.Split(queueUrl, "/")
-	queueName := uriSegments[len(uriSegments)-1]
-
-	log.Println("Purging Queue:", queueName)
-
-	app.SyncQueues.Lock()
-	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		app.SyncQueues.Queues[queueName].Messages = nil
-		app.SyncQueues.Queues[queueName].Duplicates = make(map[string]time.Time)
-		respStruct := app.PurgeQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-			createErrorResponse(w, req, "GeneralError")
-		}
-	} else {
-		log.Println("Purge Queue:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req, "QueueNotFound")
-	}
-	app.SyncQueues.Unlock()
-}
-
 func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
 	// Sent response type
 	w.Header().Set("Content-Type", "application/xml")

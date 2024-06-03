@@ -27,9 +27,6 @@ import (
 	"github.com/gavv/httpexpect/v2"
 )
 
-// TODO - Is there a way to also capture the defaults we set and/or load from the config here? (review the xml
-// code below)
-// NOTE: Actually I think you can just adjust the app.CurrentEnvironment memory space...it travels across tests it seems.
 func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {

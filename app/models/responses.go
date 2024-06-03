@@ -236,3 +236,17 @@ func (r SetQueueAttributesResponse) GetResult() interface{} {
 func (r SetQueueAttributesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Purge Queue Response */
+type PurgeQueueResponse struct {
+	Xmlns    string               `xml:"xmlns,attr,omitempty"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r PurgeQueueResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r PurgeQueueResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
