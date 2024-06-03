@@ -242,6 +242,18 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 	}
 }
 
+// Get Queue Url Request
+func NewGetQueueUrlRequest() *GetQueueUrlRequest {
+	return &GetQueueUrlRequest{}
+}
+
+type GetQueueUrlRequest struct {
+	QueueName              string `json:"QueueName"`
+	QueueOwnerAWSAccountId string `json:"QueueOwnerAWSAccountId"` // NOTE: not implemented
+}
+
+func (r *GetQueueUrlRequest) SetAttributesFromForm(values url.Values) {}
+
 func NewSetQueueAttributesRequest() *SetQueueAttributesRequest {
 	return &SetQueueAttributesRequest{}
 }

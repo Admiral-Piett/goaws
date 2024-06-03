@@ -362,29 +362,6 @@ func DeleteQueue(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func GetQueueUrl(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-	//
-	//// Retrieve FormValues required
-	queueName := req.FormValue("QueueName")
-	if queue, ok := app.SyncQueues.Queues[queueName]; ok {
-		url := queue.URL
-		log.Println("Get Queue URL:", queueName)
-		// Create, encode/xml and send response
-		result := app.GetQueueUrlResult{QueueUrl: url}
-		respStruct := app.GetQueueUrlResponse{"http://queue.amazonaws.com/doc/2012-11-05/", result, app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
-		}
-	} else {
-		log.Println("Get Queue URL:", queueName, ", queue does not exist!!!")
-		createErrorResponse(w, req, "QueueNotFound")
-	}
-}
-
 func getQueueFromPath(formVal string, theUrl string) string {
 	if formVal != "" {
 		return formVal
