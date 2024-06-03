@@ -21,7 +21,7 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewSendMessageRequest()
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
-		log.Error("Invalid Request - CreateQueueV1")
+		log.Error("Invalid Request - SendMessageV1")
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)
 	}
 	messageBody := requestBody.MessageBody

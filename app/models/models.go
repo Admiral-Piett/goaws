@@ -445,3 +445,13 @@ type DeleteMessageRequest struct {
 }
 
 func (r *DeleteMessageRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewPurgeQueueRequest() *PurgeQueueRequest {
+	return &PurgeQueueRequest{}
+}
+
+type PurgeQueueRequest struct {
+	QueueUrl string `json:"QueueUrl" schema:"QueueUrl"`
+}
+
+func (r *PurgeQueueRequest) SetAttributesFromForm(values url.Values) {}
