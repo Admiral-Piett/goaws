@@ -59,12 +59,6 @@ type SendMessageBatchResponse struct {
 	Metadata ResponseMetadata       `xml:"ResponseMetadata,omitempty"`
 }
 
-/*** Purge Queue Response */
-type PurgeQueueResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
-}
-
 /*** Get Queue Url Response */
 type GetQueueUrlResult struct {
 	QueueUrl string `xml:"QueueUrl,omitempty"`

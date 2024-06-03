@@ -61,10 +61,10 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	queueAttributes := make([]models.Attribute, 0, 0)
 
 	app.SyncQueues.RLock()
+	defer app.SyncQueues.RUnlock()
 	queue, ok := app.SyncQueues.Queues[queueName]
 	if !ok {
 		log.Errorf("Get Queue URL: %s queue does not exist!!!", queueName)
-		app.SyncQueues.RUnlock()
 		return createErrorResponseV1(ErrInvalidParameterValue.Type)
 	}
 
@@ -126,7 +126,6 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 		attr := models.Attribute{Name: "RedrivePolicy", Value: fmt.Sprintf(`{"maxReceiveCount":"%d", "deadLetterTargetArn":"%s"}`, queue.MaxReceiveCount, queue.DeadLetterQueue.Arn)}
 		queueAttributes = append(queueAttributes, attr)
 	}
-	app.SyncQueues.RUnlock()
 
 	respStruct := models.GetQueueAttributesResponse{
 		models.BASE_XMLNS,
