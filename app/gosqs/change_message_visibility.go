@@ -75,8 +75,9 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 	}
 
 	respStruct := models.ChangeMessageVisibilityResult{
-		"http://queue.amazonaws.com/doc/2012-11-05/",
-		app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+		Xmlns:    models.BASE_XMLNS,
+		Metadata: models.BASE_RESPONSE_METADATA,
+	}
 
 	return http.StatusOK, &respStruct
 }

@@ -67,11 +67,9 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 			case <-req.Context().Done():
 				continueTimer.Stop()
 				return http.StatusOK, models.ReceiveMessageResponse{
-					"http://queue.amazonaws.com/doc/2012-11-05/",
-					models.ReceiveMessageResult{},
-					app.ResponseMetadata{
-						RequestId: "00000000-0000-0000-0000-000000000000",
-					},
+					Xmlns:    models.BASE_XMLNS,
+					Result:   models.ReceiveMessageResult{},
+					Metadata: models.BASE_RESPONSE_METADATA,
 				}
 			case <-continueTimer.C:
 				continueTimer.Stop()

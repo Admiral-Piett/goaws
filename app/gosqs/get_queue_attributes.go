@@ -128,9 +128,9 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	}
 
 	respStruct := models.GetQueueAttributesResponse{
-		models.BASE_XMLNS,
-		models.GetQueueAttributesResult{Attrs: queueAttributes},
-		models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BASE_XMLNS,
+		Result:   models.GetQueueAttributesResult{Attrs: queueAttributes},
+		Metadata: models.BASE_RESPONSE_METADATA,
 	}
 	return http.StatusOK, respStruct
 }
