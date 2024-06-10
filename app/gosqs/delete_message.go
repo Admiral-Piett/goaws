@@ -50,7 +50,10 @@ func DeleteMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 				delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
 				// Create, encode/xml and send response
-				respStruct := models.DeleteMessageResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000001"}}
+				respStruct := models.DeleteMessageResponse{
+					Xmlns:    models.BASE_XMLNS,
+					Metadata: models.BASE_RESPONSE_METADATA,
+				}
 				return 200, &respStruct
 			}
 		}
