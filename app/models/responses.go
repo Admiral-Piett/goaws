@@ -269,3 +269,17 @@ func (r PurgeQueueResponse) GetResult() interface{} {
 func (r PurgeQueueResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Delete Queue Response */
+type DeleteQueueResponse struct {
+	Xmlns    string               `xml:"xmlns,attr,omitempty"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r DeleteQueueResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r DeleteQueueResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

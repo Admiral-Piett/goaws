@@ -15,6 +15,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO - Admiral-Piett - could we refactor the way we hide messages?  Change data structure to a queue
+// organized by "reveal time" or a map with the key being a timestamp of when it could be shown?
+// Ordered Map - https://github.com/elliotchance/orderedmap
 func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	requestBody := models.NewReceiveMessageRequest()
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)

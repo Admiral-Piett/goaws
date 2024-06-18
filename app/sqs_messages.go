@@ -1,21 +1,5 @@
 package app
 
-/*** List Queues Response */
-type ListQueuesResult struct {
-	QueueUrl []string `xml:"QueueUrl"`
-}
-
-type ListQueuesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListQueuesResult `xml:"ListQueuesResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
-type DeleteQueueResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
-}
-
 type DeleteMessageBatchResultEntry struct {
 	Id string `xml:"Id"`
 }
@@ -57,9 +41,4 @@ type SendMessageBatchResponse struct {
 	Xmlns    string                 `xml:"xmlns,attr,omitempty"`
 	Result   SendMessageBatchResult `xml:"SendMessageBatchResult"`
 	Metadata ResponseMetadata       `xml:"ResponseMetadata,omitempty"`
-}
-
-type SetQueueAttributesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
 }
