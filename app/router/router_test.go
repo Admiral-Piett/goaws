@@ -270,12 +270,12 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"ChangeMessageVisibility": sqs.ChangeMessageVisibilityV1,
 			"GetQueueUrl":             sqs.GetQueueUrlV1,
 			"PurgeQueue":              sqs.PurgeQueueV1,
+			"DeleteQueue":             sqs.DeleteQueueV1,
 		}
 		routingTable = map[string]http.HandlerFunc{
 			// SQS
 			"SendMessageBatch":   sqs.SendMessageBatch,
 			"DeleteMessageBatch": sqs.DeleteMessageBatch,
-			"DeleteQueue":        sqs.DeleteQueue,
 
 			// SNS
 			"ListTopics":                sns.ListTopics,

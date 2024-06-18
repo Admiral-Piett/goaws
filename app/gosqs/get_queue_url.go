@@ -11,7 +11,6 @@ import (
 )
 
 func GetQueueUrlV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
-
 	requestBody := models.NewGetQueueUrlRequest()
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {

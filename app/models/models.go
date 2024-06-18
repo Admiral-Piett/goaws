@@ -467,3 +467,13 @@ type PurgeQueueRequest struct {
 }
 
 func (r *PurgeQueueRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewDeleteQueueRequest() *DeleteQueueRequest {
+	return &DeleteQueueRequest{}
+}
+
+type DeleteQueueRequest struct {
+	QueueUrl string `json:"QueueUrl" schema:"QueueUrl"`
+}
+
+func (r *DeleteQueueRequest) SetAttributesFromForm(values url.Values) {}

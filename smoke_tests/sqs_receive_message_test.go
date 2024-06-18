@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
@@ -47,12 +48,47 @@ func Test_ReceiveMessageV1_json(t *testing.T) {
 		QueueUrl: createQueueResponse.QueueUrl,
 	})
 
-	if err != nil {
-		t.Fatalf("Error receiving message: %v", err)
-	}
+	assert.Nil(t, err)
 
 	assert.Equal(t, 1, len(receiveMessageResponse.Messages))
 	assert.Equal(t, sf.SendMessageRequestBodyXML.MessageBody, *receiveMessageResponse.Messages[0].Body)
+}
+
+func Test_ReceiveMessageV1_json_while_concurrent_delete(t *testing.T) {
+	server := generateServer()
+	defer func() {
+		server.Close()
+		utils.ResetResources()
+	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+
+	createQueueResponse, _ := sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
+		QueueName:  &af.QueueName,
+		Attributes: map[string]string{"ReceiveMessageWaitTimeSeconds": "1"},
+	})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+			QueueUrl: createQueueResponse.QueueUrl,
+		})
+		assert.Contains(t, err.Error(), "AWS.SimpleQueueService.NonExistentQueue")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := sqsClient.DeleteQueue(context.TODO(), &sqs.DeleteQueueInput{
+			QueueUrl: createQueueResponse.QueueUrl,
+		})
+		assert.Nil(t, err)
+	}()
+	wg.Wait()
 }
 
 func Test_ReceiveMessageV1_xml(t *testing.T) {
