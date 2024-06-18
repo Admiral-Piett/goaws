@@ -333,35 +333,6 @@ func DeleteMessageBatch(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func DeleteQueue(w http.ResponseWriter, req *http.Request) {
-	// Sent response type
-	w.Header().Set("Content-Type", "application/xml")
-
-	// Retrieve FormValues required
-	queueUrl := getQueueFromPath(req.FormValue("QueueUrl"), req.URL.String())
-	queueName := ""
-	if queueUrl == "" {
-		vars := mux.Vars(req)
-		queueName = vars["queueName"]
-	} else {
-		uriSegments := strings.Split(queueUrl, "/")
-		queueName = uriSegments[len(uriSegments)-1]
-	}
-
-	log.Println("Deleting Queue:", queueName)
-	app.SyncQueues.Lock()
-	delete(app.SyncQueues.Queues, queueName)
-	app.SyncQueues.Unlock()
-
-	// Create, encode/xml and send response
-	respStruct := app.DeleteQueueResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
-}
-
 func getQueueFromPath(formVal string, theUrl string) string {
 	if formVal != "" {
 		return formVal
