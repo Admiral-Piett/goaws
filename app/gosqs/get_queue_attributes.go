@@ -21,11 +21,11 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - GetQueueAttributesV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 	if requestBody.QueueUrl == "" {
 		log.Error("Missing QueueUrl - GetQueueAttributesV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	requestedAttributes := func() map[string]bool {
@@ -57,7 +57,7 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	uriSegments := strings.Split(requestBody.QueueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
 
-	log.Infof("Get Queue Attributes: %s", queueName)
+	log.Infof("Get Queue QueueAttributes: %s", queueName)
 	queueAttributes := make([]models.Attribute, 0, 0)
 
 	app.SyncQueues.RLock()
@@ -65,7 +65,7 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	queue, ok := app.SyncQueues.Queues[queueName]
 	if !ok {
 		log.Errorf("Get Queue URL: %s queue does not exist!!!", queueName)
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	if _, ok := includedAttributes["DelaySeconds"]; ok {

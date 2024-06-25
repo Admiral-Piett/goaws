@@ -4,19 +4,16 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/mocks"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	InitializeDecoders()
-	m.Run()
-}
-
 func TestTransformRequest_success_json(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", fixtures.JSONRequestBody, true)
+	_, r := test.GenerateRequestInfo("POST", "url", fixtures.JSONRequestBody, true)
 
 	mock := &mocks.MockRequestBody{}
 
@@ -28,7 +25,7 @@ func TestTransformRequest_success_json(t *testing.T) {
 }
 
 func TestTransformRequest_success_json_empty_request_accepted(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "url", nil, true)
 
 	mock := &mocks.MockRequestBody{}
 
@@ -40,7 +37,7 @@ func TestTransformRequest_success_json_empty_request_accepted(t *testing.T) {
 }
 
 func TestTransformRequest_success_xml(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", nil, false)
+	_, r := test.GenerateRequestInfo("POST", "url", nil, false)
 	form := url.Values{}
 	form.Add("Action", "CreateQueue")
 	form.Add("QueueName", "UnitTestQueue1")
@@ -60,7 +57,7 @@ func TestTransformRequest_success_xml(t *testing.T) {
 }
 
 func TestTransformRequest_error_invalid_request_body_json(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", "\"I-am-garbage", true)
+	_, r := test.GenerateRequestInfo("POST", "url", "\"I-am-garbage", true)
 
 	mock := &mocks.MockRequestBody{}
 
@@ -72,7 +69,7 @@ func TestTransformRequest_error_invalid_request_body_json(t *testing.T) {
 }
 
 func TestTransformRequest_error_failure_to_parse_form_xml(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", nil, false)
+	_, r := test.GenerateRequestInfo("POST", "url", nil, false)
 
 	mock := &mocks.MockRequestBody{}
 
@@ -83,7 +80,7 @@ func TestTransformRequest_error_failure_to_parse_form_xml(t *testing.T) {
 }
 
 func TestTransformRequest_error_invalid_request_body_xml(t *testing.T) {
-	_, r := GenerateRequestInfo("POST", "url", nil, false)
+	_, r := test.GenerateRequestInfo("POST", "url", nil, false)
 
 	form := url.Values{}
 	form.Add("intField", "\"I-am-garbage")

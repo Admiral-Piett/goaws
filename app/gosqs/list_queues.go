@@ -21,7 +21,7 @@ func ListQueuesV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, true)
 	if !ok {
 		log.Error("Invalid Request - ListQueuesV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	log.Info("Listing Queues")

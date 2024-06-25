@@ -17,7 +17,7 @@ func DeleteMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - DeleteMessageV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	// Retrieve FormValues required
@@ -62,5 +62,5 @@ func DeleteMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		log.Warning("Queue not found")
 	}
 
-	return createErrorResponseV1("MessageDoesNotExist")
+	return utils.CreateErrorResponseV1("MessageDoesNotExist", true)
 }

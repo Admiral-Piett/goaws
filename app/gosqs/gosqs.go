@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app/interfaces"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	log "github.com/sirupsen/logrus"
@@ -21,30 +19,6 @@ import (
 
 func init() {
 	app.SyncQueues.Queues = make(map[string]*app.Queue)
-
-	app.SqsErrors = make(map[string]app.SqsErrorType)
-	err1 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleQueueService.NonExistentQueue", Message: "The specified queue does not exist for this wsdl version."}
-	app.SqsErrors["QueueNotFound"] = err1
-	err2 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue already exists."}
-	app.SqsErrors["QueueExists"] = err2
-	err3 := app.SqsErrorType{HttpError: http.StatusNotFound, Type: "Not Found", Code: "AWS.SimpleQueueService.QueueExists", Message: "The specified queue does not contain the message specified."}
-	app.SqsErrors["MessageDoesNotExist"] = err3
-	err4 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "GeneralError", Code: "AWS.SimpleQueueService.GeneralError", Message: "General Error."}
-	app.SqsErrors["GeneralError"] = err4
-	err5 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "TooManyEntriesInBatchRequest", Code: "AWS.SimpleQueueService.TooManyEntriesInBatchRequest", Message: "Maximum number of entries per request are 10."}
-	app.SqsErrors["TooManyEntriesInBatchRequest"] = err5
-	err6 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "BatchEntryIdsNotDistinct", Code: "AWS.SimpleQueueService.BatchEntryIdsNotDistinct", Message: "Two or more batch entries in the request have the same Id."}
-	app.SqsErrors["BatchEntryIdsNotDistinct"] = err6
-	err7 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleQueueService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."}
-	app.SqsErrors["EmptyBatchRequest"] = err7
-	err8 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "ValidationError", Code: "AWS.SimpleQueueService.ValidationError", Message: "The visibility timeout is incorrect"}
-	app.SqsErrors["InvalidVisibilityTimeout"] = err8
-	err9 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageNotInFlight", Code: "AWS.SimpleQueueService.MessageNotInFlight", Message: "The message referred to isn't in flight."}
-	app.SqsErrors["MessageNotInFlight"] = err9
-	err10 := app.SqsErrorType{HttpError: http.StatusBadRequest, Type: "MessageTooBig", Code: "InvalidParameterValue", Message: "The message size exceeds the limit."}
-	app.SqsErrors["MessageTooBig"] = err10
-	app.SqsErrors[ErrInvalidParameterValue.Type] = *ErrInvalidParameterValue
-	app.SqsErrors[ErrInvalidAttributeValue.Type] = *ErrInvalidAttributeValue
 }
 
 func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
@@ -345,7 +319,7 @@ func getQueueFromPath(formVal string, theUrl string) string {
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := app.SqsErrors[err]
+	er := models.SqsErrors[err]
 	respStruct := models.ErrorResponse{
 		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
 		RequestId: "00000000-0000-0000-0000-000000000000",
@@ -357,13 +331,4 @@ func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
 	if err := enc.Encode(respStruct); err != nil {
 		log.Printf("error: %v\n", err)
 	}
-}
-
-func createErrorResponseV1(err string) (int, interfaces.AbstractResponseBody) {
-	er := app.SqsErrors[err]
-	respStruct := models.ErrorResponse{
-		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
-		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
-	}
-	return er.HttpError, respStruct
 }

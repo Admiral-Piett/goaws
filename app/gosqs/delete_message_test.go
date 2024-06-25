@@ -4,17 +4,18 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteMessage(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{
@@ -27,7 +28,7 @@ func TestDeleteMessage(t *testing.T) {
 
 	app.SyncQueues.Queues["testing"] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", models.DeleteMessageRequest{
+	_, r := test.GenerateRequestInfo("POST", "/", models.DeleteMessageRequest{
 		QueueUrl:      "http://localhost:4100/queue/testing",
 		ReceiptHandle: "123",
 	}, true)

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
+	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestStringToInt_unmarshalJSON_int(t *testing.T) {
 		Field1: 1,
 		Field2: 2,
 	}
-	_, r := utils.GenerateRequestInfo("POST", "/", body, true)
+	_, r := test.GenerateRequestInfo("POST", "/", body, true)
 
 	result := &StringToIntStruct{}
 	decoder := json.NewDecoder(r.Body)
@@ -40,7 +40,7 @@ func TestStringToInt_unmarshalJSON_string(t *testing.T) {
 		Field1: "1",
 		Field2: "2",
 	}
-	_, r := utils.GenerateRequestInfo("POST", "/", body, true)
+	_, r := test.GenerateRequestInfo("POST", "/", body, true)
 
 	result := &StringToIntStruct{}
 	decoder := json.NewDecoder(r.Body)
@@ -59,7 +59,7 @@ func TestStringToInt_unmarshalJSON_invalid_type_returns_error(t *testing.T) {
 		Field1: true,
 		Field2: false,
 	}
-	_, r := utils.GenerateRequestInfo("POST", "/", body, true)
+	_, r := test.GenerateRequestInfo("POST", "/", body, true)
 
 	result := &StringToIntStruct{}
 	decoder := json.NewDecoder(r.Body)

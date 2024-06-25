@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 
 	log "github.com/sirupsen/logrus"
@@ -17,7 +19,7 @@ import (
 var XmlDecoder *schema.Decoder
 var REQUEST_TRANSFORMER = TransformRequest
 
-func InitializeDecoders() {
+func init() {
 	XmlDecoder = schema.NewDecoder()
 	XmlDecoder.IgnoreUnknownKeys(true)
 }
@@ -71,4 +73,19 @@ func ExtractQueueAttributes(u url.Values) map[string]string {
 		}
 	}
 	return attr
+}
+
+func CreateErrorResponseV1(errKey string, isSqs bool) (int, interfaces.AbstractResponseBody) {
+	var err interfaces.AbstractErrorResponse
+	if isSqs {
+		err = models.SqsErrors[errKey]
+	} else {
+		err = models.SnsErrors[errKey]
+	}
+
+	respStruct := models.ErrorResponse{
+		Result:    err.Response(),
+		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
+	}
+	return err.StatusCode(), respStruct
 }

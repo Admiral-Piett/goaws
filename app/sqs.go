@@ -12,19 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type SqsErrorType struct {
-	HttpError int
-	Type      string
-	Code      string
-	Message   string
-}
-
-func (s *SqsErrorType) Error() string {
-	return s.Type
-}
-
-var SqsErrors map[string]SqsErrorType
-
 type Message struct {
 	MessageBody            []byte
 	Uuid                   string

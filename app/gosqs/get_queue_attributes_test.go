@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/mitchellh/copystructure"
 
 	"github.com/Admiral-Piett/goaws/app/conf"
@@ -19,7 +21,7 @@ import (
 func TestGetQueueAttributesV1_success_all(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -29,7 +31,7 @@ func TestGetQueueAttributesV1_success_all(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := GetQueueAttributesV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -39,7 +41,7 @@ func TestGetQueueAttributesV1_success_all(t *testing.T) {
 func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -51,7 +53,7 @@ func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T)
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := GetQueueAttributesV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -61,7 +63,7 @@ func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T)
 func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -74,16 +76,16 @@ func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := GetQueueAttributesV1(r)
 
 	dupe, _ := copystructure.Copy(fixtures.GetQueueAttributesResponse)
 	expectedResponse, _ := dupe.(models.GetQueueAttributesResponse)
-	expectedResponse.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", fixtures.BASE_ARN, "unit-queue2")
+	expectedResponse.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "unit-queue2")
 	expectedResponse.Result.Attrs = append(expectedResponse.Result.Attrs,
 		models.Attribute{
 			Name:  "RedrivePolicy",
-			Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, fixtures.BASE_ARN, "other-queue1"),
+			Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, fixtures.BASE_SQS_ARN, "other-queue1"),
 		},
 	)
 
@@ -94,7 +96,7 @@ func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 func TestGetQueueAttributesV1_success_specific_fields(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -107,7 +109,7 @@ func TestGetQueueAttributesV1_success_specific_fields(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := GetQueueAttributesV1(r)
 
 	expectedResponse := models.GetQueueAttributesResponse{
@@ -134,7 +136,7 @@ func TestGetQueueAttributesV1_request_transformer_error(t *testing.T) {
 		return false
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := GetQueueAttributesV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -154,7 +156,7 @@ func TestGetQueueAttributesV1_missing_queue_url_in_request_returns_error(t *test
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := GetQueueAttributesV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -171,7 +173,7 @@ func TestGetQueueAttributesV1_missing_queue_returns_error(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := GetQueueAttributesV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)

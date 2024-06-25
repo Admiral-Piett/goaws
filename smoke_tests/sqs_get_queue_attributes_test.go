@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/models"
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
 	"github.com/gavv/httpexpect/v2"
@@ -20,8 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func Test_GetQueueAttributes_json_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -47,7 +47,7 @@ func Test_GetQueueAttributes_json_all(t *testing.T) {
 		//"Policy":                        "{\"this-is\": \"the-policy\"}",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 		//"RedriveAllowPolicy":            "{\"this-is\": \"the-redrive-allow-policy\"}",
 	}
 	sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
@@ -62,12 +62,12 @@ func Test_GetQueueAttributes_json_all(t *testing.T) {
 
 	dupe, _ := copystructure.Copy(attributes)
 	expectedAttributes, _ := dupe.(map[string]string)
-	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue)
+	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue)
 	expectedAttributes["ApproximateNumberOfMessages"] = "0"
 	expectedAttributes["ApproximateNumberOfMessagesNotVisible"] = "0"
 	expectedAttributes["CreatedTimestamp"] = "0000000000"
 	expectedAttributes["LastModifiedTimestamp"] = "0000000000"
-	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
 }
@@ -76,7 +76,7 @@ func Test_GetQueueAttributes_json_specific_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -109,7 +109,7 @@ func Test_GetQueueAttributes_json_missing_attribute_name_returns_all(t *testing.
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -127,7 +127,7 @@ func Test_GetQueueAttributes_json_missing_attribute_name_returns_all(t *testing.
 		//"Policy":                        "{\"this-is\": \"the-policy\"}",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 		//"RedriveAllowPolicy":            "{\"this-is\": \"the-redrive-allow-policy\"}",
 	}
 	sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
@@ -141,12 +141,12 @@ func Test_GetQueueAttributes_json_missing_attribute_name_returns_all(t *testing.
 
 	dupe, _ := copystructure.Copy(attributes)
 	expectedAttributes, _ := dupe.(map[string]string)
-	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue)
+	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue)
 	expectedAttributes["ApproximateNumberOfMessages"] = "0"
 	expectedAttributes["ApproximateNumberOfMessagesNotVisible"] = "0"
 	expectedAttributes["CreatedTimestamp"] = "0000000000"
 	expectedAttributes["LastModifiedTimestamp"] = "0000000000"
-	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
 }
@@ -155,7 +155,7 @@ func Test_GetQueueAttributes_xml_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -174,7 +174,7 @@ func Test_GetQueueAttributes_xml_all(t *testing.T) {
 		"MessageRetentionPeriod":        "3",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 	}
 	sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
 		QueueName:  &af.QueueName,
@@ -197,7 +197,7 @@ func Test_GetQueueAttributes_xml_all(t *testing.T) {
 	expectedResponse.Result.Attrs[4].Value = "5"
 	expectedResponse.Result.Attrs = append(expectedResponse.Result.Attrs, models.Attribute{
 		Name:  "RedrivePolicy",
-		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 	})
 
 	r1 := models.GetQueueAttributesResponse{}
@@ -209,7 +209,7 @@ func Test_GetQueueAttributes_xml_select_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -271,7 +271,7 @@ func Test_GetQueueAttributes_xml_missing_attribute_name_returns_all(t *testing.T
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -291,7 +291,7 @@ func Test_GetQueueAttributes_xml_missing_attribute_name_returns_all(t *testing.T
 		//"Policy":                        "{\"this-is\": \"the-policy\"}",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 	}
 	sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
 		QueueName:  &af.QueueName,
@@ -323,7 +323,7 @@ func Test_GetQueueAttributes_xml_missing_attribute_name_returns_all(t *testing.T
 	expectedResponse.Result.Attrs[4].Value = "5"
 	expectedResponse.Result.Attrs = append(expectedResponse.Result.Attrs, models.Attribute{
 		Name:  "RedrivePolicy",
-		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 	})
 
 	r1 := models.GetQueueAttributesResponse{}

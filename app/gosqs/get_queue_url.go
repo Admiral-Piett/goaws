@@ -15,13 +15,13 @@ func GetQueueUrlV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - GetQueueUrlV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	queueName := requestBody.QueueName
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Error("Get Queue URL:", queueName, ", queue does not exist!!!")
-		return createErrorResponseV1("QueueNotFound")
+		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
 	queue := app.SyncQueues.Queues[queueName]
