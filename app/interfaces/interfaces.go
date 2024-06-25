@@ -2,6 +2,8 @@ package interfaces
 
 import (
 	"net/url"
+
+	"github.com/Admiral-Piett/goaws/app/models"
 )
 
 type AbstractRequestBody interface {
@@ -11,4 +13,9 @@ type AbstractRequestBody interface {
 type AbstractResponseBody interface {
 	GetResult() interface{}
 	GetRequestId() string
+}
+
+type AbstractErrorResponse interface {
+	Response() models.ErrorResult
+	StatusCode() int
 }

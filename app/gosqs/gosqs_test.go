@@ -15,11 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	utils.InitializeDecoders()
-	m.Run()
-}
-
 func TestSendMessageBatch_POST_QueueNotFound(t *testing.T) {
 	req, err := http.NewRequest("POST", "/", nil)
 	if err != nil {
@@ -1032,7 +1027,7 @@ func TestCreateErrorResponseV1(t *testing.T) {
 		},
 		RequestId: "00000000-0000-0000-0000-000000000000",
 	}
-	status, response := createErrorResponseV1("QueueNotFound")
+	status, response := utils.CreateErrorResponseV1("QueueNotFound", true)
 
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Equal(t, expectedResponse, response)

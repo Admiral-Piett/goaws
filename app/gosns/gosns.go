@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"bytes"
@@ -42,15 +44,6 @@ func init() {
 	app.SyncTopics.Topics = make(map[string]*app.Topic)
 	TOPIC_DATA = make(map[string]*pendingConfirm)
 
-	app.SnsErrors = make(map[string]app.SnsErrorType)
-	err1 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."}
-	app.SnsErrors["TopicNotFound"] = err1
-	err2 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."}
-	app.SnsErrors["SubscriptionNotFound"] = err2
-	err3 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."}
-	app.SnsErrors["TopicExists"] = err3
-	err4 := app.SnsErrorType{HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.ValidationError", Message: "The input fails to satisfy the constraints specified by an AWS service."}
-	app.SnsErrors["ValidationError"] = err4
 	PrivateKEY, PemKEY, _ = createPemFile()
 }
 
@@ -131,109 +124,6 @@ func CreateTopic(w http.ResponseWriter, req *http.Request) {
 	SendResponseBack(w, req, respStruct, content)
 }
 
-// aws --endpoint-url http://localhost:47194 sns subscribe --topic-arn arn:aws:sns:us-west-2:0123456789012:my-topic --protocol email --notification-endpoint my-email@example.com
-func Subscribe(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	topicArn := req.FormValue("TopicArn")
-	protocol := req.FormValue("Protocol")
-	endpoint := req.FormValue("Endpoint")
-	filterPolicy := &app.FilterPolicy{}
-	raw := false
-
-	for attrIndex := 1; req.FormValue("Attributes.entry."+strconv.Itoa(attrIndex)+".key") != ""; attrIndex++ {
-		value := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".value")
-		switch key := req.FormValue("Attributes.entry." + strconv.Itoa(attrIndex) + ".key"); key {
-		case "FilterPolicy":
-			json.Unmarshal([]byte(value), filterPolicy)
-		case "RawMessageDelivery":
-			raw = (value == "true")
-		}
-	}
-
-	uriSegments := strings.Split(topicArn, ":")
-	topicName := uriSegments[len(uriSegments)-1]
-	log.WithFields(log.Fields{
-		"content":      content,
-		"topicArn":     topicArn,
-		"topicName":    topicName,
-		"protocol":     protocol,
-		"endpoint":     endpoint,
-		"filterPolicy": filterPolicy,
-		"raw":          raw,
-	}).Info("Creating Subscription")
-
-	subscription := &app.Subscription{EndPoint: endpoint, Protocol: protocol, TopicArn: topicArn, Raw: raw, FilterPolicy: filterPolicy}
-	subArn, _ := common.NewUUID()
-	subArn = topicArn + ":" + subArn
-	subscription.SubscriptionArn = subArn
-
-	if app.SyncTopics.Topics[topicName] != nil {
-		app.SyncTopics.Lock()
-		isDuplicate := false
-		// Duplicate check
-		for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
-			if subscription.EndPoint == endpoint && subscription.TopicArn == topicArn {
-				isDuplicate = true
-				subArn = subscription.SubscriptionArn
-			}
-		}
-		if !isDuplicate {
-			app.SyncTopics.Topics[topicName].Subscriptions = append(app.SyncTopics.Topics[topicName].Subscriptions, subscription)
-			log.WithFields(log.Fields{
-				"topic":    topicName,
-				"endpoint": endpoint,
-				"topicArn": topicArn,
-			}).Debug("Created subscription")
-		}
-		app.SyncTopics.Unlock()
-
-		//Create the response
-		uuid, _ := common.NewUUID()
-		if app.Protocol(subscription.Protocol) == app.ProtocolHTTP || app.Protocol(subscription.Protocol) == app.ProtocolHTTPS {
-			id, _ := common.NewUUID()
-			token, _ := common.NewUUID()
-
-			TOPIC_DATA[topicArn] = &pendingConfirm{
-				subArn: subArn,
-				token:  token,
-			}
-
-			respStruct := app.SubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.SubscribeResult{SubscriptionArn: subArn}, app.ResponseMetadata{RequestId: uuid}}
-			SendResponseBack(w, req, respStruct, content)
-			time.Sleep(time.Second)
-
-			snsMSG := &app.SNSMessage{
-				Type:             "SubscriptionConfirmation",
-				MessageId:        id,
-				Token:            token,
-				TopicArn:         topicArn,
-				Message:          "You have chosen to subscribe to the topic " + topicArn + ".\nTo confirm the subscription, visit the SubscribeURL included in this message.",
-				SigningCertURL:   "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/SimpleNotificationService/" + uuid + ".pem",
-				SignatureVersion: "1",
-				SubscribeURL:     "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port + "/?Action=ConfirmSubscription&TopicArn=" + topicArn + "&Token=" + token,
-				Timestamp:        time.Now().UTC().Format(time.RFC3339),
-			}
-			signature, err := signMessage(PrivateKEY, snsMSG)
-			if err != nil {
-				log.Error("Error signing message")
-			} else {
-				snsMSG.Signature = signature
-			}
-			err = callEndpoint(subscription.EndPoint, uuid, *snsMSG, subscription.Raw)
-			if err != nil {
-				log.Error("Error posting to url ", err)
-			}
-		} else {
-			respStruct := app.SubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.SubscribeResult{SubscriptionArn: subArn}, app.ResponseMetadata{RequestId: uuid}}
-
-			SendResponseBack(w, req, respStruct, content)
-		}
-
-	} else {
-		createErrorResponse(w, req, "TopicNotFound")
-	}
-}
-
 func signMessage(privkey *rsa.PrivateKey, snsMsg *app.SNSMessage) (string, error) {
 	fs, err := formatSignature(snsMsg)
 	if err != nil {
@@ -286,8 +176,7 @@ func ConfirmSubscription(w http.ResponseWriter, req *http.Request) {
 	confirmToken := req.Form.Get("Token")
 	pendingConfirm := TOPIC_DATA[topicArn]
 	if pendingConfirm.token == confirmToken {
-		uuid, _ := common.NewUUID()
-		respStruct := app.ConfirmSubscriptionResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.SubscribeResult{SubscriptionArn: pendingConfirm.subArn}, app.ResponseMetadata{RequestId: uuid}}
+		respStruct := models.ConfirmSubscriptionResponse{"http://queue.amazonaws.com/doc/2012-11-05/", models.SubscribeResult{SubscriptionArn: pendingConfirm.subArn}, app.ResponseMetadata{RequestId: uuid.NewString()}}
 
 		SendResponseBack(w, req, respStruct, "application/xml")
 	} else {
@@ -770,7 +659,7 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := app.SnsErrors[err]
+	er := models.SnsErrors[err]
 	respStruct := models.ErrorResponse{
 		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
 		RequestId: "00000000-0000-0000-0000-000000000000",

@@ -41,7 +41,7 @@ var CreateQueueRequest = models.CreateQueueRequest{
 	Tags:       map[string]string{"my": "tag"},
 }
 
-var QueueAttributes = models.Attributes{
+var QueueAttributes = models.QueueAttributes{
 	DelaySeconds:                  1,
 	MaximumMessageSize:            2,
 	MessageRetentionPeriod:        3,

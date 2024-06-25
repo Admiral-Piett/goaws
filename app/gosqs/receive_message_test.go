@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +20,7 @@ import (
 func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{
@@ -30,7 +31,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	app.SyncQueues.Queues["waiting-queue"] = q
 
 	// receive message ensure delay
-	_, r := utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+	_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
 		QueueUrl: "http://localhost:4100/queue/waiting-queue",
 	}, true)
 
@@ -47,7 +48,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	q.Messages = append(q.Messages, app.Message{MessageBody: []byte("1")})
 
 	// receive message
-	_, r = utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
 		QueueUrl: "http://localhost:4100/queue/waiting-queue",
 	}, true)
 	start = time.Now()
@@ -66,7 +67,7 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	// create a queue
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{
@@ -82,7 +83,7 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		// receive message (that will be canceled)
-		_, r := utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
 			QueueUrl: "http://localhost:4100/queue/cancel-queue",
 		}, true)
 		r = r.WithContext(ctx)
@@ -99,7 +100,7 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 
 	// send a message
-	_, r := utils.GenerateRequestInfo("POST", "/", models.SendMessageRequest{
+	_, r := test.GenerateRequestInfo("POST", "/", models.SendMessageRequest{
 		QueueUrl:    "http://localhost:4100/queue/cancel-queue",
 		MessageBody: "12345",
 	}, true)
@@ -109,7 +110,7 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	}
 
 	// receive message
-	_, r = utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
 		QueueUrl: "http://localhost:4100/queue/cancel-queue",
 	}, true)
 	start := time.Now()
@@ -138,7 +139,7 @@ func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 	// create a queue
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{
@@ -148,7 +149,7 @@ func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 	app.SyncQueues.Queues["delay-seconds-queue"] = q
 
 	// send a message
-	_, r := utils.GenerateRequestInfo("POST", "/", models.SendMessageRequest{
+	_, r := test.GenerateRequestInfo("POST", "/", models.SendMessageRequest{
 		QueueUrl:    "http://localhost:4100/queue/delay-seconds-queue",
 		MessageBody: "1",
 	}, true)
@@ -158,12 +159,12 @@ func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 	}
 
 	// receive message before delay is up
-	_, r = utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{QueueUrl: "http://localhost:4100/queue/delay-seconds-queue"}, true)
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{QueueUrl: "http://localhost:4100/queue/delay-seconds-queue"}, true)
 	status, _ = ReceiveMessageV1(r)
 	assert.Equal(t, http.StatusOK, status)
 
 	// receive message with wait should return after delay
-	_, r = utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
 		QueueUrl:        "http://localhost:4100/queue/delay-seconds-queue",
 		WaitTimeSeconds: 10,
 	}, true)
@@ -183,7 +184,7 @@ func TestReceiveMessageAttributesV1(t *testing.T) {
 	// create a queue
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{Name: "waiting-queue"}
@@ -202,7 +203,7 @@ func TestReceiveMessageAttributesV1(t *testing.T) {
 	})
 
 	// receive message
-	_, r := utils.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{QueueUrl: "http://localhost:4100/queue/waiting-queue"}, true)
+	_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{QueueUrl: "http://localhost:4100/queue/waiting-queue"}, true)
 	status, resp := ReceiveMessageV1(r)
 	result := resp.GetResult().(models.ReceiveMessageResult)
 

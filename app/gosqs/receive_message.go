@@ -23,7 +23,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - ReceiveMessageV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	maxNumberOfMessages := requestBody.MaxNumberOfMessages
@@ -41,7 +41,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 	}
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		return createErrorResponseV1("QueueNotFound")
+		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
 	var messages []*models.ResultMessage
@@ -60,7 +60,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 		_, queueFound := app.SyncQueues.Queues[queueName]
 		if !queueFound {
 			app.SyncQueues.RUnlock()
-			return createErrorResponseV1("QueueNotFound")
+			return utils.CreateErrorResponseV1("QueueNotFound", true)
 		}
 		messageFound := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
 		app.SyncQueues.RUnlock()

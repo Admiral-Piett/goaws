@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/conf"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -19,7 +21,7 @@ import (
 func TestPurgeQueueV1_success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -45,7 +47,7 @@ func TestPurgeQueueV1_success(t *testing.T) {
 		Metadata: models.BASE_RESPONSE_METADATA,
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := PurgeQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -58,7 +60,7 @@ func TestPurgeQueueV1_success(t *testing.T) {
 func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -75,7 +77,7 @@ func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 		Metadata: models.BASE_RESPONSE_METADATA,
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := PurgeQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -89,7 +91,7 @@ func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 func TestPurgeQueueV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -97,7 +99,7 @@ func TestPurgeQueueV1_request_transformer_error(t *testing.T) {
 		return false
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := PurgeQueueV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -106,7 +108,7 @@ func TestPurgeQueueV1_request_transformer_error(t *testing.T) {
 func TestPurgeQueueV1_requested_queue_does_not_exist(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -118,7 +120,7 @@ func TestPurgeQueueV1_requested_queue_does_not_exist(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := PurgeQueueV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)

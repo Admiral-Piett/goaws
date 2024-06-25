@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/gavv/httpexpect/v2"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 
@@ -24,7 +25,7 @@ func Test_DeleteQueueV1_json(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -55,7 +56,7 @@ func Test_DeleteQueueV1_xml(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

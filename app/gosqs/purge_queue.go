@@ -18,7 +18,7 @@ func PurgeQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - PurgeQueueV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	uriSegments := strings.Split(requestBody.QueueUrl, "/")
@@ -28,7 +28,7 @@ func PurgeQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	defer app.SyncQueues.Unlock()
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
 		log.Errorf("Purge Queue: %s, queue does not exist!!!", queueName)
-		return createErrorResponseV1("QueueNotFound")
+		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
 	log.Infof("Purging Queue: %s", queueName)

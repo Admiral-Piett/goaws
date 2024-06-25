@@ -30,26 +30,7 @@ type CreateTopicResponse struct {
 	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
 }
 
-/*** Create Subscription ***/
-type SubscribeResult struct {
-	SubscriptionArn string `xml:"SubscriptionArn"`
-}
-
-type SubscribeResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   SubscribeResult  `xml:"SubscribeResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
-/*** ConfirmSubscriptionResponse ***/
-type ConfirmSubscriptionResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   SubscribeResult  `xml:"ConfirmSubscriptionResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
 /***  Set Subscription Response ***/
-
 type SetSubscriptionAttributesResponse struct {
 	Xmlns    string           `xml:"xmlns,attr"`
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`

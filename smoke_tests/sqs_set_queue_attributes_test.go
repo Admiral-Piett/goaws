@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
 	"github.com/gavv/httpexpect/v2"
 
@@ -18,8 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ func Test_SetQueueAttributes_json_multiple(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -49,7 +49,7 @@ func Test_SetQueueAttributes_json_multiple(t *testing.T) {
 		//"Policy":                        "{\"this-is\": \"the-policy\"}",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 		//"RedriveAllowPolicy":            "{\"this-is\": \"the-redrive-allow-policy\"}",
 	}
 
@@ -68,12 +68,12 @@ func Test_SetQueueAttributes_json_multiple(t *testing.T) {
 
 	dupe, _ := copystructure.Copy(attributes)
 	expectedAttributes, _ := dupe.(map[string]string)
-	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue)
+	expectedAttributes["RedrivePolicy"] = fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue)
 	expectedAttributes["ApproximateNumberOfMessages"] = "0"
 	expectedAttributes["ApproximateNumberOfMessagesNotVisible"] = "0"
 	expectedAttributes["CreatedTimestamp"] = "0000000000"
 	expectedAttributes["LastModifiedTimestamp"] = "0000000000"
-	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_ARN, queueName)
+	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, queueName)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
 }
@@ -82,7 +82,7 @@ func Test_SetQueueAttributes_json_single(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -120,7 +120,7 @@ func Test_SetQueueAttributes_json_single(t *testing.T) {
 	expectedAttributes["ApproximateNumberOfMessagesNotVisible"] = "0"
 	expectedAttributes["CreatedTimestamp"] = "0000000000"
 	expectedAttributes["LastModifiedTimestamp"] = "0000000000"
-	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_ARN, queueName)
+	expectedAttributes["QueueArn"] = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, queueName)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
 }
@@ -129,7 +129,7 @@ func Test_SetQueueAttributes_xml_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -161,7 +161,7 @@ func Test_SetQueueAttributes_xml_all(t *testing.T) {
 		WithFormField("Attribute.6.Name", "ReceiveMessageWaitTimeSeconds").
 		WithFormField("Attribute.6.Value", "4").
 		WithFormField("Attribute.7.Name", "RedrivePolicy").
-		WithFormField("Attribute.7.Value", fmt.Sprintf("{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"%s:%s\"}", af.BASE_ARN, redriveQueue)).
+		WithFormField("Attribute.7.Value", fmt.Sprintf("{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"%s:%s\"}", af.BASE_SQS_ARN, redriveQueue)).
 		WithFormField("Attribute.8.Name", "RedriveAllowPolicy").
 		WithFormField("Attribute.8.Value", "{\"this-is\": \"the-redrive-allow-policy\"}").
 		Expect().
@@ -180,13 +180,13 @@ func Test_SetQueueAttributes_xml_all(t *testing.T) {
 		//"Policy":                        "{\"this-is\": \"the-policy\"}",
 		"ReceiveMessageWaitTimeSeconds": "4",
 		"VisibilityTimeout":             "5",
-		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 		//"RedriveAllowPolicy":            "{\"this-is\": \"the-redrive-allow-policy\"}",
 		"ApproximateNumberOfMessages":           "0",
 		"ApproximateNumberOfMessagesNotVisible": "0",
 		"CreatedTimestamp":                      "0000000000",
 		"LastModifiedTimestamp":                 "0000000000",
-		"QueueArn":                              fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName),
+		"QueueArn":                              fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName),
 	}
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
@@ -196,7 +196,7 @@ func Test_SetQueueAttributes_xml_single(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -236,7 +236,7 @@ func Test_SetQueueAttributes_xml_single(t *testing.T) {
 		"ApproximateNumberOfMessagesNotVisible": "0",
 		"CreatedTimestamp":                      "0000000000",
 		"LastModifiedTimestamp":                 "0000000000",
-		"QueueArn":                              fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName),
+		"QueueArn":                              fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName),
 	}
 	assert.Nil(t, err)
 	assert.Equal(t, expectedAttributes, sdkResponse.Attributes)
