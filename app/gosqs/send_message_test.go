@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -16,7 +18,7 @@ import (
 func TestSendMessageV1_Success(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -36,7 +38,7 @@ func TestSendMessageV1_Success(t *testing.T) {
 	}
 	app.SyncQueues.Queues["new-queue-1"] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
 
 	// Check the queue
@@ -56,7 +58,7 @@ func TestSendMessageV1_Success(t *testing.T) {
 func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -77,7 +79,7 @@ func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 	}
 	app.SyncQueues.Queues["new-queue-1"] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
 
 	// Check the queue
@@ -97,7 +99,7 @@ func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -121,7 +123,7 @@ func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 	}
 	app.SyncQueues.Queues["new-queue-1"] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, _ := SendMessageV1(r)
 
 	// Check the queue
@@ -140,7 +142,7 @@ func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 func TestSendMessageV1_request_transformer_error(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -148,7 +150,7 @@ func TestSendMessageV1_request_transformer_error(t *testing.T) {
 		return false
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := SendMessageV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -157,7 +159,7 @@ func TestSendMessageV1_request_transformer_error(t *testing.T) {
 func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -177,7 +179,7 @@ func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 	}
 	app.SyncQueues.Queues["new-queue-1"] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
 
 	// Check the response
@@ -190,7 +192,7 @@ func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 func TestSendMessageV1_POST_QueueNonExistant(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -206,7 +208,7 @@ func TestSendMessageV1_POST_QueueNonExistant(t *testing.T) {
 
 	// No test queue is added to app.SyncQueues
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
 
 	// Check the status code is what we expect.

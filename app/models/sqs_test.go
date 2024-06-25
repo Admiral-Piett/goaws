@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/utils"
+	"github.com/Admiral-Piett/goaws/app/test"
 
+	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,11 +18,11 @@ func TestNewCreateQueueRequest(t *testing.T) {
 	app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds = 10
 	app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	expectedCreateQueueRequest := &CreateQueueRequest{
-		Attributes: Attributes{
+		Attributes: QueueAttributes{
 			DelaySeconds:                  0,
 			MaximumMessageSize:            262144,
 			MessageRetentionPeriod:        345600,
@@ -64,7 +64,7 @@ func TestCreateQueueRequest_SetAttributesFromForm_success(t *testing.T) {
 	form.Add("Attribute.8.Value", "{\"i-am\":\"the-redrive-allow-policy\"}")
 
 	cqr := &CreateQueueRequest{
-		Attributes: Attributes{
+		Attributes: QueueAttributes{
 			DelaySeconds:                  1,
 			MaximumMessageSize:            262144,
 			MessageRetentionPeriod:        345600,
@@ -95,7 +95,7 @@ func TestCreateQueueRequest_SetAttributesFromForm_success_handles_redrive_reciev
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &CreateQueueRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -113,7 +113,7 @@ func TestCreateQueueRequest_SetAttributesFromForm_success_handles_redrive_reciev
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": \"100\", \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &CreateQueueRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -131,7 +131,7 @@ func TestCreateQueueRequest_SetAttributesFromForm_success_default_unparsable_red
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": null, \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &CreateQueueRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -158,7 +158,7 @@ func TestCreateQueueRequest_SetAttributesFromForm_success_skips_invalid_values(t
 	form.Add("Attribute.8.Value", "garbage")
 
 	cqr := &CreateQueueRequest{
-		Attributes: Attributes{
+		Attributes: QueueAttributes{
 			DelaySeconds:                  1,
 			MaximumMessageSize:            262144,
 			MessageRetentionPeriod:        345600,
@@ -348,7 +348,7 @@ func TestSetQueueAttributesRequest_SetAttributesFromForm_success(t *testing.T) {
 	form.Add("Attribute.8.Value", "{\"i-am\":\"the-redrive-allow-policy\"}")
 
 	cqr := &SetQueueAttributesRequest{
-		Attributes: Attributes{
+		Attributes: QueueAttributes{
 			DelaySeconds:                  1,
 			MaximumMessageSize:            262144,
 			MessageRetentionPeriod:        345600,
@@ -379,7 +379,7 @@ func TestSetQueueAttributesRequest_SetAttributesFromForm_success_handles_redrive
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &SetQueueAttributesRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -397,7 +397,7 @@ func TestSetQueueAttributesRequest_SetAttributesFromForm_success_handles_redrive
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": \"100\", \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &SetQueueAttributesRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -415,7 +415,7 @@ func TestSetQueueAttributesRequest_SetAttributesFromForm_success_default_unparsa
 	form.Add("Attribute.1.Value", "{\"maxReceiveCount\": null, \"deadLetterTargetArn\":\"dead-letter-queue-arn\"}")
 
 	cqr := &SetQueueAttributesRequest{
-		Attributes: Attributes{},
+		Attributes: QueueAttributes{},
 	}
 	cqr.SetAttributesFromForm(form)
 
@@ -442,7 +442,7 @@ func TestSetQueueAttributesRequest_SetAttributesFromForm_success_skips_invalid_v
 	form.Add("Attribute.8.Value", "garbage")
 
 	cqr := &SetQueueAttributesRequest{
-		Attributes: Attributes{
+		Attributes: QueueAttributes{
 			DelaySeconds:                  1,
 			MaximumMessageSize:            262144,
 			MessageRetentionPeriod:        345600,

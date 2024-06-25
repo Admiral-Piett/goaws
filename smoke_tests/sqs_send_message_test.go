@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -22,7 +23,7 @@ func Test_SendMessageV1_json_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -66,7 +67,7 @@ func Test_SendMessageV1_json_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -162,7 +163,7 @@ func Test_SendMessageV1_json_MaximumMessageSize_TooBig(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -191,7 +192,7 @@ func Test_SendMessageV1_json_QueueNotExistant(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -214,7 +215,7 @@ func Test_SendMessageV1_xml_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -264,7 +265,7 @@ func Test_SendMessageV1_xml_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())

@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app/utils"
-
 	"github.com/Admiral-Piett/goaws/app"
 
 	log "github.com/sirupsen/logrus"
@@ -62,8 +60,6 @@ func main() {
 
 	quit := make(chan struct{}, 0)
 	go gosqs.PeriodicTasks(1*time.Second, quit)
-
-	utils.InitializeDecoders()
 
 	if len(portNumbers) == 1 {
 		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])

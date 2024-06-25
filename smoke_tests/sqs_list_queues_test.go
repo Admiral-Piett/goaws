@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-
-	"github.com/Admiral-Piett/goaws/app/utils"
 
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func Test_ListQueues_json_no_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -44,7 +44,7 @@ func Test_ListQueues_json_multiple_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -76,7 +76,7 @@ func Test_ListQueues_json_multiple_queues_with_queue_name_prefix(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -108,7 +108,7 @@ func Test_ListQueues_xml_no_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -135,7 +135,7 @@ func Test_ListQueues_xml_multiple_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -173,7 +173,7 @@ func Test_ListQueues_xml_multiple_queues_with_queue_name_prefix(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

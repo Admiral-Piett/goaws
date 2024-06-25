@@ -74,6 +74,7 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"GetQueueUrl":             sqs.GetQueueUrlV1,
 	"PurgeQueue":              sqs.PurgeQueueV1,
 	"DeleteQueue":             sqs.DeleteQueueV1,
+	"Subscribe":               sns.SubscribeV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
@@ -85,7 +86,6 @@ var routingTable = map[string]http.HandlerFunc{
 	"ListTopics":                sns.ListTopics,
 	"CreateTopic":               sns.CreateTopic,
 	"DeleteTopic":               sns.DeleteTopic,
-	"Subscribe":                 sns.Subscribe,
 	"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,

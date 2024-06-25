@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/gavv/httpexpect/v2"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-
-	"github.com/Admiral-Piett/goaws/app/utils"
 
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +31,7 @@ func Test_PurgeQueueV1_json(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetApp()
+		test.ResetApp()
 		app.CurrentEnvironment = defaultEnvironment
 	}()
 
@@ -74,7 +74,7 @@ func Test_PurgeQueueV1_xml(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetApp()
+		test.ResetApp()
 		app.CurrentEnvironment = defaultEnvironment
 	}()
 

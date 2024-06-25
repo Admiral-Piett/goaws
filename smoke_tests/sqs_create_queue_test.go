@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-
-	"github.com/Admiral-Piett/goaws/app/utils"
 
 	"github.com/Admiral-Piett/goaws/app/models"
 
@@ -31,7 +31,7 @@ func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -75,7 +75,7 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -99,7 +99,7 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 			//"Policy":                        "{\"this-is\": \"the-policy\"}",
 			"ReceiveMessageWaitTimeSeconds": "4",
 			"VisibilityTimeout":             "5",
-			"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+			"RedrivePolicy":                 fmt.Sprintf(`{"maxReceiveCount":"100","deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 			//"RedriveAllowPolicy":            "{\"this-is\": \"the-redrive-allow-policy\"}",
 		},
 	})
@@ -135,10 +135,10 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 	exp3.Result.Attrs[2].Value = "3"
 	exp3.Result.Attrs[3].Value = "4"
 	exp3.Result.Attrs[4].Value = "5"
-	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName)
 	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
 		Name:  "RedrivePolicy",
-		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, redriveQueue),
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, redriveQueue),
 	})
 	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
@@ -149,7 +149,7 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -198,7 +198,7 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 	exp3.Result.Attrs[2].Value = "3"
 	exp3.Result.Attrs[3].Value = "4"
 	exp3.Result.Attrs[4].Value = "5"
-	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_ARN, af.QueueName)
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:%s", af.BASE_SQS_ARN, af.QueueName)
 
 	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
@@ -209,7 +209,7 @@ func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -263,7 +263,7 @@ func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 				DeadLetterTargetArn string `json:"deadLetterTargetArn"`
 			}{
 				MaxReceiveCount:     "100",
-				DeadLetterTargetArn: fmt.Sprintf("%s:new-queue-1", af.BASE_ARN),
+				DeadLetterTargetArn: fmt.Sprintf("%s:new-queue-1", af.BASE_SQS_ARN),
 			},
 			VisibilityTimeout: "30"},
 	}
@@ -305,10 +305,10 @@ func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 	exp3.Result.Attrs[2].Value = "3"
 	exp3.Result.Attrs[3].Value = "0"
 	exp3.Result.Attrs[4].Value = "30"
-	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-string-queue", af.BASE_ARN)
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-string-queue", af.BASE_SQS_ARN)
 	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
 		Name:  "RedrivePolicy",
-		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, af.QueueName),
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, af.QueueName),
 	})
 	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)
@@ -319,7 +319,7 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -370,7 +370,7 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -408,7 +408,7 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 		WithFormField("Attribute.6.Name", "ReceiveMessageWaitTimeSeconds").
 		WithFormField("Attribute.6.Value", "4").
 		WithFormField("Attribute.7.Name", "RedrivePolicy").
-		WithFormField("Attribute.7.Value", fmt.Sprintf("{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"%s:new-queue-1\"}", af.BASE_ARN)).
+		WithFormField("Attribute.7.Value", fmt.Sprintf("{\"maxReceiveCount\": 100, \"deadLetterTargetArn\":\"%s:new-queue-1\"}", af.BASE_SQS_ARN)).
 		WithFormField("Attribute.8.Name", "RedriveAllowPolicy").
 		WithFormField("Attribute.8.Value", "{\"this-is\": \"the-redrive-allow-policy\"}").
 		Expect().
@@ -447,10 +447,10 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 	exp3.Result.Attrs[2].Value = "3"
 	exp3.Result.Attrs[3].Value = "4"
 	exp3.Result.Attrs[4].Value = "5"
-	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-queue-2", af.BASE_ARN)
+	exp3.Result.Attrs[9].Value = fmt.Sprintf("%s:new-queue-2", af.BASE_SQS_ARN)
 	exp3.Result.Attrs = append(exp3.Result.Attrs, models.Attribute{
 		Name:  "RedrivePolicy",
-		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_ARN, af.QueueName),
+		Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, af.BASE_SQS_ARN, af.QueueName),
 	})
 	r3 := models.GetQueueAttributesResponse{}
 	xml.Unmarshal([]byte(r), &r3)

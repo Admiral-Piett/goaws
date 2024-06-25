@@ -1,37 +1,35 @@
-Local:                              # Environment name that can be passed on the command line
-  #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
-  Host: localhost                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
-  Port: 4100                        # port to listen on.
+Local:
+  Host: localhost
+  Port: 4100
   Region: us-east-1
   AccountId: "100010001000"
-  LogMessages: true                 # Log messages (true/false)
-  LogFile: ./goaws_messages.log     # Log filename (for message logging
-  QueueAttributeDefaults:           # default attributes for all queues
-    VisibilityTimeout: 10              # message visibility timeout
-    ReceiveMessageWaitTimeSeconds: 10  # receive message max wait time
-    MaximumMessageSize: 1024           # maximum message size (bytes)
-    MessageRetentionPeriod: 445600     # time period to retain messages (seconds) NOTE: Functionality not implemented
-  Queues:                           # List of queues to create at startup
-    - Name: local-queue1                # Queue name
-    - Name: local-queue2                # Queue name
-      ReceiveMessageWaitTimeSeconds: 20 # Queue receive message max wait time
-      MaximumMessageSize: 128           # Queue maximum message size (bytes)
-      VisibilityTimeout: 150            # Queue visibility timeout
+  LogMessages: true
+  LogFile: ./goaws_messages.log
+  QueueAttributeDefaults:
+    VisibilityTimeout: 10
+    ReceiveMessageWaitTimeSeconds: 10
+    MaximumMessageSize: 1024
+  Queues:
+    - Name: local-queue1
+    - Name: local-queue2
+      ReceiveMessageWaitTimeSeconds: 20
+      MaximumMessageSize: 128
+      VisibilityTimeout: 150
       MessageRetentionPeriod: 245600
-    - Name: local-queue3                # Queue name
+    - Name: local-queue3
       RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:local-queue3-dlq"}'
-    - Name: local-queue3-dlq            # Queue name      
-  Topics:                           # List of topic to create at startup
-    - Name: local-topic1            # Topic name - with some Subscriptions
-      Subscriptions:                # List of Subscriptions to create for this topic (queues will be created as required)
-        - QueueName: local-queue4   # Queue name
-          Raw: false                # Raw message delivery (true/false)
-        - QueueName: local-queue5   # Queue name
-          Raw: true                 # Raw message delivery (true/false)
-          FilterPolicy: '{"foo":["bar"]}' # Subscription's FilterPolicy, json like a string
-    - Name: local-topic2            # Topic name - no Subscriptions
+    - Name: local-queue3-dlq
+  Topics:
+    - Name: local-topic1
+      Subscriptions:
+        - QueueName: local-queue4
+          Raw: false
+        - QueueName: local-queue5
+          Raw: true
+          FilterPolicy: '{"foo":["bar"]}'
+    - Name: local-topic2
 
-NoQueuesOrTopics:                   # Another environment
+NoQueuesOrTopics:
   Host: localhost
   Port: 4100
   LogMessages: true
@@ -50,15 +48,21 @@ NoQueueAttributeDefaults:
       ReceiveMessageWaitTimeSeconds: 20
 
 BaseUnitTests:
-  #     (i.e.: ./goaws [Local | Dev]  -- defaults to 'Local')
-  Host: host                   # hostname of the goaws system  (for docker-compose this is the tag name of the container)
-  Port: port                        # port to listen on.
+  Host: host
+  Port: port
   Region: region
   AccountId: accountID
-  LogMessages: true                 # Log messages (true/false)
-  LogFile: ./goaws_messages.log     # Log filename (for message logging
-  Queues: # List of queues to create at startup
-    - Name: unit-queue1                # Queue name
-    - Name: unit-queue2                # Queue name
+  LogMessages: true
+  LogFile: ./goaws_messages.log
+  Queues:
+    - Name: unit-queue1
+    - Name: unit-queue2
       RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:other-queue1"}'
-    - Name: other-queue1               # Queue name
+    - Name: other-queue1
+    - Name: subscribed-queue2
+  Topics:
+    - Name: unit-topic1
+      Subscriptions:
+        - QueueName: subscribed-queue2
+          Raw: true
+    - Name: unit-topic2

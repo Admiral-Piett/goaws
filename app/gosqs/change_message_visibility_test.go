@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestChangeMessageVisibility_POST_SUCCESS(t *testing.T) {
 	// create a queue
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 	}()
 
 	q := &app.Queue{
@@ -30,7 +31,7 @@ func TestChangeMessageVisibility_POST_SUCCESS(t *testing.T) {
 	// The default value for the VisibilityTimeout is the zero value of time.Time
 	assert.Zero(t, q.Messages[0].VisibilityTimeout)
 
-	_, r := utils.GenerateRequestInfo("POST", "/", models.ChangeMessageVisibilityRequest{
+	_, r := test.GenerateRequestInfo("POST", "/", models.ChangeMessageVisibilityRequest{
 		QueueUrl:          "http://localhost:4100/queue/testing",
 		ReceiptHandle:     "123",
 		VisibilityTimeout: 0,

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -17,7 +19,7 @@ func TestGetQueueUrlV1_success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -30,7 +32,7 @@ func TestGetQueueUrlV1_success(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo(
+	_, r := test.GenerateRequestInfo(
 		"POST",
 		"/",
 		nil,
@@ -49,7 +51,7 @@ func TestGetQueueUrlV1_error_no_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -62,7 +64,7 @@ func TestGetQueueUrlV1_error_no_queue(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo(
+	_, r := test.GenerateRequestInfo(
 		"POST",
 		"/",
 		nil,
@@ -84,7 +86,7 @@ func TestGetQueueUrlV1_error_request_transformer(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -92,7 +94,7 @@ func TestGetQueueUrlV1_error_request_transformer(t *testing.T) {
 		return false
 	}
 
-	_, r := utils.GenerateRequestInfo(
+	_, r := test.GenerateRequestInfo(
 		"POST",
 		"/",
 		nil,

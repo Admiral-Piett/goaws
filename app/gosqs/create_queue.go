@@ -16,7 +16,7 @@ func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - CreateQueueV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 	queueName := requestBody.QueueName
 
@@ -39,7 +39,7 @@ func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 			Duplicates:       make(map[string]time.Time),
 		}
 		if err := setQueueAttributesV1(queue, requestBody.Attributes); err != nil {
-			return createErrorResponseV1(err.Error())
+			return utils.CreateErrorResponseV1(err.Error(), true)
 		}
 		app.SyncQueues.Lock()
 		app.SyncQueues.Queues[queueName] = queue

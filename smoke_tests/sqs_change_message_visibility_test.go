@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
-	"github.com/Admiral-Piett/goaws/app/utils"
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -20,7 +21,7 @@ func Test_ChangeMessageVisibilityV1_json(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -60,7 +61,7 @@ func Test_ChangeMessageVisibilityV1_xml(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		utils.ResetResources()
+		test.ResetResources()
 	}()
 	ctx := context.Background()
 

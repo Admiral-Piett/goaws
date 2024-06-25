@@ -17,6 +17,7 @@ import (
 var LogMessages bool
 var LogFile string
 
+// TODO - Admiral-Piett replace with `github.com/google/uuid` - `uuid.NewString()`
 func NewUUID() (string, error) {
 	uuid := make([]byte, 16)
 	n, err := io.ReadFull(rand.Reader, uuid)

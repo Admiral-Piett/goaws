@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/test"
+
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -18,7 +20,7 @@ import (
 func TestCreateQueueV1_success(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -28,7 +30,7 @@ func TestCreateQueueV1_success(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -41,7 +43,7 @@ func TestCreateQueueV1_success(t *testing.T) {
 func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -87,7 +89,7 @@ func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
 		Duplicates:                    make(map[string]time.Time),
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -100,7 +102,7 @@ func TestCreateQueueV1_success_with_redrive_policy(t *testing.T) {
 func TestCreateQueueV1_success_with_existing_queue(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -115,7 +117,7 @@ func TestCreateQueueV1_success_with_existing_queue(t *testing.T) {
 	}
 	app.SyncQueues.Queues[fixtures.QueueName] = q
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -128,14 +130,14 @@ func TestCreateQueueV1_success_with_existing_queue(t *testing.T) {
 func TestCreateQueueV1_success_with_no_request_attributes_falls_back_to_default(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
-		c.Attributes = models.Attributes{}
+		c.Attributes = models.QueueAttributes{}
 
 		v := resultingStruct.(*models.CreateQueueRequest)
 		*v = c
@@ -164,7 +166,7 @@ func TestCreateQueueV1_success_with_no_request_attributes_falls_back_to_default(
 		Duplicates:                    make(map[string]time.Time),
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, response := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -178,21 +180,21 @@ func TestCreateQueueV1_success_no_configured_region_for_queue_url(t *testing.T) 
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	app.CurrentEnvironment.Region = ""
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		dupe, _ := copystructure.Copy(fixtures.CreateQueueRequest)
 		c, _ := dupe.(models.CreateQueueRequest)
-		c.Attributes = models.Attributes{}
+		c.Attributes = models.QueueAttributes{}
 
 		v := resultingStruct.(*models.CreateQueueRequest)
 		*v = c
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusOK, code)
@@ -212,7 +214,7 @@ func TestCreateQueueV1_success_no_configured_region_for_queue_url(t *testing.T) 
 func TestCreateQueueV1_request_transformer_error(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -220,7 +222,7 @@ func TestCreateQueueV1_request_transformer_error(t *testing.T) {
 		return false
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)
@@ -229,7 +231,7 @@ func TestCreateQueueV1_request_transformer_error(t *testing.T) {
 func TestCreateQueueV1_invalid_dead_letter_queue_error(t *testing.T) {
 	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		utils.ResetApp()
+		test.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -246,7 +248,7 @@ func TestCreateQueueV1_invalid_dead_letter_queue_error(t *testing.T) {
 		return true
 	}
 
-	_, r := utils.GenerateRequestInfo("POST", "/", nil, true)
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	code, _ := CreateQueueV1(r)
 
 	assert.Equal(t, http.StatusBadRequest, code)

@@ -35,6 +35,13 @@ func LoadYamlConfig(filename string, env string) []string {
 			return ports
 		}
 	}
+
+	filename, _ = filepath.Abs(filename)
+	if _, err := os.Stat(filename); err != nil {
+		log.Warnf("Failure to find config file: %s", filename)
+		return ports
+	}
+
 	log.Infof("Loading config file: %s", filename)
 	yamlFile, err := os.ReadFile(filename)
 	if err != nil {

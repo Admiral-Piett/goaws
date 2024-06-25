@@ -17,11 +17,11 @@ func SetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - GetQueueAttributesV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 	if requestBody.QueueUrl == "" {
 		log.Error("Missing QueueUrl - GetQueueAttributesV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	// NOTE: I tore out the handling for devining the url from a param.  I can't find documentation that
@@ -29,16 +29,16 @@ func SetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	uriSegments := strings.Split(requestBody.QueueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
 
-	log.Infof("Set Queue Attributes: %s", queueName)
+	log.Infof("Set Queue QueueAttributes: %s", queueName)
 	app.SyncQueues.Lock()
 	defer app.SyncQueues.Unlock()
 	queue, ok := app.SyncQueues.Queues[queueName]
 	if !ok {
 		log.Warningf("Get Queue URL: %s, queue does not exist!!!", queueName)
-		return createErrorResponseV1("QueueNotFound")
+		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 	if err := setQueueAttributesV1(queue, requestBody.Attributes); err != nil {
-		return createErrorResponseV1(err.Error())
+		return utils.CreateErrorResponseV1(err.Error(), true)
 	}
 
 	respStruct := models.SetQueueAttributesResponse{

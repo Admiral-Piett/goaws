@@ -62,7 +62,7 @@ type ResultMessage struct {
 
 // MarshalJSON first converts the ResultMessage to the shape which the SDKs
 // expect. When receiving a response from the JSON API, it apparently expects
-// Attributes and MessageAttributes to be maps, rather than the former slice
+// QueueAttributes and MessageAttributes to be maps, rather than the former slice
 // shape.
 func (r *ResultMessage) MarshalJSON() ([]byte, error) {
 	m := &sqstypes.Message{
@@ -158,7 +158,7 @@ func (r ListQueuesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
 
-/*** Get Queue Attributes ***/
+/*** Get Queue QueueAttributes ***/
 type Attribute struct {
 	Name  string `xml:"Name,omitempty"`
 	Value string `xml:"Value,omitempty"`
@@ -282,4 +282,30 @@ func (r DeleteQueueResponse) GetResult() interface{} {
 
 func (r DeleteQueueResponse) GetRequestId() string {
 	return r.Metadata.RequestId
+}
+
+/*** Create Subscription ***/
+type SubscribeResult struct {
+	SubscriptionArn string `xml:"SubscriptionArn"`
+}
+
+type SubscribeResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   SubscribeResult      `xml:"SubscribeResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r SubscribeResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r SubscribeResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
+/*** ConfirmSubscriptionResponse ***/
+type ConfirmSubscriptionResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   SubscribeResult      `xml:"ConfirmSubscriptionResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
 }

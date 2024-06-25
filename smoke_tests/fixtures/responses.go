@@ -51,7 +51,7 @@ var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = models.GetQueueAttributesResponse{
 		},
 		{
 			Name:  "QueueArn",
-			Value: fmt.Sprintf("%s:new-queue-1", af.BASE_ARN),
+			Value: fmt.Sprintf("%s:new-queue-1", af.BASE_SQS_ARN),
 		},
 	}},
 	Metadata: app.ResponseMetadata{RequestId: REQUEST_ID},

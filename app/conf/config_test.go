@@ -73,7 +73,7 @@ func TestConfig_QueueAttributes(t *testing.T) {
 	assert.Equal(t, 1024, app.SyncQueues.Queues["local-queue1"].MaximumMessageSize)
 	assert.Equal(t, emptyQueue, app.SyncQueues.Queues["local-queue1"].DeadLetterQueue)
 	assert.Equal(t, 0, app.SyncQueues.Queues["local-queue1"].MaxReceiveCount)
-	assert.Equal(t, 445600, app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod)
+	assert.Equal(t, 345600, app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod)
 	assert.Equal(t, 100, app.SyncQueues.Queues["local-queue3"].MaxReceiveCount)
 
 	assert.Equal(t, "local-queue3-dlq", app.SyncQueues.Queues["local-queue3"].DeadLetterQueue.Name)
@@ -147,4 +147,20 @@ func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
 		_, ok := topics[expectedName]
 		assert.True(t, ok)
 	}
+}
+
+func TestConfig_LoadYamlConfig_missing_config_loads_nothing(t *testing.T) {
+	app.CurrentEnvironment = app.Environment{}
+	ports := LoadYamlConfig("/garbage", "Local")
+
+	assert.Equal(t, []string{"4100"}, ports)
+	assert.Equal(t, app.CurrentEnvironment, app.Environment{})
+}
+
+func TestConfig_LoadYamlConfig_invalid_config_loads_nothing(t *testing.T) {
+	app.CurrentEnvironment = app.Environment{}
+	ports := LoadYamlConfig("../common/common.go", "Local")
+
+	assert.Equal(t, []string{"4100"}, ports)
+	assert.Equal(t, app.CurrentEnvironment, app.Environment{})
 }

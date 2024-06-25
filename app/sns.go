@@ -4,15 +4,6 @@ import (
 	"sync"
 )
 
-type SnsErrorType struct {
-	HttpError int
-	Type      string
-	Code      string
-	Message   string
-}
-
-var SnsErrors map[string]SnsErrorType
-
 type MsgAttr struct {
 	Type  string
 	Value string

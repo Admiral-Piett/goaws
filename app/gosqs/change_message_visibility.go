@@ -18,7 +18,7 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
 	if !ok {
 		log.Error("Invalid Request - ChangeMessageVisibilityV1")
-		return createErrorResponseV1(ErrInvalidParameterValue.Type)
+		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
 	}
 
 	vars := mux.Vars(req)
@@ -36,11 +36,11 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 
 	visibilityTimeout := requestBody.VisibilityTimeout
 	if visibilityTimeout > 43200 {
-		return createErrorResponseV1("ValidationError")
+		return utils.CreateErrorResponseV1("ValidationError", true)
 	}
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		return createErrorResponseV1("QueueNotFound")
+		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
 	app.SyncQueues.Lock()
@@ -71,7 +71,7 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 	}
 	app.SyncQueues.Unlock()
 	if !messageFound {
-		return createErrorResponseV1("MessageNotInFlight")
+		return utils.CreateErrorResponseV1("MessageNotInFlight", true)
 	}
 
 	respStruct := models.ChangeMessageVisibilityResult{
