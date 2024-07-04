@@ -284,6 +284,25 @@ func (r DeleteQueueResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
 
+/*** Create Topic Response */
+type CreateTopicResult struct {
+	TopicArn string `xml:"TopicArn"`
+}
+
+type CreateTopicResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   CreateTopicResult    `xml:"CreateTopicResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r CreateTopicResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r CreateTopicResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
 /*** Create Subscription ***/
 type SubscribeResult struct {
 	SubscriptionArn string `xml:"SubscriptionArn"`

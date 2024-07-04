@@ -103,27 +103,6 @@ func ListTopics(w http.ResponseWriter, req *http.Request) {
 	SendResponseBack(w, req, respStruct, content)
 }
 
-func CreateTopic(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	topicName := req.FormValue("Name")
-	topicArn := ""
-	if _, ok := app.SyncTopics.Topics[topicName]; ok {
-		topicArn = app.SyncTopics.Topics[topicName].Arn
-	} else {
-		topicArn = "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topicName
-
-		log.Println("Creating Topic:", topicName)
-		topic := &app.Topic{Name: topicName, Arn: topicArn}
-		topic.Subscriptions = make([]*app.Subscription, 0, 0)
-		app.SyncTopics.Lock()
-		app.SyncTopics.Topics[topicName] = topic
-		app.SyncTopics.Unlock()
-	}
-	uuid, _ := common.NewUUID()
-	respStruct := app.CreateTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.CreateTopicResult{TopicArn: topicArn}, app.ResponseMetadata{RequestId: uuid}}
-	SendResponseBack(w, req, respStruct, content)
-}
-
 func signMessage(privkey *rsa.PrivateKey, snsMsg *app.SNSMessage) (string, error) {
 	fs, err := formatSignature(snsMsg)
 	if err != nil {
