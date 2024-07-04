@@ -11,6 +11,113 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func NewCreateTopicRequest() *CreateTopicRequest {
+	return &CreateTopicRequest{
+		Attributes: TopicAttributes{
+			FifoTopic:                 false,
+			SignatureVersion:          1,
+			TracingConfig:             "Active",
+			ContentBasedDeduplication: false,
+		},
+	}
+}
+
+type CreateTopicRequest struct {
+	Name string `json:"Name" schema:"Name"`
+
+	// Goaws unsupports below properties currently.
+	DataProtectionPolicy string            `json:"DataProtectionPolicy" schema:"DataProtectionPolicy"`
+	Attributes           TopicAttributes   `json:"Attributes" schema:"Attributes"`
+	Tags                 map[string]string `json:"Tags" schema:"Tags"`
+}
+
+// Ref: https://docs.aws.amazon.com/sns/latest/api/API_CreateTopic.html
+type TopicAttributes struct {
+	DeliveryPolicy            map[string]interface{} `json:"DeliveryPolicy"`            // NOTE: not implemented
+	DisplayName               string                 `json:"DisplayName"`               // NOTE: not implemented
+	FifoTopic                 bool                   `json:"FifoTopic"`                 // NOTE: not implemented
+	Policy                    map[string]interface{} `json:"Policy"`                    // NOTE: not implemented
+	SignatureVersion          StringToInt            `json:"SignatureVersion"`          // NOTE: not implemented
+	TracingConfig             string                 `json:"TracingConfig"`             // NOTE: not implemented
+	KmsMasterKeyId            string                 `json:"KmsMasterKeyId"`            // NOTE: not implemented
+	ArchivePolicy             map[string]interface{} `json:"ArchivePolicy"`             // NOTE: not implemented
+	BeginningArchiveTime      string                 `json:"BeginningArchiveTime"`      // NOTE: not implemented
+	ContentBasedDeduplication bool                   `json:"ContentBasedDeduplication"` // NOTE: not implemented
+}
+
+func (r *CreateTopicRequest) SetAttributesFromForm(values url.Values) {
+
+	for i := 1; true; i++ {
+		nameKey := fmt.Sprintf("Attribute.%d.Name", i)
+		attrName := values.Get(nameKey)
+		if attrName == "" {
+			break
+		}
+
+		valueKey := fmt.Sprintf("Attribute.%d.Value", i)
+		attrValue := values.Get(valueKey)
+		if attrValue == "" {
+			continue
+		}
+
+		switch attrName {
+		case "DeliveryPolicy":
+			var tmp map[string]interface{}
+			err := json.Unmarshal([]byte(attrValue), &tmp)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.DeliveryPolicy = tmp
+		case "DisplayName":
+			r.Attributes.DisplayName = attrValue
+		case "FifoTopic":
+			tmp, err := strconv.ParseBool(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.FifoTopic = tmp
+		case "Policy":
+			var tmp map[string]interface{}
+			err := json.Unmarshal([]byte(attrValue), &tmp)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.Policy = tmp
+		case "SignatureVersion":
+			tmp, err := strconv.Atoi(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.SignatureVersion = StringToInt(tmp)
+		case "TracingConfig":
+			r.Attributes.TracingConfig = attrValue
+		case "KmsMasterKeyId":
+			r.Attributes.KmsMasterKeyId = attrValue
+		case "ArchivePolicy":
+			var tmp map[string]interface{}
+			err := json.Unmarshal([]byte(attrValue), &tmp)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.ArchivePolicy = tmp
+		case "BeginningArchiveTime":
+			r.Attributes.BeginningArchiveTime = attrValue
+		case "ContentBasedDeduplication":
+			tmp, err := strconv.ParseBool(attrValue)
+			if err != nil {
+				log.Debugf("Failed to parse form attribute - %s: %s", attrName, attrValue)
+				continue
+			}
+			r.Attributes.ContentBasedDeduplication = tmp
+		}
+	}
+}
+
 func NewSubscribeRequest() *SubscribeRequest {
 	return &SubscribeRequest{}
 }
