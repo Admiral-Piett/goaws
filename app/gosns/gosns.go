@@ -288,29 +288,6 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	createErrorResponse(w, req, "SubscriptionNotFound")
 }
 
-func DeleteTopic(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	topicArn := req.FormValue("TopicArn")
-
-	uriSegments := strings.Split(topicArn, ":")
-	topicName := uriSegments[len(uriSegments)-1]
-
-	log.Println("Delete Topic - TopicName:", topicName)
-
-	_, ok := app.SyncTopics.Topics[topicName]
-	if ok {
-		app.SyncTopics.Lock()
-		delete(app.SyncTopics.Topics, topicName)
-		app.SyncTopics.Unlock()
-		uuid, _ := common.NewUUID()
-		respStruct := app.DeleteTopicResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
-		SendResponseBack(w, req, respStruct, content)
-	} else {
-		createErrorResponse(w, req, "TopicNotFound")
-	}
-
-}
-
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially
 // it is a localized subscription to some non-AWS endpoint.
 func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {

@@ -276,11 +276,11 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"Publish":     sns.PublishV1,
 			"ListTopics":  sns.ListTopicsV1,
 			"CreateTopic": sns.CreateTopicV1,
+			"DeleteTopic": sns.DeleteTopicV1,
 		}
 
 		routingTable = map[string]http.HandlerFunc{
 			// SNS
-			"DeleteTopic":               sns.DeleteTopic,
 			"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 			"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
