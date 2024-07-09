@@ -420,3 +420,30 @@ func (r PublishResponse) GetResult() interface{} {
 func (r PublishResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** List Topics ***/
+type TopicArnResult struct {
+	TopicArn  string `xml:"TopicArn"`
+	NextToken string `xml:"NextToken"` // not implemented
+}
+type TopicNamestype struct {
+	Member []TopicArnResult `xml:"member"`
+}
+
+type ListTopicsResult struct {
+	Topics TopicNamestype `xml:"Topics"`
+}
+
+type ListTopicsResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   ListTopicsResult     `xml:"ListTopicsResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r ListTopicsResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ListTopicsResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

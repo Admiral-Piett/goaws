@@ -85,24 +85,6 @@ func createPemFile() (privkey *rsa.PrivateKey, pemkey []byte, err error) {
 	return
 }
 
-func ListTopics(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-
-	respStruct := app.ListTopicsResponse{}
-	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
-	uuid, _ := common.NewUUID()
-	respStruct.Metadata = app.ResponseMetadata{RequestId: uuid}
-
-	respStruct.Result.Topics.Member = make([]app.TopicArnResult, 0, 0)
-	log.Println("Listing Topics")
-	for _, topic := range app.SyncTopics.Topics {
-		ta := app.TopicArnResult{TopicArn: topic.Arn}
-		respStruct.Result.Topics.Member = append(respStruct.Result.Topics.Member, ta)
-	}
-
-	SendResponseBack(w, req, respStruct, content)
-}
-
 func signMessage(privkey *rsa.PrivateKey, snsMsg *app.SNSMessage) (string, error) {
 	fs, err := formatSignature(snsMsg)
 	if err != nil {

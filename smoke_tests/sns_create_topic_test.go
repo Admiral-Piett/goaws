@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -50,7 +49,7 @@ func Test_CreateTopicV1_json_success(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r2 := app.ListTopicsResponse{}
+	r2 := models.ListTopicsResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, 1, len(r2.Result.Topics.Member))
 	assert.Contains(t, r2.Result.Topics.Member[0].TopicArn, topicName)
@@ -97,7 +96,7 @@ func Test_CreateTopicV1_json_existant_topic(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r2 := app.ListTopicsResponse{}
+	r2 := models.ListTopicsResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, 1, len(r2.Result.Topics.Member))
 	assert.Contains(t, r2.Result.Topics.Member[0].TopicArn, topicName)
@@ -145,7 +144,7 @@ func Test_CreateTopicV1_json_add_multiple_topics(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r2 := app.ListTopicsResponse{}
+	r2 := models.ListTopicsResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 	assert.Equal(t, 2, len(r2.Result.Topics.Member))
 }
@@ -191,7 +190,7 @@ func Test_CreateTopicV1_xml_success(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r3 := app.ListTopicsResponse{}
+	r3 := models.ListTopicsResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, 1, len(r3.Result.Topics.Member))
 	assert.Contains(t, r3.Result.Topics.Member[0].TopicArn, topicName)
@@ -249,7 +248,7 @@ func Test_CreateTopicV1_xml_existant_topic(t *testing.T) {
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
-	r3 := app.ListTopicsResponse{}
+	r3 := models.ListTopicsResponse{}
 	xml.Unmarshal([]byte(r), &r3)
 	assert.Equal(t, 1, len(r3.Result.Topics.Member))
 	assert.Contains(t, r3.Result.Topics.Member[0].TopicArn, topicName)
