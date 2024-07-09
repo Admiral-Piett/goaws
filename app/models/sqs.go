@@ -526,3 +526,19 @@ type DeleteQueueRequest struct {
 }
 
 func (r *DeleteQueueRequest) SetAttributesFromForm(values url.Values) {}
+
+type DeleteMessageBatchRequestEntry struct {
+	Id            string `json:"Id" schema:"Id"`
+	ReceiptHandle string `json:"ReceiptHandle" schema:"ReceiptHandle"`
+}
+
+type DeleteMessageBatchRequest struct {
+	Entries  []DeleteMessageBatchRequestEntry `json:"Entries" schema:"Entries"`
+	QueueUrl string                           `json:"QueueUrl" schema:"QueueUrl"`
+}
+
+func NewDeleteMessageBatchRequest() *DeleteMessageBatchRequest {
+	return &DeleteMessageBatchRequest{}
+}
+
+func (r *DeleteMessageBatchRequest) SetAttributesFromForm(values url.Values) {}
