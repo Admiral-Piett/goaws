@@ -61,9 +61,3 @@ type ListSubscriptionsByTopicResponse struct {
 	Result   ListSubscriptionsByTopicResult `xml:"ListSubscriptionsByTopicResult"`
 	Metadata ResponseMetadata               `xml:"ResponseMetadata"`
 }
-
-/*** Delete Topic ***/
-type DeleteTopicResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
