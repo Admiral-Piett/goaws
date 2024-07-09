@@ -224,3 +224,15 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 		}
 	}
 }
+
+// ListTopics
+
+func NewListTopicsRequest() *ListTopicsRequest {
+	return &ListTopicsRequest{}
+}
+
+type ListTopicsRequest struct {
+	NextToken string `json:"NextToken" schema:"NextToken"` // not implemented
+}
+
+func (r *ListTopicsRequest) SetAttributesFromForm(values url.Values) {}

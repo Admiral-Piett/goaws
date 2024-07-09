@@ -15,6 +15,14 @@ var ListQueuesRequestBodyXML = struct {
 	Version: "2012-11-05",
 }
 
+var ListTopicsRequestBodyXML = struct {
+	Action  string `xml:"Action"`
+	Version string `xml:"Version"`
+}{
+	Action:  "ListTopics",
+	Version: "2012-11-05",
+}
+
 var GetQueueAttributesRequestBodyXML = struct {
 	Action     string `xml:"Action"`
 	Version    string `xml:"Version"`

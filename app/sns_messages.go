@@ -1,24 +1,5 @@
 package app
 
-/*** List Topics Response */
-type TopicArnResult struct {
-	TopicArn string `xml:"TopicArn"`
-}
-
-type TopicNamestype struct {
-	Member []TopicArnResult `xml:"member"`
-}
-
-type ListTopicsResult struct {
-	Topics TopicNamestype `xml:"Topics"`
-}
-
-type ListTopicsResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListTopicsResult `xml:"ListTopicsResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
 /***  Set Subscription Response ***/
 type SetSubscriptionAttributesResponse struct {
 	Xmlns    string           `xml:"xmlns,attr"`
