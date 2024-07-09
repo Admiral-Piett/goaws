@@ -260,7 +260,7 @@ type SendMessageBatchResponse struct {
 
 type SendMessageBatchResult struct {
 	Entry []SendMessageBatchResultEntry `xml:"SendMessageBatchResultEntry"`
-	Error []app.BatchResultErrorEntry   `xml:"BatchResultErrorEntry,omitempty"`
+	Error []BatchResultErrorEntry       `xml:"BatchResultErrorEntry,omitempty"`
 }
 
 func (r SendMessageBatchResponse) GetResult() interface{} {
@@ -269,6 +269,13 @@ func (r SendMessageBatchResponse) GetResult() interface{} {
 
 func (r SendMessageBatchResponse) GetRequestId() string {
 	return r.Metadata.RequestId
+}
+
+type BatchResultErrorEntry struct {
+	Code        string `xml:"Code"`
+	Id          string `xml:"Id"`
+	Message     string `xml:"Message,omitempty"`
+	SenderFault bool   `xml:"SenderFault"`
 }
 
 type SetQueueAttributesResponse struct {
@@ -368,5 +375,29 @@ func (r UnsubscribeResponse) GetResult() interface{} {
 }
 
 func (r UnsubscribeResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
+type DeleteMessageBatchResultEntry struct {
+	Id string `xml:"Id"`
+}
+
+type DeleteMessageBatchResult struct {
+	Successful []DeleteMessageBatchResultEntry `xml:"DeleteMessageBatchResultEntry"`
+	Failed     []BatchResultErrorEntry         `xml:"BatchResultErrorEntry,omitempty"`
+}
+
+/*** Delete Message Batch Response */
+type DeleteMessageBatchResponse struct {
+	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
+	Result   DeleteMessageBatchResult `xml:"DeleteMessageBatchResult"`
+	Metadata app.ResponseMetadata     `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r DeleteMessageBatchResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r DeleteMessageBatchResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
