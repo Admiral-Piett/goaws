@@ -84,11 +84,11 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"Publish":     sns.PublishV1,
 	"ListTopics":  sns.ListTopicsV1,
 	"CreateTopic": sns.CreateTopicV1,
+	"DeleteTopic": sns.DeleteTopicV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
 	// SNS
-	"DeleteTopic":               sns.DeleteTopic,
 	"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,

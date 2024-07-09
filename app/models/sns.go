@@ -236,3 +236,15 @@ type ListTopicsRequest struct {
 }
 
 func (r *ListTopicsRequest) SetAttributesFromForm(values url.Values) {}
+
+// DeleteTopicV1
+
+func NewDeleteTopicRequest() *DeleteTopicRequest {
+	return &DeleteTopicRequest{}
+}
+
+type DeleteTopicRequest struct {
+	TopicArn string `json:"TopicArn" schema:"TopicArn"`
+}
+
+func (r *DeleteTopicRequest) SetAttributesFromForm(values url.Values) {}

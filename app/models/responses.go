@@ -447,3 +447,17 @@ func (r ListTopicsResponse) GetResult() interface{} {
 func (r ListTopicsResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Delete Topic ***/
+type DeleteTopicResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r DeleteTopicResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r DeleteTopicResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
