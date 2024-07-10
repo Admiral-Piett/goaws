@@ -79,6 +79,7 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	// SNS
 	"CreateTopic": sns.CreateTopicV1,
 	"Subscribe":   sns.SubscribeV1,
+	"Unsubscribe": sns.UnsubscribeV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
@@ -93,7 +94,6 @@ var routingTable = map[string]http.HandlerFunc{
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
 	"ListSubscriptions":         sns.ListSubscriptions,
-	"Unsubscribe":               sns.Unsubscribe,
 	"Publish":                   sns.Publish,
 
 	// SNS Internal
