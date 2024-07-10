@@ -173,3 +173,13 @@ type SubscriptionAttributes struct {
 	//ReplayPolicy        string                 `json:"ReplayPolicy" schema:"ReplayPolicy"`
 	//ReplayStatus        string                 `json:"ReplayStatus" schema:"ReplayStatus"`
 }
+
+func NewUnsubscribeRequest() *UnsubscribeRequest {
+	return &UnsubscribeRequest{}
+}
+
+type UnsubscribeRequest struct {
+	SubscriptionArn string `json:"SubscriptionArn" schema:"SubscriptionArn"`
+}
+
+func (r *UnsubscribeRequest) SetAttributesFromForm(values url.Values) {}

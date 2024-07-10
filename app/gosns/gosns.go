@@ -306,32 +306,6 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 	createErrorResponse(w, req, "SubscriptionNotFound")
 }
 
-func Unsubscribe(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	subArn := req.FormValue("SubscriptionArn")
-
-	log.Println("Unsubscribe:", subArn)
-	for _, topic := range app.SyncTopics.Topics {
-		for i, sub := range topic.Subscriptions {
-			if sub.SubscriptionArn == subArn {
-				app.SyncTopics.Lock()
-
-				copy(topic.Subscriptions[i:], topic.Subscriptions[i+1:])
-				topic.Subscriptions[len(topic.Subscriptions)-1] = nil
-				topic.Subscriptions = topic.Subscriptions[:len(topic.Subscriptions)-1]
-
-				app.SyncTopics.Unlock()
-
-				uuid, _ := common.NewUUID()
-				respStruct := app.UnsubscribeResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
-				SendResponseBack(w, req, respStruct, content)
-				return
-			}
-		}
-	}
-	createErrorResponse(w, req, "SubscriptionNotFound")
-}
-
 func DeleteTopic(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")

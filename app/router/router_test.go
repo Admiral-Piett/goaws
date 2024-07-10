@@ -271,6 +271,7 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			// SNS
 			"CreateTopic": sns.CreateTopicV1,
 			"Subscribe":   sns.SubscribeV1,
+			"Unsubscribe": sns.UnsubscribeV1,
 		}
 		routingTable = map[string]http.HandlerFunc{
 			// SQS
@@ -284,7 +285,6 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
 			"ListSubscriptions":         sns.ListSubscriptions,
-			"Unsubscribe":               sns.Unsubscribe,
 			"Publish":                   sns.Publish,
 
 			// SNS Internal
