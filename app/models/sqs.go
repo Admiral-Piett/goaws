@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/Admiral-Piett/goaws/app"
 	log "github.com/sirupsen/logrus"
@@ -220,6 +221,76 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
 		}
 	}
+}
+
+func NewSendMessageBatchRequest() *SendMessageBatchRequest {
+	return &SendMessageBatchRequest{}
+}
+
+type SendMessageBatchRequest struct {
+	Entries  []SendMessageBatchRequestEntry
+	QueueUrl string
+}
+
+func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
+	for key := range values {
+
+		keySegments := strings.Split(key, ".")
+		//If index value size is 3 or less, there is no attribute value
+		if len(keySegments) <= 3 {
+			continue
+		}
+
+		// Both patterns below are supported here.
+		// strconv.Atoi(keySegments[1] - targets the index value in pattern: `Entries.1.MessageBody`
+		// strconv.Atoi(keySegments[3] - targets the index value in pattern: `Entries.1.MessageAttributes.1.Name`
+		entryIndex, err1 := strconv.Atoi(keySegments[1])
+		attributeIndex, err2 := strconv.Atoi(keySegments[3])
+
+		// If the entry index and attribute index cannot be obtained, the attribute will not be set, so skip
+		if err1 != nil || err2 != nil {
+			continue
+		}
+
+		nameKey := fmt.Sprintf("Entries.%d.MessageAttributes.%d.Name", entryIndex, attributeIndex)
+		if key != nameKey {
+			continue
+		}
+		name := values.Get(nameKey)
+		dataTypeKey := fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.DataType", entryIndex, attributeIndex)
+		dataType := values.Get(dataTypeKey)
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
+
+		stringValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.StringValue", entryIndex, attributeIndex))
+		binaryValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.BinaryValue", entryIndex, attributeIndex))
+
+		if r.Entries[entryIndex].MessageAttributes == nil {
+			r.Entries[entryIndex].MessageAttributes = make(map[string]MessageAttributeValue)
+		}
+
+		r.Entries[entryIndex].MessageAttributes[name] = MessageAttributeValue{
+			DataType:    dataType,
+			StringValue: stringValue,
+			BinaryValue: binaryValue,
+		}
+
+		if _, ok := r.Entries[entryIndex].MessageAttributes[name]; !ok {
+			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+		}
+	}
+}
+
+type SendMessageBatchRequestEntry struct {
+	Id                      string                           `json:"Id" schema:"Id"`
+	MessageBody             string                           `json:"MessageBody" schema:"MessageBody"`
+	DelaySeconds            int                              `json:"DelaySeconds" schema:"DelaySeconds"` // NOTE: not implemented
+	MessageAttributes       map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageDeduplicationId  string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId          string                           `json:"MessageGroupId" schema:"MessageGroupId"`
+	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"` // NOTE: not implemented
 }
 
 // Get Queue Url Request
