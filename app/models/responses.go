@@ -243,6 +243,34 @@ func (r GetQueueUrlResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
 
+type SendMessageBatchResultEntry struct {
+	Id                     string `xml:"Id"`
+	MessageId              string `xml:"MessageId"`
+	MD5OfMessageBody       string `xml:"MD5OfMessageBody,omitempty"`
+	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes,omitempty"`
+	SequenceNumber         string `xml:"SequenceNumber"`
+}
+
+/*** Send Message Batch Response */
+type SendMessageBatchResponse struct {
+	Xmlns    string                 `xml:"xmlns,attr,omitempty"`
+	Result   SendMessageBatchResult `xml:"SendMessageBatchResult"`
+	Metadata app.ResponseMetadata   `xml:"ResponseMetadata,omitempty"`
+}
+
+type SendMessageBatchResult struct {
+	Entry []SendMessageBatchResultEntry `xml:"SendMessageBatchResultEntry"`
+	Error []app.BatchResultErrorEntry   `xml:"BatchResultErrorEntry,omitempty"`
+}
+
+func (r SendMessageBatchResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r SendMessageBatchResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
 type SetQueueAttributesResponse struct {
 	Xmlns    string               `xml:"xmlns,attr,omitempty"`
 	Metadata app.ResponseMetadata `xml:"ResponseMetadata,omitempty"`

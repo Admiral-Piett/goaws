@@ -75,6 +75,7 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"GetQueueUrl":             sqs.GetQueueUrlV1,
 	"PurgeQueue":              sqs.PurgeQueueV1,
 	"DeleteQueue":             sqs.DeleteQueueV1,
+	"SendMessageBatch":        sqs.SendMessageBatchV1,
 
 	// SNS
 	"CreateTopic": sns.CreateTopicV1,
@@ -84,7 +85,6 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 
 var routingTable = map[string]http.HandlerFunc{
 	// SQS
-	"SendMessageBatch":   sqs.SendMessageBatch,
 	"DeleteMessageBatch": sqs.DeleteMessageBatch,
 
 	// SNS
