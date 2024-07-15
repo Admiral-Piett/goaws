@@ -274,6 +274,7 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"CreateTopic": sns.CreateTopicV1,
 			"Subscribe":   sns.SubscribeV1,
 			"Unsubscribe": sns.UnsubscribeV1,
+			"Publish":     sns.PublishV1,
 		}
 
 		routingTable = map[string]http.HandlerFunc{
@@ -284,7 +285,6 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
 			"ListSubscriptions":         sns.ListSubscriptions,
-			"Publish":                   sns.Publish,
 
 			// SNS Internal
 			"ConfirmSubscription": sns.ConfirmSubscription,

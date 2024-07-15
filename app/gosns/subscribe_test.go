@@ -108,7 +108,7 @@ func TestSubscribeV1_success_duplicate_subscription(t *testing.T) {
 		v := resultingStruct.(*models.SubscribeRequest)
 		*v = models.SubscribeRequest{
 			TopicArn: fmt.Sprintf("%s:%s", fixtures.BASE_SNS_ARN, "unit-topic1"),
-			Endpoint: fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue2"),
+			Endpoint: fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue1"),
 			Protocol: "sqs",
 		}
 		return true
@@ -122,7 +122,7 @@ func TestSubscribeV1_success_duplicate_subscription(t *testing.T) {
 	subscriptions := app.SyncTopics.Topics["unit-topic1"].Subscriptions
 	assert.Len(t, subscriptions, 1)
 
-	assert.Equal(t, fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue2"), subscriptions[0].EndPoint)
+	assert.Equal(t, fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue1"), subscriptions[0].EndPoint)
 	assert.Equal(t, "sqs", subscriptions[0].Protocol)
 	assert.True(t, subscriptions[0].Raw)
 	assert.Contains(t, subscriptions[0].SubscriptionArn, fmt.Sprintf("%s:%s", fixtures.BASE_SNS_ARN, "unit-topic1"))
@@ -157,7 +157,7 @@ func TestSubscribeV1_error_missing_topic(t *testing.T) {
 		v := resultingStruct.(*models.SubscribeRequest)
 		*v = models.SubscribeRequest{
 			TopicArn: fmt.Sprintf("%s:%s", fixtures.BASE_SNS_ARN, "garbage"),
-			Endpoint: fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue2"),
+			Endpoint: fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, "subscribed-queue1"),
 			Protocol: "sqs",
 		}
 		return true

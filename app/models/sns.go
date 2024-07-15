@@ -46,7 +46,6 @@ type TopicAttributes struct {
 }
 
 func (r *CreateTopicRequest) SetAttributesFromForm(values url.Values) {
-
 	for i := 1; true; i++ {
 		nameKey := fmt.Sprintf("Attribute.%d.Name", i)
 		attrName := values.Get(nameKey)
@@ -183,3 +182,45 @@ type UnsubscribeRequest struct {
 }
 
 func (r *UnsubscribeRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewPublishRequest() *PublishRequest {
+	return &PublishRequest{}
+}
+
+type PublishRequest struct {
+	Message                string                           `json:"Message" schema:"Message"`
+	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
+	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageStructure       string                           `json:"MessageStructure" schema:"MessageStructure"`
+	PhoneNumber            string                           `json:"PhoneNumber" schema:"PhoneNumber"` // Not implemented
+	Subject                string                           `json:"Subject" schema:"Subject"`
+	TargetArn              string                           `json:"TargetArn" schema:"TargetArn"` // Not implemented
+	TopicArn               string                           `json:"TopicArn" schema:"TopicArn"`
+}
+
+func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
+	for i := 1; true; i++ {
+		nameKey := fmt.Sprintf("MessageAttributes.entry.%d.Name", i)
+		name := values.Get(nameKey)
+		if name == "" {
+			break
+		}
+
+		dataTypeKey := fmt.Sprintf("MessageAttributes.entry.%d.Value.DataType", i)
+		dataType := values.Get(dataTypeKey)
+		if dataType == "" {
+			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			continue
+		}
+
+		stringValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
+		binaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
+
+		r.MessageAttributes[name] = MessageAttributeValue{
+			DataType:    dataType,
+			StringValue: stringValue,
+			BinaryValue: binaryValue,
+		}
+	}
+}
