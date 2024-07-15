@@ -185,13 +185,6 @@ type SendMessageRequest struct {
 	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"`
 	QueueUrl                string                           `json:"QueueUrl" schema:"QueueUrl"`
 }
-type MessageAttributeValue struct {
-	BinaryListValues []string `json:"BinaryListValues"` // currently unsupported by AWS
-	BinaryValue      string   `json:"BinaryValue"`
-	DataType         string   `json:"DataType"`
-	StringListValues []string `json:"StringListValues"` // currently unsupported by AWS
-	StringValue      string   `json:"StringValue"`
-}
 
 func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 	for i := 1; true; i++ {
@@ -215,10 +208,6 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 			DataType:    dataType,
 			StringValue: stringValue,
 			BinaryValue: binaryValue,
-		}
-
-		if _, ok := r.MessageAttributes[name]; !ok {
-			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
 		}
 	}
 }

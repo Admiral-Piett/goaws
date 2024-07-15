@@ -81,18 +81,6 @@ type ListSubscriptionsByTopicResponse struct {
 	Metadata ResponseMetadata               `xml:"ResponseMetadata"`
 }
 
-/*** Publish ***/
-
-type PublishResult struct {
-	MessageId string `xml:"MessageId"`
-}
-
-type PublishResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   PublishResult    `xml:"PublishResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
-}
-
 /*** Delete Topic ***/
 type DeleteTopicResponse struct {
 	Xmlns    string           `xml:"xmlns,attr"`

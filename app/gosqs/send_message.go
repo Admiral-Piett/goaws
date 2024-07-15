@@ -60,7 +60,7 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	log.Debugf("Putting Message in Queue: [%s]", queueName)
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
-		oldStyleMessageAttributes := convertToOldMessageAttributeValueStructure(messageAttributes)
+		oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(messageAttributes)
 		msg.MessageAttributes = oldStyleMessageAttributes
 		msg.MD5OfMessageAttributes = common.HashAttributes(oldStyleMessageAttributes)
 	}
@@ -99,33 +99,4 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 
 	return http.StatusOK, respStruct
-}
-
-// TODO:
-// Refactor internal model for MessageAttribute between SendMessage and ReceiveMessage
-// from app.MessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
-func convertToOldMessageAttributeValueStructure(newValues map[string]models.MessageAttributeValue) map[string]app.MessageAttributeValue {
-	attributes := make(map[string]app.MessageAttributeValue)
-
-	for name, entry := range newValues {
-		// StringListValue and BinaryListValue is currently not implemented
-		// Please refer app/gosqs/message_attributes.go
-		value := ""
-		valueKey := ""
-		if entry.StringValue != "" {
-			value = entry.StringValue
-			valueKey = "StringValue"
-		} else if entry.BinaryValue != "" {
-			value = entry.BinaryValue
-			valueKey = "BinaryValue"
-		}
-		attributes[name] = app.MessageAttributeValue{
-			Name:     name,
-			DataType: entry.DataType,
-			Value:    value,
-			ValueKey: valueKey,
-		}
-	}
-
-	return attributes
 }

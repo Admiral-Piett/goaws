@@ -59,10 +59,21 @@ BaseUnitTests:
     - Name: unit-queue2
       RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:other-queue1"}'
     - Name: other-queue1
-    - Name: subscribed-queue2
+    - Name: subscribed-queue1
+    - Name: subscribed-queue3
   Topics:
     - Name: unit-topic1
       Subscriptions:
-        - QueueName: subscribed-queue2
+        - QueueName: subscribed-queue1
           Raw: true
     - Name: unit-topic2
+    - Name: unit-topic3
+      Subscriptions:
+        - QueueName: subscribed-queue3
+          Raw: false
+    - Name: unit-topic-http
+      Subscriptions:
+        - Protocol: http
+          EndPoint: http://over.ride.me/for/tests
+          TopicArn: arn:aws:sqs:region:accountID:unit-topic-http
+          Raw: true

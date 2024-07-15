@@ -4,24 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"strings"
-	"time"
-
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/router"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -115,46 +102,6 @@ func TestNewIntegration(t *testing.T) {
 	}
 }
 
-func TestSNSRoutes(t *testing.T) {
-	// Consume address
-	srv, err := NewSNSTest("localhost:4100", &snsTest{t: t})
-
-	noSetupError(t, err)
-	defer srv.Quit()
-
-	creds := credentials.NewStaticCredentials("id", "secret", "token")
-
-	awsConfig := aws.NewConfig().
-		WithRegion("us-east-1").
-		WithEndpoint(srv.URL()).
-		WithCredentials(creds)
-
-	session1 := session.New(awsConfig)
-	client := sns.New(session1)
-
-	response, err := client.CreateTopic(&sns.CreateTopicInput{
-		Name: aws.String("testing"),
-	})
-	require.NoError(t, err, "SNS Create Topic Failed")
-
-	params := &sns.SubscribeInput{
-		Protocol: aws.String("sqs"), // Required
-		TopicArn: response.TopicArn, // Required
-		Endpoint: aws.String(srv.URL() + "/local-sns"),
-	}
-	subscribeResponse, err := client.Subscribe(params)
-	require.NoError(t, err, "SNS Subscribe Failed")
-	t.Logf("Succesfully subscribed: %s\n", *subscribeResponse.SubscriptionArn)
-
-	publishParams := &sns.PublishInput{
-		Message:  aws.String("Cool"),
-		TopicArn: response.TopicArn,
-	}
-	publishResponse, err := client.Publish(publishParams)
-	require.NoError(t, err, "SNS Publish Failed")
-	t.Logf("Succesfully published: %s\n", *publishResponse.MessageId)
-}
-
 func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {
 	creds := credentials.NewStaticCredentials("id", "secret", "token")
 
@@ -175,124 +122,4 @@ func noOp(sqsiface.SQSAPI, *string) error {
 
 func noSetupError(t *testing.T, err error) {
 	require.NoError(t, err, "Failed to setup for test")
-}
-
-type snsTest struct {
-	t *testing.T
-}
-
-func NewSNSTest(addr string, snsTest *snsTest) (*Server, error) {
-	if addr == "" {
-		addr = "localhost:0"
-	}
-	localURL := strings.Split(addr, ":")
-	app.CurrentEnvironment.Host = localURL[0]
-	app.CurrentEnvironment.Port = localURL[1]
-	log.WithFields(log.Fields{
-		"host": app.CurrentEnvironment.Host,
-		"port": app.CurrentEnvironment.Port,
-	}).Info("URL Starting to listen")
-
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, fmt.Errorf("cannot listen on localhost: %v", err)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("cannot listen on localhost: %v", err)
-	}
-
-	r := mux.NewRouter()
-	r.Handle("/", router.New())
-	snsTest.SetSNSRoutes("/local-sns", r, nil)
-
-	srv := Server{listener: l, handler: r}
-
-	go http.Serve(l, &srv)
-
-	return &srv, nil
-}
-
-// Define handlers for various AWS SNS POST calls
-func (s *snsTest) SetSNSRoutes(urlPath string, r *mux.Router, handler http.Handler) {
-
-	r.HandleFunc(urlPath, s.SubscribeConfirmHandle).Methods("POST").Headers("x-amz-sns-message-type", "SubscriptionConfirmation")
-	if handler != nil {
-		log.WithFields(log.Fields{
-			"urlPath": urlPath,
-		}).Debug("handler not nil")
-		// handler is supposed to be wrapper that inturn calls NotificationHandle
-		r.Handle(urlPath, handler).Methods("POST").Headers("x-amz-sns-message-type", "Notification")
-	} else {
-		log.WithFields(log.Fields{
-			"urlPath": urlPath,
-		}).Debug("handler nil")
-		// if no wrapper handler available then define anonymous handler and directly call NotificationHandle
-		r.HandleFunc(urlPath, func(rw http.ResponseWriter, req *http.Request) {
-			s.NotificationHandle(rw, req)
-		}).Methods("POST").Headers("x-amz-sns-message-type", "Notification")
-	}
-}
-
-func (s *snsTest) SubscribeConfirmHandle(rw http.ResponseWriter, req *http.Request) {
-	//params := &sns.ConfirmSubscriptionInput{
-	//	Token:    aws.String(msg.Token),    // Required
-	//	TopicArn: aws.String(msg.TopicArn), // Required
-	//}
-	var f interface{}
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		s.t.Log("Unable to Parse Body")
-	}
-	s.t.Log(string(body))
-	err = json.Unmarshal(body, &f)
-	if err != nil {
-		s.t.Log("Unable to Unmarshal request")
-	}
-
-	data := f.(map[string]interface{})
-	s.t.Log(data["Type"].(string))
-
-	if data["Type"].(string) == "SubscriptionConfirmation" {
-		subscribeURL := data["SubscribeURL"].(string)
-		time.Sleep(time.Second)
-		response, err := http.Get(subscribeURL)
-		if err != nil {
-			s.t.Logf("Unable to confirm subscriptions. %s\n", err)
-			s.t.Fail()
-		} else {
-			s.t.Logf("Subscription Confirmed successfully. %d\n", response.StatusCode)
-		}
-	} else if data["Type"].(string) == "Notification" {
-		s.t.Log("Received this message : ", data["Message"].(string))
-	}
-}
-
-func (s *snsTest) NotificationHandle(rw http.ResponseWriter, req *http.Request) []byte {
-	subArn := req.Header.Get("X-Amz-Sns-Subscription-Arn")
-
-	msg := app.SNSMessage{}
-	_, err := DecodeJSONMessage(req, &msg)
-	if err != nil {
-		log.Error(err)
-		return []byte{}
-	}
-
-	s.t.Logf("NotificationHandle %s  MSG(%s)", subArn, msg.Message)
-	return []byte(msg.Message)
-}
-
-func DecodeJSONMessage(req *http.Request, v interface{}) ([]byte, error) {
-
-	payload, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	if len(payload) == 0 {
-		return nil, errors.New("empty payload")
-	}
-	err = json.Unmarshal([]byte(payload), v)
-	if err != nil {
-		return nil, err
-	}
-	return payload, nil
 }

@@ -401,3 +401,22 @@ func (r DeleteMessageBatchResponse) GetResult() interface{} {
 func (r DeleteMessageBatchResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Publish ***/
+type PublishResult struct {
+	MessageId string `xml:"MessageId"`
+}
+
+type PublishResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   PublishResult        `xml:"PublishResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r PublishResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r PublishResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
