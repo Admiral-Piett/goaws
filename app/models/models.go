@@ -23,3 +23,12 @@ var AVAILABLE_QUEUE_ATTRIBUTES = map[string]bool{
 	"LastModifiedTimestamp":                 true,
 	"QueueArn":                              true,
 }
+
+// TODO - reconcile this with app.MessageAttributeValue - deal with ConvertToOldMessageAttributeValueStructure
+type MessageAttributeValue struct {
+	BinaryListValues []string `json:"BinaryListValues"` // currently unsupported by AWS
+	BinaryValue      string   `json:"BinaryValue"`
+	DataType         string   `json:"DataType"`
+	StringListValues []string `json:"StringListValues"` // currently unsupported by AWS
+	StringValue      string   `json:"StringValue"`
+}
