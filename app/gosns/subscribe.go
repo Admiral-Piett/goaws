@@ -39,20 +39,19 @@ func SubscribeV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	subscription := &app.Subscription{EndPoint: requestBody.Endpoint, Protocol: requestBody.Protocol, TopicArn: requestBody.TopicArn, Raw: requestBody.Attributes.RawMessageDelivery, FilterPolicy: &requestBody.Attributes.FilterPolicy}
 
-	subArn := uuid.NewString()
 	subscription.SubscriptionArn = fmt.Sprintf("%s:%s", requestBody.TopicArn, uuid.NewString())
 
 	//Create the response
 	requestId := uuid.NewString()
-	respStruct := models.SubscribeResponse{Xmlns: models.BASE_XMLNS, Result: models.SubscribeResult{SubscriptionArn: subArn}, Metadata: app.ResponseMetadata{RequestId: requestId}}
+	respStruct := models.SubscribeResponse{Xmlns: models.BASE_XMLNS, Result: models.SubscribeResult{SubscriptionArn: subscription.SubscriptionArn}, Metadata: app.ResponseMetadata{RequestId: requestId}}
 	if app.SyncTopics.Topics[topicName] != nil {
 		app.SyncTopics.Lock()
 		isDuplicate := false
 		// Duplicate check
-		for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
-			if subscription.EndPoint == requestBody.Endpoint && subscription.TopicArn == requestBody.TopicArn {
+		for _, sub := range app.SyncTopics.Topics[topicName].Subscriptions {
+			if sub.EndPoint == requestBody.Endpoint && sub.TopicArn == requestBody.TopicArn {
 				isDuplicate = true
-				subArn = subscription.SubscriptionArn
+				sub.SubscriptionArn = subscription.SubscriptionArn
 			}
 		}
 		if !isDuplicate {
@@ -66,7 +65,7 @@ func SubscribeV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 			token := uuid.NewString()
 
 			TOPIC_DATA[requestBody.TopicArn] = &pendingConfirm{
-				subArn: subArn,
+				subArn: subscription.SubscriptionArn,
 				token:  token,
 			}
 
