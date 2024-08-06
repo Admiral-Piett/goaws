@@ -248,3 +248,15 @@ type DeleteTopicRequest struct {
 }
 
 func (r *DeleteTopicRequest) SetAttributesFromForm(values url.Values) {}
+
+// ListSubscriptionsV1
+
+func NewListSubscriptionsRequest() *ListSubscriptionsRequest {
+	return &ListSubscriptionsRequest{}
+}
+
+type ListSubscriptionsRequest struct {
+	NextToken string `json:"NextToken" schema:"NextToken"` // not implemented
+}
+
+func (r *ListSubscriptionsRequest) SetAttributesFromForm(values url.Values) {}

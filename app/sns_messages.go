@@ -27,7 +27,8 @@ type GetSubscriptionAttributesResponse struct {
 	Metadata ResponseMetadata                `xml:"ResponseMetadata,omitempty"`
 }
 
-/*** List Subscriptions Response */
+/*** List Subscriptions By Topic Response */
+
 type TopicMemberResult struct {
 	TopicArn        string `xml:"TopicArn"`
 	Protocol        string `xml:"Protocol"`
@@ -39,18 +40,6 @@ type TopicMemberResult struct {
 type TopicSubscriptions struct {
 	Member []TopicMemberResult `xml:"member"`
 }
-
-type ListSubscriptionsResult struct {
-	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
-}
-
-type ListSubscriptionsResponse struct {
-	Xmlns    string                  `xml:"xmlns,attr"`
-	Result   ListSubscriptionsResult `xml:"ListSubscriptionsResult"`
-	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
-}
-
-/*** List Subscriptions By Topic Response */
 
 type ListSubscriptionsByTopicResult struct {
 	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
