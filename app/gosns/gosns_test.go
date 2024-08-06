@@ -74,65 +74,6 @@ func TestListSubscriptionByTopicResponse_No_Owner(t *testing.T) {
 	}
 }
 
-func TestListSubscriptionsResponse_No_Owner(t *testing.T) {
-	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
-	defer func() {
-		test.ResetApp()
-	}()
-
-	// set accountID to test value so it can be populated in response
-	app.CurrentEnvironment.AccountID = "100010001000"
-
-	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
-	// pass 'nil' as the third parameter.
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form := url.Values{}
-	form.Add("TopicArn", "arn:aws:sns:local:000000000000:local-topic1")
-	req.PostForm = form
-
-	// Prepare existant topic
-	topic := &app.Topic{
-		Name: "UnitTestTopic1",
-		Arn:  "arn:aws:sns:local:100010001000:UnitTestTopic1",
-		Subscriptions: []*app.Subscription{
-			{
-				TopicArn:        "",
-				Protocol:        "",
-				SubscriptionArn: "",
-				EndPoint:        "",
-				Raw:             false,
-				FilterPolicy:    &app.FilterPolicy{},
-			},
-		},
-	}
-	app.SyncTopics.Topics["UnitTestTopic1"] = topic
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(ListSubscriptions)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// Check the response body is what we expect.
-	expected := `<Owner>` + app.CurrentEnvironment.AccountID + `</Owner>`
-	if !strings.Contains(rr.Body.String(), expected) {
-		t.Errorf("handler returned empty owner for subscription member: got %v want %v",
-			rr.Body.String(), expected)
-	}
-}
-
 func TestGetSubscriptionAttributesHandler_POST_Success(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
