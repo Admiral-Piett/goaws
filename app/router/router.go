@@ -79,12 +79,13 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"DeleteMessageBatch":      sqs.DeleteMessageBatchV1,
 
 	// SNS
-	"Subscribe":   sns.SubscribeV1,
-	"Unsubscribe": sns.UnsubscribeV1,
-	"Publish":     sns.PublishV1,
-	"ListTopics":  sns.ListTopicsV1,
-	"CreateTopic": sns.CreateTopicV1,
-	"DeleteTopic": sns.DeleteTopicV1,
+	"Subscribe":         sns.SubscribeV1,
+	"Unsubscribe":       sns.UnsubscribeV1,
+	"Publish":           sns.PublishV1,
+	"ListTopics":        sns.ListTopicsV1,
+	"CreateTopic":       sns.CreateTopicV1,
+	"DeleteTopic":       sns.DeleteTopicV1,
+	"ListSubscriptions": sns.ListSubscriptionsV1,
 }
 
 var routingTable = map[string]http.HandlerFunc{
@@ -92,7 +93,6 @@ var routingTable = map[string]http.HandlerFunc{
 	"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
-	"ListSubscriptions":         sns.ListSubscriptions,
 
 	// SNS Internal
 	"ConfirmSubscription": sns.ConfirmSubscription,
