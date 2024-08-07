@@ -20,7 +20,7 @@ func init() {
 	SnsErrors = map[string]SnsErrorType{
 		"InvalidParameterValue": {HttpError: http.StatusBadRequest, Type: "InvalidParameterValue", Code: "AWS.SimpleNotificationService.InvalidParameterValue", Message: "An invalid or out-of-range value was supplied for the input parameter."},
 		"TopicNotFound":         {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."},
-		"SubscriptionNotFound":  {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."},
+		"SubscriptionNotFound":  {HttpError: http.StatusNotFound, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."},
 		"TopicExists":           {HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."},
 		"ValidationError":       {HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.ValidationError", Message: "The input fails to satisfy the constraints specified by an AWS service."},
 	}

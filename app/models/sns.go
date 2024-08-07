@@ -260,3 +260,14 @@ type ListSubscriptionsRequest struct {
 }
 
 func (r *ListSubscriptionsRequest) SetAttributesFromForm(values url.Values) {}
+
+// Get Subscription Attributes V1
+func NewGetSubscriptionAttributesRequest() *GetSubscriptionAttributesRequest {
+	return &GetSubscriptionAttributesRequest{}
+}
+
+type GetSubscriptionAttributesRequest struct {
+	SubscriptionArn string `json:"SubscriptionArn" schema:"SubscriptionArn"`
+}
+
+func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}

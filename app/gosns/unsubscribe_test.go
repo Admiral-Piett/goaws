@@ -79,5 +79,5 @@ func TestUnsubscribeV1_invalid_subscription_arn(t *testing.T) {
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, _ := UnsubscribeV1(r)
 
-	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, http.StatusNotFound, status)
 }
