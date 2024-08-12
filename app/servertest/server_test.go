@@ -136,7 +136,7 @@ func TestSNSRoutes(t *testing.T) {
 	publishBatchResponse, err := client.PublishBatch(publishBatchParams)
 	require.NoError(t, err, "SNS PublishBatch Failed")
 	assert.Empty(t, publishBatchResponse.Failed)
-	assert.Length(t, publishBatchResponse.Successful, 2)
+	assert.Equal(t, 2, len(publishBatchResponse.Successful))
 }
 
 func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {
