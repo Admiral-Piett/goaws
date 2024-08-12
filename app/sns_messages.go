@@ -61,3 +61,29 @@ type ListSubscriptionsByTopicResponse struct {
 	Result   ListSubscriptionsByTopicResult `xml:"ListSubscriptionsByTopicResult"`
 	Metadata ResponseMetadata               `xml:"ResponseMetadata"`
 }
+
+/*** Publish ***/
+
+type PublishBatchFailed struct {
+	ErrorEntries []BatchResultErrorEntry `xml:"member"`
+}
+
+type PublishBatchResultEntry struct {
+	Id        string `xml:"Id"`
+	MessageId string `xml:"MessageId"`
+}
+
+type PublishBatchSuccessful struct {
+	SuccessEntries []PublishBatchResultEntry `xml:"member"`
+}
+
+type PublishBatchResult struct {
+	Failed     PublishBatchFailed     `xml:"Failed"`
+	Successful PublishBatchSuccessful `xml:"Successful"`
+}
+
+type PublishBatchResponse struct {
+	Xmlns    string             `xml:"xmlns,attr"`
+	Result   PublishBatchResult `xml:"PublishBatchResult"`
+	Metadata ResponseMetadata   `xml:"ResponseMetadata"`
+}

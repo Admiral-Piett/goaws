@@ -93,6 +93,7 @@ var routingTable = map[string]http.HandlerFunc{
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
 	"ListSubscriptions":         sns.ListSubscriptions,
+	"PublishBatch":              sns.PublishBatch,
 
 	// SNS Internal
 	"ConfirmSubscription": sns.ConfirmSubscription,

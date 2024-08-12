@@ -290,6 +290,127 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially
 // it is a localized subscription to some non-AWS endpoint.
+
+func PublishBatch(w http.ResponseWriter, req *http.Request) {
+	content := req.FormValue("ContentType")
+	topicArn := req.FormValue("TopicArn")
+
+	arnSegments := strings.Split(topicArn, ":")
+	topicName := arnSegments[len(arnSegments)-1]
+	topic, ok := app.SyncTopics.Topics[topicName]
+	if !ok {
+		createErrorResponse(w, req, "TopicNotFound")
+		return
+	}
+
+	var batchMessageIdToMessageBody map[string]string
+	var batchMessageIdToMessageStructure map[string]string
+	var batchMessageIdToMessageAttributes map[string]map[string]app.MessageAttributeValue
+
+	for memberIndex := 1; true; memberIndex++ {
+		if memberIndex > 10 {
+			createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
+			return
+		}
+		thisMessageFormKey := "PublishBatchRequestEntries.member." + strconv.Itoa(memberIndex)
+		if req.FormValue(thisMessageFormKey) == "" {
+			break
+		}
+
+		batchMessageId := req.FormValue(thisMessageFormKey + ".Id")
+		if _, ok := batchMessageIdToMessageBody[batchMessageId]; ok {
+			createErrorResponse(w, req, "BatchEntryIdsNotDistinct")
+			return
+		}
+
+		thisMessageBody := req.FormValue(thisMessageFormKey + ".Message")
+		thisMessageStructure := req.FormValue(thisMessageFormKey + ".MessageStructure")
+
+		thisMessageAttributes := make(map[string]app.MessageAttributeValue)
+
+		for i := 1; true; i++ {
+			name := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Name", thisMessageFormKey, i))
+			if name == "" {
+				break
+			}
+
+			dataType := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.DataType", thisMessageFormKey, i))
+			if dataType == "" {
+				log.Warnf("DataType of %s.MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", thisMessageFormKey, name)
+				continue
+			}
+
+			// StringListValue and BinaryListValue is currently not implemented
+			for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
+				value := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.%s", thisMessageFormKey, i, valueKey))
+				if value != "" {
+					attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+				}
+			}
+
+			if _, ok := attributes[name]; !ok {
+				log.Warnf("StringValue or BinaryValue of %s.MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", thisMessageFormKey, name)
+			}
+		}
+
+		batchMessageIdToMessageBody[batchMessageId] = thisMessageBody
+		batchMessageIdToMessageStructure[batchMessageId] = thisMessageStructure
+		batchMessageIdToMessageAttributes[batchMessageId] = thisMessageAttributes
+	}
+
+	if len(batchMessageIdToMessageBody) == 0 {
+		createErrorResponse(w, req, "EmptyBatchRequest")
+		return
+	}
+
+	successfulEntries := []app.PublishBatchResultEntry{}
+	failedEntries := []app.PublishBatchErrorEntry{}
+	for batchMessageId, messageBody := range batchMessageIdToMessageBody {
+		messageStructure := batchMessageIdToMessageStructure[batchMessageId]
+		messageAttributes := batchMessageIdToMessageAttributes[batchMessageId]
+		for _, sub := range topic.Subscriptions {
+			switch app.Protocol(subs.Protocol) {
+			case app.ProtocolSQS:
+				if err := publishSQS(subs, messageBody, messageAttributes, subject, topicArn, topicName, messageStructure); err != nil {
+					er := app.SnsErrors[err.Error()]
+					failedEntries = append(failedEntries, app.PublishBatchErrorEntry{
+						Code:        er.Code,
+						Id:          batchMessageId,
+						Message:     er.Message,
+						SenderFault: true,
+					})
+				} else {
+					msgId, _ := common.NewUUID()
+					successfulEntries = append(successfulEntries, app.PublishBatchResultEntry{
+						Id:        batchMessageId,
+						MessageId: msgId,
+					})
+				}
+			case app.ProtocolHTTP:
+				fallthrough
+			case app.ProtocolHTTPS:
+				publishHTTP(subs, messageBody, messageAttributes, subject, topicArn)
+				msgId, _ := common.NewUUID()
+				successfulEntries = append(successfulEntries, app.PublishBatchResultEntry{
+					Id:        batchMessageId,
+					MessageId: msgId,
+				})
+			}
+		}
+	}
+
+	uuid, _ := common.NewUUID()
+	respStruct := app.PublishBatchResponse{
+		"https://sns.amazonaws.com/doc/2010-03-31/",
+		app.PublishBatchResult{
+			Successful: app.PublishBatchResultEntries{Member: successfulEntries},
+			Failed:     app.PublishBatchErrorEntries{Member: failedEntries},
+		},
+		app.ResponseMetadata{RequestId: uuid},
+	}
+	SendResponseBack(w, req, respStruct, content)
+}
+
 func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
 	log.WithFields(log.Fields{
 		"sns":      msg,
