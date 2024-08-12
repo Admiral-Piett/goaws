@@ -308,17 +308,15 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 	batchMessageIdToMessageAttributes := make(map[string]map[string]app.MessageAttributeValue, 10)
 	batchMessageIdToSubject := make(map[string]string, 10)
 
-	for memberIndex := 1; true; memberIndex++ {
-		if memberIndex > 10 {
-			createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
-			return
-		}
+	permissibleNumberOfEntries := 10
+	for memberIndex := 1; len(batchMessageIdToMessageBody) <= permissibleNumberOfEntries; memberIndex++ {
 		thisMessageFormKey := "PublishBatchRequestEntries.member." + strconv.Itoa(memberIndex)
 
 		batchMessageId := req.FormValue(thisMessageFormKey + ".Id")
 		if batchMessageId == "" {
 			// This is a required field, its absence likely indicates there are no further entries.
-			// TODO: how to tell the difference in case this is validation failure?
+			// It is unclear from the AWS docs if an error is returned if there are other fields
+			// present for PublishBatchRequestEntries.member.N where N is some integer in range [1,10].
 			break
 		}
 		if _, ok := batchMessageIdToMessageBody[batchMessageId]; ok {
@@ -330,8 +328,8 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 		thisMessageStructure := req.FormValue(thisMessageFormKey + ".MessageStructure")
 		thisMessageSubject := req.FormValue(thisMessageFormKey + ".Subject")
 
+		// Here we collate the MessageAttributes for the message at index memberIndex.
 		thisMessageAttributes := make(map[string]app.MessageAttributeValue)
-
 		for i := 1; true; i++ {
 			name := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Name", thisMessageFormKey, i))
 			if name == "" {
@@ -344,15 +342,18 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 				continue
 			}
 
-			// StringListValue and BinaryListValue is currently not implemented
-			for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
-				value := req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.%s", thisMessageFormKey, i, valueKey))
-				if value != "" {
-					thisMessageAttributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
-				}
+			value := ""
+			valueKey := ""
+			if dataType == "Binary" {
+				valueKey = "BinaryValue"
+				value = req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.BinaryValue", thisMessageFormKey, i))
+			} else {
+				valueKey = "StringValue"
+				value = req.FormValue(fmt.Sprintf("%s.MessageAttributes.entry.%d.Value.StringValue", thisMessageFormKey, i))
 			}
-
-			if _, ok := thisMessageAttributes[name]; !ok {
+			if value != "" {
+				thisMessageAttributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+			} else {
 				log.Warnf("StringValue or BinaryValue of %s.MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", thisMessageFormKey, name)
 			}
 		}
@@ -363,8 +364,13 @@ func PublishBatch(w http.ResponseWriter, req *http.Request) {
 		batchMessageIdToSubject[batchMessageId] = thisMessageSubject
 	}
 
-	if len(batchMessageIdToMessageBody) == 0 {
+	numberOfEntries := len(batchMessageIdToMessageBody)
+	if numberOfEntries == 0 {
 		createErrorResponse(w, req, "EmptyBatchRequest")
+		return
+	}
+	if numberOfEntries > permissibleNumberOfEntries {
+		createErrorResponse(w, req, "TooManyEntriesInBatchRequest")
 		return
 	}
 

@@ -43,6 +43,7 @@ Here is a list of the APIs:
  - [x] Subscribe (raw)
  - [x] ListSubscriptions
  - [x] Publish
+ - [x] PublishBatch
  - [x] DeleteTopic
  - [x] Subscribe
  - [x] Unsubscribe
