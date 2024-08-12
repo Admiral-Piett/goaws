@@ -18,11 +18,14 @@ func init() {
 		"InvalidAttributeValue":        {HttpError: http.StatusBadRequest, Type: "InvalidAttributeValue", Code: "AWS.SimpleQueueService.InvalidAttributeValue", Message: "Invalid Value for the parameter RedrivePolicy."},
 	}
 	SnsErrors = map[string]SnsErrorType{
-		"InvalidParameterValue": {HttpError: http.StatusBadRequest, Type: "InvalidParameterValue", Code: "AWS.SimpleNotificationService.InvalidParameterValue", Message: "An invalid or out-of-range value was supplied for the input parameter."},
-		"TopicNotFound":         {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."},
-		"SubscriptionNotFound":  {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."},
-		"TopicExists":           {HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."},
-		"ValidationError":       {HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.ValidationError", Message: "The input fails to satisfy the constraints specified by an AWS service."},
+		"InvalidParameterValue":        {HttpError: http.StatusBadRequest, Type: "InvalidParameterValue", Code: "AWS.SimpleNotificationService.InvalidParameterValue", Message: "An invalid or out-of-range value was supplied for the input parameter."},
+		"TopicNotFound":                {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentTopic", Message: "The specified topic does not exist for this wsdl version."},
+		"SubscriptionNotFound":         {HttpError: http.StatusBadRequest, Type: "Not Found", Code: "AWS.SimpleNotificationService.NonExistentSubscription", Message: "The specified subscription does not exist for this wsdl version."},
+		"TopicExists":                  {HttpError: http.StatusBadRequest, Type: "Duplicate", Code: "AWS.SimpleNotificationService.TopicAlreadyExists", Message: "The specified topic already exists."},
+		"ValidationError":              {HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.ValidationError", Message: "The input fails to satisfy the constraints specified by an AWS service."},
+		"BatchEntryIdsNotDistinct":     {HttpError: http.StatusBadRequest, Type: "InvalidParameter", Code: "AWS.SimpleNotificationService.BatchEntryIdsNotDistinct", Message: "Two or more batch entries in the request have the same Id."},
+		"TooManyEntriesInBatchRequest": {HttpError: http.StatusBadRequest, Type: "TooManyEntriesInBatchRequest", Code: "AWS.SimpleNotificationService.TooManyEntriesInBatchRequest", Message: "Maximum number of entries per request are 10."},
+		"EmptyBatchRequest":            {HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleNotificationService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."},
 	}
 }
 

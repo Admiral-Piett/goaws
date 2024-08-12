@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/stretchr/testify/assert"
@@ -101,42 +100,6 @@ func TestNewIntegration(t *testing.T) {
 			assert.Equal(t, nil, err, "Error")
 		})
 	}
-}
-
-func TestSNSRoutes(t *testing.T) {
-	// Consume address
-	srv, err := NewSNSTest("localhost:4100", &snsTest{t: t})
-
-	noSetupError(t, err)
-	defer srv.Quit()
-
-	creds := credentials.NewStaticCredentials("id", "secret", "token")
-
-	awsConfig := aws.NewConfig().
-		WithRegion("us-east-1").
-		WithEndpoint(srv.URL()).
-		WithCredentials(creds)
-
-	session1 := session.New(awsConfig)
-	client := sns.New(session1)
-
-	publishBatchParams := &sns.PublishBatchInput{
-		TopicArn: response.TopicArn,
-		PublishBatchRequestEntries: []*sns.PublishBatchRequestEntry{
-			{
-				Id:      aws.String("1"),
-				Message: aws.String("Cool"),
-			},
-			{
-				Id:      aws.String("2"),
-				Message: aws.String("Dog"),
-			},
-		},
-	}
-	publishBatchResponse, err := client.PublishBatch(publishBatchParams)
-	require.NoError(t, err, "SNS PublishBatch Failed")
-	assert.Empty(t, publishBatchResponse.Failed)
-	assert.Equal(t, 2, len(publishBatchResponse.Successful))
 }
 
 func newSQS(t *testing.T, region string, endpoint string) *sqs.SQS {

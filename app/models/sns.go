@@ -248,3 +248,26 @@ type DeleteTopicRequest struct {
 }
 
 func (r *DeleteTopicRequest) SetAttributesFromForm(values url.Values) {}
+
+// PublishBatchV1
+
+func NewPublishBatchRequest() *PublishBatchRequest {
+	return &PublishBatchRequest{}
+}
+
+type PublishBatchRequest struct {
+	PublishBatchRequestEntries []*PublishBatchRequestEntry `json:"PublishBatchRequestEntries" schema:"PublishBatchRequestEntries"`
+	TopicArn                   string                      `json:"TopicArn" schema:"TopicArn"`
+}
+
+type PublishBatchRequestEntry struct {
+	ID                     string                           `json:"Id" schema:"Id"`
+	Message                string                           `json:"Message" schema:"Message"`
+	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
+	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageStructure       string                           `json:"MessageStructure" schema:"MessageStructure"`
+	Subject                string                           `json:"Subject" schema:"Subject"`
+}
+
+func (r *PublishBatchRequest) SetAttributesFromForm(values url.Values) {}

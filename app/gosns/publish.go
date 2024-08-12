@@ -38,27 +38,28 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	topicName := arnSegments[len(arnSegments)-1]
 
 	_, ok = app.SyncTopics.Topics[topicName]
-	if ok {
-		log.WithFields(log.Fields{
-			"topic":    topicName,
-			"topicArn": requestBody.TopicArn,
-			"subject":  requestBody.Subject,
-		}).Debug("Publish to Topic")
-		for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
-			switch app.Protocol(subscription.Protocol) {
-			case app.ProtocolSQS:
-				err := publishSQS(subscription, topicName, requestBody)
-				if err != nil {
-					utils.CreateErrorResponseV1(err.Error(), false)
-				}
-			case app.ProtocolHTTP:
-				fallthrough
-			case app.ProtocolHTTPS:
-				publishHTTP(subscription, requestBody)
-			}
-		}
-	} else {
+	if !ok {
 		return utils.CreateErrorResponseV1("TopicNotFound", false)
+	}
+
+	log.WithFields(log.Fields{
+		"topic":    topicName,
+		"topicArn": requestBody.TopicArn,
+		"subject":  requestBody.Subject,
+	}).Debug("Publish to Topic")
+	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(requestBody.MessageAttributes)
+	for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
+		switch app.Protocol(subscription.Protocol) {
+		case app.ProtocolSQS:
+			err := publishSQS(subscription, requestBody.Message, messageAttributes, requestBody.Subject, topicName, requestBody.MessageStructure)
+			if err != nil {
+				utils.CreateErrorResponseV1(err.Error(), false)
+			}
+		case app.ProtocolHTTP:
+			fallthrough
+		case app.ProtocolHTTPS:
+			publishHTTP(subscription, requestBody.Message, messageAttributes, requestBody.Subject, requestBody.TopicArn)
+		}
 	}
 
 	//Create the response
@@ -74,8 +75,7 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	return http.StatusOK, respStruct
 }
 
-func publishSQS(subscription *app.Subscription, topicName string, requestBody *models.PublishRequest) error {
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(requestBody.MessageAttributes)
+func publishSQS(subscription *app.Subscription, message string, messageAttributes map[string]app.MessageAttributeValue, subject string, topicName string, messageStructure string) error {
 	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messageAttributes) {
 		return nil
 	}
@@ -86,51 +86,51 @@ func publishSQS(subscription *app.Subscription, topicName string, requestBody *m
 	arnSegments := strings.Split(queueName, ":")
 	queueName = arnSegments[len(arnSegments)-1]
 
-	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		msg := app.Message{}
+	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+		log.Infof("%s: Queue %s does not exist, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName)
+		return nil
+	}
 
-		if subscription.Raw == false {
-			m, err := createMessageBody(subscription, requestBody.Message, requestBody.Subject, requestBody.MessageStructure, messageAttributes)
-			if err != nil {
-				return err
-			}
+	msg := app.Message{}
 
-			msg.MessageBody = m
-		} else {
-			msg.MessageAttributes = messageAttributes
-			msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
-			m, err := extractMessageFromJSON(requestBody.Message, subscription.Protocol)
-			if err == nil {
-				msg.MessageBody = []byte(m)
-			} else {
-				msg.MessageBody = []byte(requestBody.Message)
-			}
+	if subscription.Raw == false {
+		m, err := createMessageBody(subscription, message, subject, messageStructure, messageAttributes)
+		if err != nil {
+			return err
 		}
 
-		msg.MD5OfMessageBody = common.GetMD5Hash(requestBody.Message)
-		msg.Uuid, _ = common.NewUUID()
-		app.SyncQueues.Lock()
-		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
-		app.SyncQueues.Unlock()
-
-		log.Infof("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody)
+		msg.MessageBody = m
 	} else {
-		log.Infof("%s: Queue %s does not exist, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName)
+		msg.MessageAttributes = messageAttributes
+		msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
+		m, err := extractMessageFromJSON(message, subscription.Protocol)
+		if err == nil {
+			msg.MessageBody = []byte(m)
+		} else {
+			msg.MessageBody = []byte(message)
+		}
 	}
+
+	msg.MD5OfMessageBody = common.GetMD5Hash(message)
+	msg.Uuid, _ = common.NewUUID()
+	app.SyncQueues.Lock()
+	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+	app.SyncQueues.Unlock()
+
+	log.Infof("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody)
 	return nil
 }
 
-func publishHTTP(subs *app.Subscription, requestBody *models.PublishRequest) {
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(requestBody.MessageAttributes)
+func publishHTTP(subs *app.Subscription, message string, messageAttributes map[string]app.MessageAttributeValue, subject string, topicArn string) {
 	id := uuid.NewString()
 	msg := app.SNSMessage{
 		Type:              "Notification",
 		MessageId:         id,
-		TopicArn:          requestBody.TopicArn,
-		Subject:           requestBody.Subject,
-		Message:           requestBody.Message,
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
+		Message:           message,
+		TopicArn:          topicArn,
+		Subject:           subject,
 		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, id),
 		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
 		MessageAttributes: formatAttributes(messageAttributes),
