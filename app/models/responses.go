@@ -522,3 +522,23 @@ func (r GetSubscriptionAttributesResponse) GetResult() interface{} {
 func (r GetSubscriptionAttributesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** List Subscriptions By Topic Response */
+type ListSubscriptionsByTopicResult struct {
+	NextToken     string             `xml:"NextToken"` // not implemented
+	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
+}
+
+type ListSubscriptionsByTopicResponse struct {
+	Xmlns    string                         `xml:"xmlns,attr"`
+	Result   ListSubscriptionsByTopicResult `xml:"ListSubscriptionsByTopicResult"`
+	Metadata app.ResponseMetadata           `xml:"ResponseMetadata"`
+}
+
+func (r ListSubscriptionsByTopicResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ListSubscriptionsByTopicResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

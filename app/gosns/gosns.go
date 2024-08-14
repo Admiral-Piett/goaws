@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -143,31 +142,6 @@ func ConfirmSubscription(w http.ResponseWriter, req *http.Request) {
 		createErrorResponse(w, req, "SubArnNotFound")
 	}
 
-}
-
-func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	topicArn := req.FormValue("TopicArn")
-
-	uriSegments := strings.Split(topicArn, ":")
-	topicName := uriSegments[len(uriSegments)-1]
-
-	if topic, ok := app.SyncTopics.Topics[topicName]; ok {
-		uuid, _ := common.NewUUID()
-		respStruct := app.ListSubscriptionsByTopicResponse{}
-		respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
-		respStruct.Metadata.RequestId = uuid
-		respStruct.Result.Subscriptions.Member = make([]app.TopicMemberResult, 0, 0)
-
-		for _, sub := range topic.Subscriptions {
-			tar := app.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
-			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
-		}
-		SendResponseBack(w, req, respStruct, content)
-	} else {
-		createErrorResponse(w, req, "TopicNotFound")
-	}
 }
 
 func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
