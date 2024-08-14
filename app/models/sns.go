@@ -271,3 +271,16 @@ type GetSubscriptionAttributesRequest struct {
 }
 
 func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
+
+// List Subscriptions By Topic
+
+func NewListSubscriptionsByTopicRequest() *ListSubscriptionsByTopicRequest {
+	return &ListSubscriptionsByTopicRequest{}
+}
+
+type ListSubscriptionsByTopicRequest struct {
+	NextToken string `json:"NextToken" schema:"NextToken"` // not implemented
+	TopicArn  string `json:"TopicArn" schema:"TopicArn"`
+}
+
+func (r *ListSubscriptionsByTopicRequest) SetAttributesFromForm(values url.Values) {}
