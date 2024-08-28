@@ -186,6 +186,10 @@ type SendMessageRequest struct {
 	QueueUrl                string                           `json:"QueueUrl" schema:"QueueUrl"`
 }
 
+func (r *SendMessageRequest) GetMessageAttributes() map[string]app.MessageAttributeValue {
+	return convertToOldMessageAttributeValueStructure(r.MessageAttributes)
+}
+
 func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 	for i := 1; true; i++ {
 		nameKey := fmt.Sprintf("MessageAttribute.%d.Name", i)
@@ -280,6 +284,10 @@ type SendMessageBatchRequestEntry struct {
 	MessageDeduplicationId  string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
 	MessageGroupId          string                           `json:"MessageGroupId" schema:"MessageGroupId"`
 	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"` // NOTE: not implemented
+}
+
+func (e *SendMessageBatchRequestEntry) GetMessageAttributes() map[string]app.MessageAttributeValue {
+	return convertToOldMessageAttributeValueStructure(e.MessageAttributes)
 }
 
 // Get Queue Url Request

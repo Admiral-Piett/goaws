@@ -62,7 +62,7 @@ func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody
 	for _, sendEntry := range sendEntries {
 		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
-			oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(sendEntry.MessageAttributes)
+			oldStyleMessageAttributes := sendEntry.GetMessageAttributes()
 			msg.MessageAttributes = oldStyleMessageAttributes
 			msg.MD5OfMessageAttributes = common.HashAttributes(oldStyleMessageAttributes)
 		}

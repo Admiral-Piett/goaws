@@ -60,7 +60,7 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	log.Debugf("Putting Message in Queue: [%s]", queueName)
 	msg := app.Message{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
-		oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(messageAttributes)
+		oldStyleMessageAttributes := requestBody.GetMessageAttributes()
 		msg.MessageAttributes = oldStyleMessageAttributes
 		msg.MD5OfMessageAttributes = common.HashAttributes(oldStyleMessageAttributes)
 	}

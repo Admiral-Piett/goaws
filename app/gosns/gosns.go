@@ -270,7 +270,6 @@ func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially
 // it is a localized subscription to some non-AWS endpoint.
-
 func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
 	log.WithFields(log.Fields{
 		"sns":      msg,
