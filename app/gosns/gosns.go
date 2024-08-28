@@ -146,26 +146,6 @@ func ConfirmSubscription(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func ListSubscriptions(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-
-	uuid, _ := common.NewUUID()
-	respStruct := app.ListSubscriptionsResponse{}
-	respStruct.Xmlns = "http://queue.amazonaws.com/doc/2012-11-05/"
-	respStruct.Metadata.RequestId = uuid
-	respStruct.Result.Subscriptions.Member = make([]app.TopicMemberResult, 0, 0)
-
-	for _, topic := range app.SyncTopics.Topics {
-		for _, sub := range topic.Subscriptions {
-			tar := app.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
-			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
-		}
-	}
-
-	SendResponseBack(w, req, respStruct, content)
-}
-
 func ListSubscriptionsByTopic(w http.ResponseWriter, req *http.Request) {
 	content := req.FormValue("ContentType")
 	topicArn := req.FormValue("TopicArn")

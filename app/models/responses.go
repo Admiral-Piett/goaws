@@ -494,3 +494,35 @@ func (r DeleteTopicResponse) GetResult() interface{} {
 func (r DeleteTopicResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/** List Subcriptions **/
+
+type TopicMemberResult struct {
+	TopicArn        string `xml:"TopicArn"`
+	Protocol        string `xml:"Protocol"`
+	SubscriptionArn string `xml:"SubscriptionArn"`
+	Owner           string `xml:"Owner"`
+	Endpoint        string `xml:"Endpoint"`
+}
+
+type TopicSubscriptions struct {
+	Member []TopicMemberResult `xml:"member"`
+}
+
+type ListSubscriptionsResult struct {
+	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
+}
+
+type ListSubscriptionsResponse struct {
+	Xmlns    string                  `xml:"xmlns,attr"`
+	Result   ListSubscriptionsResult `xml:"ListSubscriptionsResult"`
+	Metadata app.ResponseMetadata    `xml:"ResponseMetadata"`
+}
+
+func (r ListSubscriptionsResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ListSubscriptionsResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
