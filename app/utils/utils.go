@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Admiral-Piett/goaws/app"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -90,33 +88,4 @@ func CreateErrorResponseV1(errKey string, isSqs bool) (int, interfaces.AbstractR
 		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
 	}
 	return err.StatusCode(), respStruct
-}
-
-// TODO:
-// Refactor internal model for MessageAttribute between SendMessage and ReceiveMessage
-// from app.MessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
-func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.MessageAttributeValue) map[string]app.MessageAttributeValue {
-	attributes := make(map[string]app.MessageAttributeValue)
-
-	for name, entry := range newValues {
-		// StringListValue and BinaryListValue is currently not implemented
-		// Please refer app/gosqs/message_attributes.go
-		value := ""
-		valueKey := ""
-		if entry.StringValue != "" {
-			value = entry.StringValue
-			valueKey = "StringValue"
-		} else if entry.BinaryValue != "" {
-			value = entry.BinaryValue
-			valueKey = "BinaryValue"
-		}
-		attributes[name] = app.MessageAttributeValue{
-			Name:     name,
-			DataType: entry.DataType,
-			Value:    value,
-			ValueKey: valueKey,
-		}
-	}
-
-	return attributes
 }

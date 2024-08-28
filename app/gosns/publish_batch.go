@@ -60,8 +60,7 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		for _, sub := range topic.Subscriptions {
 			switch app.Protocol(sub.Protocol) {
 			case app.ProtocolSQS:
-				oldMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.MessageAttributes)
-				if err := publishSQS(sub, entry.Message, oldMessageAttributes, entry.Subject, topicName, entry.MessageStructure); err != nil {
+				if err := publishSQS(sub, topicName, entry); err != nil {
 					er := models.SnsErrors[err.Error()]
 					failedEntries = append(failedEntries, models.BatchResultErrorEntry{
 						Code:        er.Code,
@@ -79,8 +78,7 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 			case app.ProtocolHTTP:
 				fallthrough
 			case app.ProtocolHTTPS:
-				oldMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.MessageAttributes)
-				publishHTTP(sub, entry.Message, oldMessageAttributes, entry.Subject, topicArn)
+				publishHTTP(sub, topicArn, entry)
 				msgId := uuid.NewString()
 				successfulEntries = append(successfulEntries, models.PublishBatchResultEntry{
 					Id:        entry.ID,

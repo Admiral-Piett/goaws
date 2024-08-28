@@ -199,6 +199,54 @@ type PublishRequest struct {
 	TopicArn               string                           `json:"TopicArn" schema:"TopicArn"`
 }
 
+// TODO:
+// Refactor internal model for MessageAttribute between SendMessage and ReceiveMessage
+// from app.MessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
+func convertToOldMessageAttributeValueStructure(newValues map[string]MessageAttributeValue) map[string]app.MessageAttributeValue {
+	attributes := make(map[string]app.MessageAttributeValue)
+
+	for name, entry := range newValues {
+		// StringListValue and BinaryListValue is currently not implemented
+		// Please refer app/gosqs/message_attributes.go
+		value := ""
+		valueKey := ""
+		if entry.StringValue != "" {
+			value = entry.StringValue
+			valueKey = "StringValue"
+		} else if entry.BinaryValue != "" {
+			value = entry.BinaryValue
+			valueKey = "BinaryValue"
+		}
+		attributes[name] = app.MessageAttributeValue{
+			Name:     name,
+			DataType: entry.DataType,
+			Value:    value,
+			ValueKey: valueKey,
+		}
+	}
+
+	return attributes
+}
+func (r *PublishRequest) GetMessageAttributes() map[string]app.MessageAttributeValue {
+	return convertToOldMessageAttributeValueStructure(r.MessageAttributes)
+}
+
+func (r *PublishRequest) GetMessage() string {
+	return r.Message
+}
+
+func (r *PublishRequest) GetSubject() string {
+	return r.Subject
+}
+
+func (r *PublishRequest) GetMessageStructure() string {
+	return r.MessageStructure
+}
+
+func (r *PublishRequest) GetTopicArn() string {
+	return r.TopicArn
+}
+
 func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 	for i := 1; true; i++ {
 		nameKey := fmt.Sprintf("MessageAttributes.entry.%d.Name", i)
@@ -271,3 +319,19 @@ type PublishBatchRequestEntry struct {
 }
 
 func (r *PublishBatchRequest) SetAttributesFromForm(values url.Values) {}
+
+func (e *PublishBatchRequestEntry) GetMessage() string {
+	return e.Message
+}
+
+func (e *PublishBatchRequestEntry) GetSubject() string {
+	return e.Subject
+}
+
+func (e *PublishBatchRequestEntry) GetMessageStructure() string {
+	return e.MessageStructure
+}
+
+func (e *PublishBatchRequestEntry) GetMessageAttributes() map[string]app.MessageAttributeValue {
+	return convertToOldMessageAttributeValueStructure(e.MessageAttributes)
+}

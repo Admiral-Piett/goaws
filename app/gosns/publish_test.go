@@ -249,8 +249,7 @@ func Test_publishSQS_success_raw(t *testing.T) {
 		TopicArn: topicArn,
 		Message:  message,
 	}
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	err := publishSQS(sub, request.Message, messageAttributes, request.Subject, "unit-topic1", request.MessageStructure)
+	err := publishSQS(sub, "unit-topic1", &request)
 
 	assert.Nil(t, err)
 
@@ -278,8 +277,7 @@ func Test_publishSQS_success_json(t *testing.T) {
 		TopicArn: topicArn,
 		Message:  message,
 	}
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	err := publishSQS(sub, request.Message, messageAttributes, request.Subject, "unit-topic1", request.MessageStructure)
+	err := publishSQS(sub, "unit-topic1", &request)
 
 	assert.Nil(t, err)
 
@@ -322,8 +320,7 @@ func Test_publishSQS_filter_policy_not_satisfied_by_attributes(t *testing.T) {
 			},
 		},
 	}
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	err := publishSQS(sub, request.Message, messageAttributes, request.Subject, "unit-topic1", request.MessageStructure)
+	err := publishSQS(sub, "unit-topic1", &request)
 
 	assert.Nil(t, err)
 }
@@ -347,8 +344,7 @@ func Test_publishSQS_missing_queue_returns_nil(t *testing.T) {
 		TopicArn: topicArn,
 		Message:  message,
 	}
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	err := publishSQS(sub, request.Message, messageAttributes, request.Subject, "unit-topic1", request.MessageStructure)
+	err := publishSQS(sub, "unit-topic1", &request)
 
 	assert.Nil(t, err)
 }
@@ -380,8 +376,7 @@ func Test_publishHTTP_success(t *testing.T) {
 		Message:  message,
 	}
 
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	publishHTTP(sub, request.Message, messageAttributes, request.Subject, request.TopicArn)
+	publishHTTP(sub, request.TopicArn, &request)
 
 	assert.True(t, called)
 }
@@ -404,8 +399,7 @@ func Test_publishHTTP_callEndpoint_failure(t *testing.T) {
 		Message:  message,
 	}
 
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(request.MessageAttributes)
-	publishHTTP(sub, request.Message, messageAttributes, request.Subject, request.TopicArn)
+	publishHTTP(sub, request.TopicArn, &request)
 	// swallows all errors
 }
 

@@ -47,18 +47,17 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		"topicArn": requestBody.TopicArn,
 		"subject":  requestBody.Subject,
 	}).Debug("Publish to Topic")
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(requestBody.MessageAttributes)
 	for _, subscription := range app.SyncTopics.Topics[topicName].Subscriptions {
 		switch app.Protocol(subscription.Protocol) {
 		case app.ProtocolSQS:
-			err := publishSQS(subscription, requestBody.Message, messageAttributes, requestBody.Subject, topicName, requestBody.MessageStructure)
+			err := publishSQS(subscription, topicName, requestBody)
 			if err != nil {
 				utils.CreateErrorResponseV1(err.Error(), false)
 			}
 		case app.ProtocolHTTP:
 			fallthrough
 		case app.ProtocolHTTPS:
-			publishHTTP(subscription, requestBody.Message, messageAttributes, requestBody.Subject, requestBody.TopicArn)
+			publishHTTP(subscription, requestBody.TopicArn, requestBody)
 		}
 	}
 
@@ -75,8 +74,15 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	return http.StatusOK, respStruct
 }
 
-func publishSQS(subscription *app.Subscription, message string, messageAttributes map[string]app.MessageAttributeValue, subject string, topicName string, messageStructure string) error {
-	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messageAttributes) {
+type MessageCreator interface {
+	GetMessageAttributes() map[string]app.MessageAttributeValue
+	GetMessage() string
+	GetSubject() string
+	GetMessageStructure() string
+}
+
+func publishSQS(subscription *app.Subscription, topicName string, messager MessageCreator) error {
+	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messager.GetMessageAttributes()) {
 		return nil
 	}
 
@@ -90,47 +96,45 @@ func publishSQS(subscription *app.Subscription, message string, messageAttribute
 		log.Infof("Queue %s does not exist, message discarded\n", queueName)
 		return nil
 	}
-
 	msg := app.Message{}
-
 	if subscription.Raw == false {
-		m, err := createMessageBody(subscription, message, subject, messageStructure, messageAttributes)
+		m, err := createMessageBody(subscription, messager.GetMessage(), messager.GetSubject(), messager.GetMessageStructure(), messager.GetMessageAttributes())
 		if err != nil {
 			return err
 		}
-
 		msg.MessageBody = m
 	} else {
-		msg.MessageAttributes = messageAttributes
-		msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
-		m, err := extractMessageFromJSON(message, subscription.Protocol)
+		msg.MessageAttributes = messager.GetMessageAttributes()
+		msg.MD5OfMessageAttributes = common.HashAttributes(msg.MessageAttributes)
+		m, err := extractMessageFromJSON(messager.GetMessage(), subscription.Protocol)
 		if err == nil {
 			msg.MessageBody = []byte(m)
 		} else {
-			msg.MessageBody = []byte(message)
+			msg.MessageBody = []byte(messager.GetMessage())
 		}
 	}
-
-	msg.MD5OfMessageBody = common.GetMD5Hash(message)
+	msg.MD5OfMessageBody = common.GetMD5Hash(messager.GetMessage())
 	msg.Uuid = uuid.NewString()
+
 	app.SyncQueues.Lock()
 	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 	app.SyncQueues.Unlock()
 
-	log.Infof("%s: Topic: %s(%s), Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), topicName, queueName, msg.MessageBody)
+	log.Infof("Topic: %s(%s), Message: %s\n", topicName, queueName, msg.MessageBody)
 	return nil
 }
 
-func publishHTTP(subs *app.Subscription, message string, messageAttributes map[string]app.MessageAttributeValue, subject string, topicArn string) {
+func publishHTTP(subs *app.Subscription, topicArn string, messager MessageCreator) {
+	messageAttributes := messager.GetMessageAttributes()
 	id := uuid.NewString()
 	msg := app.SNSMessage{
 		Type:              "Notification",
 		MessageId:         id,
+		Message:           messager.GetMessage(),
+		TopicArn:          topicArn,
+		Subject:           messager.GetSubject(),
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		Message:           message,
-		TopicArn:          topicArn,
-		Subject:           subject,
 		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, id),
 		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
 		MessageAttributes: formatAttributes(messageAttributes),
