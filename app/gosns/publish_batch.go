@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -25,6 +24,13 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		return utils.CreateErrorResponseV1("InvalidParameterValue", false)
 	}
 
+	if len(requestBody.PublishBatchRequestEntries) == 0 {
+		return utils.CreateErrorResponseV1("EmptyBatchRequest", false)
+	}
+	if len(requestBody.PublishBatchRequestEntries) > 10 {
+		return utils.CreateErrorResponseV1("TooManyEntriesInBatchRequest", false)
+	}
+
 	topicArn := requestBody.TopicArn
 	arnSegments := strings.Split(topicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
@@ -37,10 +43,9 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	for _, entry := range requestBody.PublishBatchRequestEntries {
 		if entry.ID == "" {
-			// This is a required field, its absence likely indicates there are no further entries.
-			// It is unclear from the AWS docs if an error is returned if there are other fields
-			// present for PublishBatchRequestEntries.member.N where N is some integer in range [1,10].
-			break
+			// This is a required field for the PublishBatchRequestEntry entity but doesn't seem required in the request.
+			// If it's not present in the request then assume we should generate one.
+			entry.ID = uuid.NewString()
 		}
 		if seen[entry.ID] {
 			return utils.CreateErrorResponseV1("BatchEntryIdsNotDistinct", false)
@@ -48,23 +53,10 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		seen[entry.ID] = true
 	}
 
-	if len(requestBody.PublishBatchRequestEntries) == 0 {
-		return utils.CreateErrorResponseV1("EmptyBatchRequest", false)
-	}
-	if len(requestBody.PublishBatchRequestEntries) > 10 {
-		return utils.CreateErrorResponseV1("TooManyEntriesInBatchRequest", false)
-	}
-
 	successfulEntries := []models.PublishBatchResultEntry{}
 	failedEntries := []models.BatchResultErrorEntry{}
 	for _, entry := range requestBody.PublishBatchRequestEntries {
-		// we now know all the entry.IDs are unique
-		if entry.ID == "" {
-			// This is a required field, its absence likely indicates there are no further entries.
-			// It is unclear from the AWS docs if an error is returned if there are other fields
-			// present for PublishBatchRequestEntries.member.N where N is some integer in range [1,10].
-			break
-		}
+		// we now know all the entry.IDs are unique and non-blank
 		for _, sub := range topic.Subscriptions {
 			switch app.Protocol(sub.Protocol) {
 			case app.ProtocolSQS:
@@ -78,7 +70,7 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 						SenderFault: true,
 					})
 				} else {
-					msgId, _ := common.NewUUID()
+					msgId := uuid.NewString()
 					successfulEntries = append(successfulEntries, models.PublishBatchResultEntry{
 						Id:        entry.ID,
 						MessageId: msgId,
@@ -89,7 +81,7 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 			case app.ProtocolHTTPS:
 				oldMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.MessageAttributes)
 				publishHTTP(sub, entry.Message, oldMessageAttributes, entry.Subject, topicArn)
-				msgId, _ := common.NewUUID()
+				msgId := uuid.NewString()
 				successfulEntries = append(successfulEntries, models.PublishBatchResultEntry{
 					Id:        entry.ID,
 					MessageId: msgId,
@@ -99,7 +91,6 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 
 	respStruct := models.PublishBatchResponse{
-		// "https://sns.amazonaws.com/doc/2010-03-31/",
 		Xmlns: models.BASE_XMLNS,
 		Result: models.PublishBatchResult{
 			Successful: models.PublishBatchSuccessful{SuccessEntries: successfulEntries},

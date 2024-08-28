@@ -87,7 +87,7 @@ func publishSQS(subscription *app.Subscription, message string, messageAttribute
 	queueName = arnSegments[len(arnSegments)-1]
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		log.Infof("%s: Queue %s does not exist, message discarded\n", time.Now().Format("2006-01-02 15:04:05"), queueName)
+		log.Infof("Queue %s does not exist, message discarded\n", queueName)
 		return nil
 	}
 
@@ -112,7 +112,7 @@ func publishSQS(subscription *app.Subscription, message string, messageAttribute
 	}
 
 	msg.MD5OfMessageBody = common.GetMD5Hash(message)
-	msg.Uuid, _ = common.NewUUID()
+	msg.Uuid = uuid.NewString()
 	app.SyncQueues.Lock()
 	app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
 	app.SyncQueues.Unlock()
