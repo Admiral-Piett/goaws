@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/gavv/httpexpect/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,18 +42,20 @@ func Test_Publish_batch_sqs_json_raw(t *testing.T) {
 		TopicArn: &topicArn,
 		PublishBatchRequestEntries: []types.PublishBatchRequestEntry{
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 		},
 	})
 
-	assert.Nil(t, err)
-	assert.NotNil(t, response)
+	require.Nil(t, err)
+	require.NotNil(t, response)
 
 	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
 	require.Len(t, messages, 2)
@@ -81,18 +84,20 @@ func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 		TopicArn: &topicArn,
 		PublishBatchRequestEntries: []types.PublishBatchRequestEntry{
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 		},
 	})
 
-	assert.Nil(t, err)
-	assert.NotNil(t, response)
+	require.Nil(t, err)
+	require.NotNil(t, response)
 
 	messages := app.SyncQueues.Queues["subscribed-queue3"].Messages
 	assert.Len(t, messages, 2)
@@ -148,16 +153,18 @@ func Test_Publish_batch_http_json(t *testing.T) {
 
 		PublishBatchRequestEntries: []types.PublishBatchRequestEntry{
 			{
-				Message: &message,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
 			},
 			{
-				Message: &message,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
 			},
 		},
 	})
 
-	assert.Nil(t, err)
-	assert.NotNil(t, response)
+	require.Nil(t, err)
+	require.NotNil(t, response)
 
 	assert.True(t, called)
 	assert.Equal(t, "\"{\\\"IAm\\\": \\\"aMessage\\\"}\"", httpMessage)
@@ -202,16 +209,18 @@ func Test_Publish_batch_https_json_raw(t *testing.T) {
 
 		PublishBatchRequestEntries: []types.PublishBatchRequestEntry{
 			{
-				Message: &message,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
 			},
 			{
-				Message: &message,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
 			},
 		},
 	})
 
-	assert.Nil(t, err)
-	assert.NotNil(t, response)
+	require.Nil(t, err)
+	require.NotNil(t, response)
 
 	assert.True(t, called)
 	assert.Equal(t, "\"{\\\"IAm\\\": \\\"aMessage\\\"}\"", httpMessage)
@@ -257,18 +266,20 @@ func Test_Publish_batch_https_json_not_raw(t *testing.T) {
 		TopicArn: &topicArn,
 		PublishBatchRequestEntries: []types.PublishBatchRequestEntry{
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 			{
-				Message: &message,
-				Subject: &subject,
+				Id:      aws.String(uuid.NewString()),
+				Message: aws.String(message),
+				Subject: aws.String(subject),
 			},
 		},
 	})
 
-	assert.Nil(t, err)
-	assert.NotNil(t, response)
+	require.Nil(t, err)
+	require.NotNil(t, response)
 
 	assert.True(t, called)
 	assert.Contains(t, httpMessage, "\"Message\":\"{\\\"IAm\\\": \\\"aMessage\\\"}\"")
@@ -303,6 +314,7 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
 		PublishBatchRequestEntries []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		} `schema:"PublishBatchRequestEntries"`
@@ -310,14 +322,17 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
 		PublishBatchRequestEntries: []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		}{
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
@@ -356,6 +371,7 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
 		PublishBatchRequestEntries []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		} `schema:"PublishBatchRequestEntries"`
@@ -363,14 +379,17 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
 		PublishBatchRequestEntries: []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		}{
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
@@ -436,6 +455,7 @@ func Test_Publish_batch_http_xml(t *testing.T) {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
 		PublishBatchRequestEntries []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		} `schema:"PublishBatchRequestEntries"`
@@ -443,14 +463,17 @@ func Test_Publish_batch_http_xml(t *testing.T) {
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
 		PublishBatchRequestEntries: []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		}{
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
@@ -505,6 +528,7 @@ func Test_Publish_batch_https_xml_raw(t *testing.T) {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
 		PublishBatchRequestEntries []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		} `schema:"PublishBatchRequestEntries"`
@@ -512,14 +536,17 @@ func Test_Publish_batch_https_xml_raw(t *testing.T) {
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
 		PublishBatchRequestEntries: []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		}{
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
@@ -575,6 +602,7 @@ func Test_Publish_batch_https_xml_not_raw(t *testing.T) {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
 		PublishBatchRequestEntries []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		} `schema:"PublishBatchRequestEntries"`
@@ -582,14 +610,17 @@ func Test_Publish_batch_https_xml_not_raw(t *testing.T) {
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
 		PublishBatchRequestEntries: []struct {
+			Id      string `schema:"Id"`
 			Message string `schema:"Message"`
 			Subject string `schema:"Subject"`
 		}{
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},
 			{
+				Id:      uuid.NewString(),
 				Message: message,
 				Subject: subject,
 			},

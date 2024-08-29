@@ -39,9 +39,9 @@ func Test_Publish_sqs_json_raw(t *testing.T) {
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn: &topicArn,
-		Message:  &message,
-		Subject:  &subject,
+		TopicArn: aws.String(topicArn),
+		Message:  aws.String(message),
+		Subject:  aws.String(subject),
 	})
 
 	assert.Nil(t, err)
@@ -70,9 +70,9 @@ func Test_Publish_sqs_json_not_raw(t *testing.T) {
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn: &topicArn,
-		Message:  &message,
-		Subject:  &subject,
+		TopicArn: aws.String(topicArn),
+		Message:  aws.String(message),
+		Subject:  aws.String(subject),
 	})
 
 	assert.Nil(t, err)
@@ -128,8 +128,8 @@ func Test_Publish_http_json(t *testing.T) {
 	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn: &topicArn,
-		Message:  &message,
+		TopicArn: aws.String(topicArn),
+		Message:  aws.String(message),
 	})
 
 	assert.Nil(t, err)
@@ -174,8 +174,8 @@ func Test_Publish_https_json_raw(t *testing.T) {
 	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn: &topicArn,
-		Message:  &message,
+		TopicArn: aws.String(topicArn),
+		Message:  aws.String(message),
 	})
 
 	assert.Nil(t, err)
@@ -222,9 +222,9 @@ func Test_Publish_https_json_not_raw(t *testing.T) {
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn: &topicArn,
-		Message:  &message,
-		Subject:  &subject,
+		TopicArn: aws.String(topicArn),
+		Message:  aws.String(message),
+		Subject:  aws.String(subject),
 	})
 
 	assert.Nil(t, err)
