@@ -271,20 +271,20 @@ func TestActionHandler_v0_xml(t *testing.T) {
 			"DeleteMessageBatch":      sqs.DeleteMessageBatchV1,
 
 			// SNS
-			"Subscribe":         sns.SubscribeV1,
-			"Unsubscribe":       sns.UnsubscribeV1,
-			"Publish":           sns.PublishV1,
-			"ListTopics":        sns.ListTopicsV1,
-			"CreateTopic":       sns.CreateTopicV1,
-			"DeleteTopic":       sns.DeleteTopicV1,
-			"ListSubscriptions": sns.ListSubscriptionsV1,
-			"PublishBatch":      sns.PublishBatchV1,
+			"Subscribe":                 sns.SubscribeV1,
+			"Unsubscribe":               sns.UnsubscribeV1,
+			"Publish":                   sns.PublishV1,
+			"ListTopics":                sns.ListTopicsV1,
+			"CreateTopic":               sns.CreateTopicV1,
+			"DeleteTopic":               sns.DeleteTopicV1,
+			"ListSubscriptions":         sns.ListSubscriptionsV1,
+			"GetSubscriptionAttributes": sns.GetSubscriptionAttributesV1,
+			"PublishBatch":              sns.PublishBatchV1,
 		}
 
 		routingTable = map[string]http.HandlerFunc{
 			// SNS
 			"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
-			"GetSubscriptionAttributes": sns.GetSubscriptionAttributes,
 			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopic,
 
 			// SNS Internal

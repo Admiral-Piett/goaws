@@ -526,3 +526,32 @@ func (r ListSubscriptionsResponse) GetResult() interface{} {
 func (r ListSubscriptionsResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Get Subscription Attributes ***/
+type GetSubscriptionAttributesResult struct {
+	Attributes GetSubscriptionAttributes `xml:"Attributes,omitempty"`
+}
+
+type GetSubscriptionAttributes struct {
+	/* SubscriptionArn, FilterPolicy */
+	Entries []SubscriptionAttributeEntry `xml:"entry,omitempty"`
+}
+
+type SubscriptionAttributeEntry struct {
+	Key   string `xml:"key,omitempty"`
+	Value string `xml:"value,omitempty"`
+}
+
+type GetSubscriptionAttributesResponse struct {
+	Xmlns    string                          `xml:"xmlns,attr,omitempty"`
+	Result   GetSubscriptionAttributesResult `xml:"GetSubscriptionAttributesResult"`
+	Metadata app.ResponseMetadata            `xml:"ResponseMetadata,omitempty"`
+}
+
+func (r GetSubscriptionAttributesResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r GetSubscriptionAttributesResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

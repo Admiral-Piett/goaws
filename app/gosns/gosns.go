@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -214,54 +213,6 @@ func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 
-			}
-		}
-	}
-	createErrorResponse(w, req, "SubscriptionNotFound")
-}
-
-func GetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
-
-	content := req.FormValue("ContentType")
-	subsArn := req.FormValue("SubscriptionArn")
-
-	for _, topic := range app.SyncTopics.Topics {
-		for _, sub := range topic.Subscriptions {
-			if sub.SubscriptionArn == subsArn {
-
-				entries := make([]app.SubscriptionAttributeEntry, 0, 0)
-				entry := app.SubscriptionAttributeEntry{Key: "Owner", Value: app.CurrentEnvironment.AccountID}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "RawMessageDelivery", Value: strconv.FormatBool(sub.Raw)}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "TopicArn", Value: sub.TopicArn}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "Endpoint", Value: sub.EndPoint}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "PendingConfirmation", Value: "false"}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "ConfirmationWasAuthenticated", Value: "true"}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "SubscriptionArn", Value: sub.SubscriptionArn}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "Protocol", Value: sub.Protocol}
-				entries = append(entries, entry)
-				entry = app.SubscriptionAttributeEntry{Key: "Endpoint", Value: sub.EndPoint}
-				entries = append(entries, entry)
-
-				if sub.FilterPolicy != nil {
-					filterPolicyBytes, _ := json.Marshal(sub.FilterPolicy)
-					entry = app.SubscriptionAttributeEntry{Key: "FilterPolicy", Value: string(filterPolicyBytes)}
-					entries = append(entries, entry)
-				}
-
-				result := app.GetSubscriptionAttributesResult{SubscriptionAttributes: app.SubscriptionAttributes{Entries: entries}}
-				uuid, _ := common.NewUUID()
-				respStruct := app.GetSubscriptionAttributesResponse{"http://sns.amazonaws.com/doc/2010-03-31", result, app.ResponseMetadata{RequestId: uuid}}
-
-				SendResponseBack(w, req, respStruct, content)
-
-				return
 			}
 		}
 	}

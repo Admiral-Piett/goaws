@@ -6,27 +6,6 @@ type SetSubscriptionAttributesResponse struct {
 	Metadata ResponseMetadata `xml:"ResponseMetadata"`
 }
 
-/*** Get Subscription Attributes ***/
-type GetSubscriptionAttributesResult struct {
-	SubscriptionAttributes SubscriptionAttributes `xml:"Attributes,omitempty"`
-}
-
-type SubscriptionAttributes struct {
-	/* SubscriptionArn, FilterPolicy */
-	Entries []SubscriptionAttributeEntry `xml:"entry,omitempty"`
-}
-
-type SubscriptionAttributeEntry struct {
-	Key   string `xml:"key,omitempty"`
-	Value string `xml:"value,omitempty"`
-}
-
-type GetSubscriptionAttributesResponse struct {
-	Xmlns    string                          `xml:"xmlns,attr,omitempty"`
-	Result   GetSubscriptionAttributesResult `xml:"GetSubscriptionAttributesResult"`
-	Metadata ResponseMetadata                `xml:"ResponseMetadata,omitempty"`
-}
-
 /*** List Subscriptions By Topic Response */
 
 type TopicMemberResult struct {

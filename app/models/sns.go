@@ -274,7 +274,6 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 }
 
 // ListTopics
-
 func NewListTopicsRequest() *ListTopicsRequest {
 	return &ListTopicsRequest{}
 }
@@ -286,7 +285,6 @@ type ListTopicsRequest struct {
 func (r *ListTopicsRequest) SetAttributesFromForm(values url.Values) {}
 
 // DeleteTopicV1
-
 func NewDeleteTopicRequest() *DeleteTopicRequest {
 	return &DeleteTopicRequest{}
 }
@@ -298,7 +296,6 @@ type DeleteTopicRequest struct {
 func (r *DeleteTopicRequest) SetAttributesFromForm(values url.Values) {}
 
 // ListSubscriptionsV1
-
 func NewListSubscriptionsRequest() *ListSubscriptionsRequest {
 	return &ListSubscriptionsRequest{}
 }
@@ -309,8 +306,18 @@ type ListSubscriptionsRequest struct {
 
 func (r *ListSubscriptionsRequest) SetAttributesFromForm(values url.Values) {}
 
-// PublishBatchV1
+// Get Subscription Attributes V1
+func NewGetSubscriptionAttributesRequest() *GetSubscriptionAttributesRequest {
+	return &GetSubscriptionAttributesRequest{}
+}
 
+type GetSubscriptionAttributesRequest struct {
+	SubscriptionArn string `json:"SubscriptionArn" schema:"SubscriptionArn"`
+}
+
+func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
+
+// PublishBatchV1
 func NewPublishBatchRequest() *PublishBatchRequest {
 	return &PublishBatchRequest{}
 }
