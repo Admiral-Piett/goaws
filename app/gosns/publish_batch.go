@@ -24,10 +24,10 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		return utils.CreateErrorResponseV1("InvalidParameterValue", false)
 	}
 
-	if len(requestBody.PublishBatchRequestEntries) == 0 {
+	if len(requestBody.PublishBatchRequestEntries.Member) == 0 {
 		return utils.CreateErrorResponseV1("EmptyBatchRequest", false)
 	}
-	if len(requestBody.PublishBatchRequestEntries) > 10 {
+	if len(requestBody.PublishBatchRequestEntries.Member) > 10 {
 		return utils.CreateErrorResponseV1("TooManyEntriesInBatchRequest", false)
 	}
 
@@ -41,7 +41,10 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	seen := make(map[string]bool)
 
-	for _, entry := range requestBody.PublishBatchRequestEntries {
+	for _, entry := range requestBody.PublishBatchRequestEntries.Member {
+		if entry == nil { // we use gorilla schema to parse value params. Indexing on the aws client starts at 1 but gorilla schema starts at 0 so we may have a nil entry at the start of the slice
+			continue
+		}
 		if entry.ID == "" {
 			// This is a required field for the PublishBatchRequestEntry entity but doesn't seem required in the request.
 			// If it's not present in the request then assume we should generate one.
@@ -55,7 +58,10 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	successfulEntries := []models.PublishBatchResultEntry{}
 	failedEntries := []models.BatchResultErrorEntry{}
-	for _, entry := range requestBody.PublishBatchRequestEntries {
+	for _, entry := range requestBody.PublishBatchRequestEntries.Member {
+		if entry == nil { // we use gorilla schema to parse value params. Indexing on the aws client starts at 1 but gorilla schema starts at 0 so we may have a nil entry at the start of the slice
+			continue
+		}
 		// we now know all the entry.IDs are unique and non-blank
 		for _, sub := range topic.Subscriptions {
 			switch app.Protocol(sub.Protocol) {

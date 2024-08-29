@@ -316,8 +316,10 @@ func NewPublishBatchRequest() *PublishBatchRequest {
 }
 
 type PublishBatchRequest struct {
-	PublishBatchRequestEntries []*PublishBatchRequestEntry `json:"PublishBatchRequestEntries" schema:"PublishBatchRequestEntries"`
-	TopicArn                   string                      `json:"TopicArn" schema:"TopicArn"`
+	PublishBatchRequestEntries struct {
+		Member []*PublishBatchRequestEntry `json:"member" schema:"member"`
+	} `json:"PublishBatchRequestEntries" schema:"PublishBatchRequestEntries"`
+	TopicArn string `json:"TopicArn" schema:"TopicArn"`
 }
 
 type PublishBatchRequestEntry struct {

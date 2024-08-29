@@ -313,32 +313,41 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 	requestBody := struct {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
-		PublishBatchRequestEntries []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		} `schema:"PublishBatchRequestEntries"`
 	}{
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
-		PublishBatchRequestEntries: []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries: struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		}{
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
-			},
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
+			Member: []struct {
+				Id      string "schema:\"Id\""
+				Message string "schema:\"Message\""
+				Subject string "schema:\"Subject\""
+			}{
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
 			},
 		},
 	}
-
 	e.POST("/").
 		WithForm(requestBody).
 		Expect().
@@ -346,7 +355,7 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 		Body().Raw()
 
 	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
-	assert.Len(t, messages, 2)
+	require.Len(t, messages, 2)
 	assert.Equal(t, message, string(messages[0].MessageBody))
 	assert.Equal(t, message, string(messages[1].MessageBody))
 }
@@ -370,28 +379,38 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 	requestBody := struct {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
-		PublishBatchRequestEntries []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		} `schema:"PublishBatchRequestEntries"`
 	}{
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
-		PublishBatchRequestEntries: []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries: struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		}{
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
-			},
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
+			Member: []struct {
+				Id      string "schema:\"Id\""
+				Message string "schema:\"Message\""
+				Subject string "schema:\"Subject\""
+			}{
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
 			},
 		},
 	}
@@ -454,28 +473,38 @@ func Test_Publish_batch_http_xml(t *testing.T) {
 	requestBody := struct {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
-		PublishBatchRequestEntries []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		} `schema:"PublishBatchRequestEntries"`
 	}{
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
-		PublishBatchRequestEntries: []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries: struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		}{
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
-			},
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
+			Member: []struct {
+				Id      string "schema:\"Id\""
+				Message string "schema:\"Message\""
+				Subject string "schema:\"Subject\""
+			}{
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
 			},
 		},
 	}
@@ -527,28 +556,38 @@ func Test_Publish_batch_https_xml_raw(t *testing.T) {
 	requestBody := struct {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
-		PublishBatchRequestEntries []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		} `schema:"PublishBatchRequestEntries"`
 	}{
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
-		PublishBatchRequestEntries: []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries: struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		}{
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
-			},
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
+			Member: []struct {
+				Id      string "schema:\"Id\""
+				Message string "schema:\"Message\""
+				Subject string "schema:\"Subject\""
+			}{
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
 			},
 		},
 	}
@@ -601,28 +640,38 @@ func Test_Publish_batch_https_xml_not_raw(t *testing.T) {
 	requestBody := struct {
 		Action                     string `schema:"Action"`
 		TopicArn                   string `schema:"TopicArn"`
-		PublishBatchRequestEntries []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		} `schema:"PublishBatchRequestEntries"`
 	}{
 		Action:   "PublishBatch",
 		TopicArn: topicArn,
-		PublishBatchRequestEntries: []struct {
-			Id      string `schema:"Id"`
-			Message string `schema:"Message"`
-			Subject string `schema:"Subject"`
+		PublishBatchRequestEntries: struct {
+			Member []struct {
+				Id      string `schema:"Id"`
+				Message string `schema:"Message"`
+				Subject string `schema:"Subject"`
+			} `schema:"member"`
 		}{
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
-			},
-			{
-				Id:      uuid.NewString(),
-				Message: message,
-				Subject: subject,
+			Member: []struct {
+				Id      string "schema:\"Id\""
+				Message string "schema:\"Message\""
+				Subject string "schema:\"Subject\""
+			}{
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
+				{
+					Id:      uuid.NewString(),
+					Message: message,
+					Subject: subject,
+				},
 			},
 		},
 	}
