@@ -44,8 +44,10 @@ func TestBatchPublishV1_empty_topicArn_error(t *testing.T) {
 		message := "{\"IAm\": \"aMessage\"}"
 		e := &models.PublishBatchRequestEntry{ID: "1", Message: message}
 		*v = models.PublishBatchRequest{
-			TopicArn:                   "",
-			PublishBatchRequestEntries: []*models.PublishBatchRequestEntry{e},
+			TopicArn: "",
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: []*models.PublishBatchRequestEntry{e}},
 		}
 		return true
 	}
@@ -68,8 +70,10 @@ func TestBatchPublishV1_nonexistent_topicArn_error(t *testing.T) {
 		message := "{\"IAm\": \"aMessage\"}"
 		e := &models.PublishBatchRequestEntry{ID: "1", Message: message}
 		*v = models.PublishBatchRequest{
-			TopicArn:                   "non-existing",
-			PublishBatchRequestEntries: []*models.PublishBatchRequestEntry{e},
+			TopicArn: "non-existing",
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: []*models.PublishBatchRequestEntry{e}},
 		}
 		return true
 	}
@@ -91,8 +95,10 @@ func TestBatchPublishV1_zero_entries_error(t *testing.T) {
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.PublishBatchRequest)
 		*v = models.PublishBatchRequest{
-			TopicArn:                   topicArn,
-			PublishBatchRequestEntries: []*models.PublishBatchRequestEntry{},
+			TopicArn: topicArn,
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: []*models.PublishBatchRequestEntry{}},
 		}
 		return true
 	}
@@ -120,8 +126,10 @@ func TestBatchPublishV1_too_many_entries_error(t *testing.T) {
 			entries = append(entries, e)
 		}
 		*v = models.PublishBatchRequest{
-			TopicArn:                   topicArn,
-			PublishBatchRequestEntries: entries,
+			TopicArn: topicArn,
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: entries},
 		}
 		return true
 	}
@@ -146,8 +154,10 @@ func TestBatchPublishV1_success_sqs(t *testing.T) {
 		v := resultingStruct.(*models.PublishBatchRequest)
 		e := &models.PublishBatchRequestEntry{ID: "1", Message: message}
 		*v = models.PublishBatchRequest{
-			TopicArn:                   topicArn,
-			PublishBatchRequestEntries: []*models.PublishBatchRequestEntry{e},
+			TopicArn: topicArn,
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: []*models.PublishBatchRequestEntry{e}},
 		}
 		return true
 	}
@@ -178,8 +188,10 @@ func TestBatchPublishV1_duplicate_id_errors(t *testing.T) {
 		v := resultingStruct.(*models.PublishBatchRequest)
 		e := &models.PublishBatchRequestEntry{ID: "1", Message: message}
 		*v = models.PublishBatchRequest{
-			TopicArn:                   topicArn,
-			PublishBatchRequestEntries: []*models.PublishBatchRequestEntry{e, e},
+			TopicArn: topicArn,
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: []*models.PublishBatchRequestEntry{e, e}},
 		}
 		return true
 	}
@@ -210,8 +222,10 @@ func TestBatchPublishV1_multiple_success_sqs(t *testing.T) {
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.PublishBatchRequest)
 		*v = models.PublishBatchRequest{
-			TopicArn:                   topicArn,
-			PublishBatchRequestEntries: entries,
+			TopicArn: topicArn,
+			PublishBatchRequestEntries: struct {
+				Member []*models.PublishBatchRequestEntry `json:"member" schema:"member"`
+			}{Member: entries},
 		}
 		return true
 	}
