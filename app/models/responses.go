@@ -523,6 +523,20 @@ func (r GetSubscriptionAttributesResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
 
+/*** Set Subscription Attributes ***/
+type SetSubscriptionAttributesResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r SetSubscriptionAttributesResponse) GetResult() interface{} {
+	return nil
+}
+
+func (r SetSubscriptionAttributesResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
 /*** List Subscriptions By Topic Response */
 type ListSubscriptionsByTopicResult struct {
 	NextToken     string             `xml:"NextToken"` // not implemented
