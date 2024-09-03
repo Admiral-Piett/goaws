@@ -272,6 +272,21 @@ type GetSubscriptionAttributesRequest struct {
 
 func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
 
+// SetSubscriptionAttributes
+
+func NewSetSubscriptionAttributesRequest() *SetSubscriptionAttributesRequest {
+	return &SetSubscriptionAttributesRequest{}
+}
+
+// Ref: https://docs.aws.amazon.com/sns/latest/api/API_SetSubscriptionAttributes.html
+type SetSubscriptionAttributesRequest struct {
+	SubscriptionArn string `json:"SubscriptionArn" schema:"SubscriptionArn"`
+	AttributeName   string `json:"AttributeName" schema:"AttributeName"`
+	AttributeValue  string `json:"AttributeValue" schema:"AttributeValue"`
+}
+
+func (r *SetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
+
 // List Subscriptions By Topic
 
 func NewListSubscriptionsByTopicRequest() *ListSubscriptionsByTopicRequest {
