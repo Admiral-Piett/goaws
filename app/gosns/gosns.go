@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"bytes"
@@ -127,20 +125,6 @@ func formatSignature(msg *app.SNSMessage) (formated string, err error) {
 	}
 
 	return
-}
-
-func ConfirmSubscription(w http.ResponseWriter, req *http.Request) {
-	topicArn := req.Form.Get("TopicArn")
-	confirmToken := req.Form.Get("Token")
-	pendingConfirm := TOPIC_DATA[topicArn]
-	if pendingConfirm.token == confirmToken {
-		respStruct := models.ConfirmSubscriptionResponse{"http://queue.amazonaws.com/doc/2012-11-05/", models.SubscribeResult{SubscriptionArn: pendingConfirm.subArn}, app.ResponseMetadata{RequestId: uuid.NewString()}}
-
-		SendResponseBack(w, req, respStruct, "application/xml")
-	} else {
-		createErrorResponse(w, req, "SubArnNotFound")
-	}
-
 }
 
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially

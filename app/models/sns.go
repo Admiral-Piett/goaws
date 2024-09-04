@@ -299,3 +299,17 @@ type ListSubscriptionsByTopicRequest struct {
 }
 
 func (r *ListSubscriptionsByTopicRequest) SetAttributesFromForm(values url.Values) {}
+
+// Confirm Subscription V1
+
+func NewConfirmSubscriptionRequest() *ConfirmSubscriptionRequest {
+	return &ConfirmSubscriptionRequest{}
+}
+
+type ConfirmSubscriptionRequest struct {
+	AuthenticateOnUnsubscribe bool   `json:"AuthenticateOnUnsubscribe" schema:"AuthenticateOnUnsubscribe"` // not implemented
+	TopicArn                  string `json:"TopicArn" schema:"TopicArn"`
+	Token                     string `json:"Token" schema:"Token"`
+}
+
+func (r *ConfirmSubscriptionRequest) SetAttributesFromForm(values url.Values) {}

@@ -359,9 +359,21 @@ func (r SubscribeResponse) GetRequestId() string {
 
 /*** ConfirmSubscriptionResponse ***/
 type ConfirmSubscriptionResponse struct {
-	Xmlns    string               `xml:"xmlns,attr"`
-	Result   SubscribeResult      `xml:"ConfirmSubscriptionResult"`
-	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string                    `xml:"xmlns,attr"`
+	Result   ConfirmSubscriptionResult `xml:"ConfirmSubscriptionResult"`
+	Metadata app.ResponseMetadata      `xml:"ResponseMetadata"`
+}
+
+type ConfirmSubscriptionResult struct {
+	SubscriptionArn string `xml:"SubscriptionArn"`
+}
+
+func (r ConfirmSubscriptionResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ConfirmSubscriptionResponse) GetRequestId() string {
+	return r.Metadata.RequestId
 }
 
 /*** Delete Subscription ***/
