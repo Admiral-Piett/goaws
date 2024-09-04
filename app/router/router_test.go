@@ -17,8 +17,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 
-	sns "github.com/Admiral-Piett/goaws/app/gosns"
-
 	sqs "github.com/Admiral-Piett/goaws/app/gosqs"
 
 	"github.com/stretchr/testify/assert"
@@ -250,62 +248,4 @@ func TestActionHandler_v1_xml(t *testing.T) {
 	tmp := mocks.BaseResponse{}
 	xml.Unmarshal(w.Body.Bytes(), &tmp)
 	assert.Equal(t, mocks.BaseResponse{Message: "response-body"}, tmp)
-}
-
-func TestActionHandler_v0_xml(t *testing.T) {
-	defer func() {
-		routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){
-			// SQS
-			"CreateQueue":             sqs.CreateQueueV1,
-			"ListQueues":              sqs.ListQueuesV1,
-			"GetQueueAttributes":      sqs.GetQueueAttributesV1,
-			"SetQueueAttributes":      sqs.SetQueueAttributesV1,
-			"SendMessage":             sqs.SendMessageV1,
-			"ReceiveMessage":          sqs.ReceiveMessageV1,
-			"DeleteMessage":           sqs.DeleteMessageV1,
-			"ChangeMessageVisibility": sqs.ChangeMessageVisibilityV1,
-			"GetQueueUrl":             sqs.GetQueueUrlV1,
-			"PurgeQueue":              sqs.PurgeQueueV1,
-			"DeleteQueue":             sqs.DeleteQueueV1,
-			"SendMessageBatch":        sqs.SendMessageBatchV1,
-			"DeleteMessageBatch":      sqs.DeleteMessageBatchV1,
-
-			// SNS
-			"Subscribe":                 sns.SubscribeV1,
-			"Unsubscribe":               sns.UnsubscribeV1,
-			"Publish":                   sns.PublishV1,
-			"ListTopics":                sns.ListTopicsV1,
-			"CreateTopic":               sns.CreateTopicV1,
-			"DeleteTopic":               sns.DeleteTopicV1,
-			"ListSubscriptions":         sns.ListSubscriptionsV1,
-			"GetSubscriptionAttributes": sns.GetSubscriptionAttributesV1,
-			"SetSubscriptionAttributes": sns.SetSubscriptionAttributesV1,
-			"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopicV1,
-		}
-
-		routingTable = map[string]http.HandlerFunc{
-			// SNS Internal
-			"ConfirmSubscription": sns.ConfirmSubscription,
-		}
-	}()
-
-	mockCalled := false
-	mockFunction := func(w http.ResponseWriter, req *http.Request) {
-		mockCalled = true
-		w.WriteHeader(http.StatusOK)
-	}
-	routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractResponseBody){}
-	routingTable = map[string]http.HandlerFunc{
-		"CreateQueue": mockFunction,
-	}
-
-	w, r := test.GenerateRequestInfo("POST", "/url", nil, false)
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	r.PostForm = form
-
-	actionHandler(w, r)
-
-	assert.True(t, mockCalled)
-	assert.Equal(t, http.StatusOK, w.Code)
 }
