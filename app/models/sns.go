@@ -317,6 +317,21 @@ type GetSubscriptionAttributesRequest struct {
 
 func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
 
+// SetSubscriptionAttributes
+
+func NewSetSubscriptionAttributesRequest() *SetSubscriptionAttributesRequest {
+	return &SetSubscriptionAttributesRequest{}
+}
+
+// Ref: https://docs.aws.amazon.com/sns/latest/api/API_SetSubscriptionAttributes.html
+type SetSubscriptionAttributesRequest struct {
+	SubscriptionArn string `json:"SubscriptionArn" schema:"SubscriptionArn"`
+	AttributeName   string `json:"AttributeName" schema:"AttributeName"`
+	AttributeValue  string `json:"AttributeValue" schema:"AttributeValue"`
+}
+
+func (r *SetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
+
 // List Subscriptions By Topic
 func NewListSubscriptionsByTopicRequest() *ListSubscriptionsByTopicRequest {
 	return &ListSubscriptionsByTopicRequest{}
@@ -329,7 +344,20 @@ type ListSubscriptionsByTopicRequest struct {
 
 func (r *ListSubscriptionsByTopicRequest) SetAttributesFromForm(values url.Values) {}
 
-// PublishBatchV1
+// Confirm Subscription V1
+
+func NewConfirmSubscriptionRequest() *ConfirmSubscriptionRequest {
+	return &ConfirmSubscriptionRequest{}
+}
+
+type ConfirmSubscriptionRequest struct {
+	AuthenticateOnUnsubscribe bool   `json:"AuthenticateOnUnsubscribe" schema:"AuthenticateOnUnsubscribe"` // not implemented
+	TopicArn                  string `json:"TopicArn" schema:"TopicArn"`
+	Token                     string `json:"Token" schema:"Token"`
+}
+
+func (r *ConfirmSubscriptionRequest) SetAttributesFromForm(values url.Values) {}
+
 func NewPublishBatchRequest() *PublishBatchRequest {
 	return &PublishBatchRequest{}
 }

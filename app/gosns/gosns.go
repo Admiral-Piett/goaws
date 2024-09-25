@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"bytes"
@@ -25,7 +23,6 @@ import (
 	"math/big"
 
 	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -130,69 +127,6 @@ func formatSignature(msg *app.SNSMessage) (formated string, err error) {
 	return
 }
 
-func ConfirmSubscription(w http.ResponseWriter, req *http.Request) {
-	topicArn := req.Form.Get("TopicArn")
-	confirmToken := req.Form.Get("Token")
-	pendingConfirm := TOPIC_DATA[topicArn]
-	if pendingConfirm.token == confirmToken {
-		respStruct := models.ConfirmSubscriptionResponse{"http://queue.amazonaws.com/doc/2012-11-05/", models.SubscribeResult{SubscriptionArn: pendingConfirm.subArn}, app.ResponseMetadata{RequestId: uuid.NewString()}}
-
-		SendResponseBack(w, req, respStruct, "application/xml")
-	} else {
-		createErrorResponse(w, req, "SubArnNotFound")
-	}
-
-}
-
-func SetSubscriptionAttributes(w http.ResponseWriter, req *http.Request) {
-	content := req.FormValue("ContentType")
-	subsArn := req.FormValue("SubscriptionArn")
-	Attribute := req.FormValue("AttributeName")
-	Value := req.FormValue("AttributeValue")
-
-	for _, topic := range app.SyncTopics.Topics {
-		for _, sub := range topic.Subscriptions {
-			if sub.SubscriptionArn == subsArn {
-				if Attribute == "RawMessageDelivery" {
-					app.SyncTopics.Lock()
-					if Value == "true" {
-						sub.Raw = true
-					} else {
-						sub.Raw = false
-					}
-					app.SyncTopics.Unlock()
-					//Good Response == return
-					uuid, _ := common.NewUUID()
-					respStruct := app.SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
-					SendResponseBack(w, req, respStruct, content)
-					return
-				}
-
-				if Attribute == "FilterPolicy" {
-					filterPolicy := &app.FilterPolicy{}
-					err := json.Unmarshal([]byte(Value), filterPolicy)
-					if err != nil {
-						createErrorResponse(w, req, "ValidationError")
-						return
-					}
-
-					app.SyncTopics.Lock()
-					sub.FilterPolicy = filterPolicy
-					app.SyncTopics.Unlock()
-
-					//Good Response == return
-					uuid, _ := common.NewUUID()
-					respStruct := app.SetSubscriptionAttributesResponse{"http://queue.amazonaws.com/doc/2012-11-05/", app.ResponseMetadata{RequestId: uuid}}
-					SendResponseBack(w, req, respStruct, content)
-					return
-				}
-
-			}
-		}
-	}
-	createErrorResponse(w, req, "SubscriptionNotFound")
-}
-
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially
 // it is a localized subscription to some non-AWS endpoint.
 func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
@@ -275,6 +209,17 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 	}
 
 	return defaultMsg, nil
+}
+
+func getSubscription(subsArn string) *app.Subscription {
+	for _, topic := range app.SyncTopics.Topics {
+		for _, sub := range topic.Subscriptions {
+			if sub.SubscriptionArn == subsArn {
+				return sub
+			}
+		}
+	}
+	return nil
 }
 
 func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {

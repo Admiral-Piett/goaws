@@ -87,16 +87,12 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"DeleteTopic":               sns.DeleteTopicV1,
 	"ListSubscriptions":         sns.ListSubscriptionsV1,
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributesV1,
+	"SetSubscriptionAttributes": sns.SetSubscriptionAttributesV1,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopicV1,
 	"PublishBatch":              sns.PublishBatchV1,
-}
-
-var routingTable = map[string]http.HandlerFunc{
-	// SNS
-	"SetSubscriptionAttributes": sns.SetSubscriptionAttributes,
 
 	// SNS Internal
-	"ConfirmSubscription": sns.ConfirmSubscription,
+	"ConfirmSubscription": sns.ConfirmSubscriptionV1,
 }
 
 func health(w http.ResponseWriter, req *http.Request) {
@@ -118,15 +114,9 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 		encodeResponse(w, req, statusCode, responseBody)
 		return
 	}
-	fn, ok := routingTable[action]
-	if !ok {
-		log.Println("Bad Request - Action:", action)
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Bad Request")
-		return
-	}
-
-	http.HandlerFunc(fn).ServeHTTP(w, req)
+	log.Println("Bad Request - Action:", action)
+	w.WriteHeader(http.StatusBadRequest)
+	io.WriteString(w, "Bad Request")
 }
 
 func pemHandler(w http.ResponseWriter, req *http.Request) {
