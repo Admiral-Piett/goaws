@@ -318,7 +318,6 @@ type GetSubscriptionAttributesRequest struct {
 func (r *GetSubscriptionAttributesRequest) SetAttributesFromForm(values url.Values) {}
 
 // SetSubscriptionAttributes
-
 func NewSetSubscriptionAttributesRequest() *SetSubscriptionAttributesRequest {
 	return &SetSubscriptionAttributesRequest{}
 }
@@ -345,7 +344,6 @@ type ListSubscriptionsByTopicRequest struct {
 func (r *ListSubscriptionsByTopicRequest) SetAttributesFromForm(values url.Values) {}
 
 // Confirm Subscription V1
-
 func NewConfirmSubscriptionRequest() *ConfirmSubscriptionRequest {
 	return &ConfirmSubscriptionRequest{}
 }
@@ -358,6 +356,7 @@ type ConfirmSubscriptionRequest struct {
 
 func (r *ConfirmSubscriptionRequest) SetAttributesFromForm(values url.Values) {}
 
+// PublishBatch
 func NewPublishBatchRequest() *PublishBatchRequest {
 	return &PublishBatchRequest{}
 }
