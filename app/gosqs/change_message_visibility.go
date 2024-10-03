@@ -56,10 +56,9 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 				msgs[i].Retry++
 				if queue.MaxReceiveCount > 0 &&
 					queue.DeadLetterQueue != nil &&
-					msgs[i].Retry > queue.MaxReceiveCount {
+					msgs[i].Retry >= queue.MaxReceiveCount {
 					queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, msgs[i])
 					queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
-					i++
 				}
 			} else {
 				msgs[i].VisibilityTimeout = time.Now().Add(time.Duration(visibilityTimeout) * time.Second)
