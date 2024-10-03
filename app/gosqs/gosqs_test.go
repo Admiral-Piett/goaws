@@ -243,7 +243,7 @@ func TestDeadLetterQueue(t *testing.T) {
 	form.Add("Attribute.1.Name", "VisibilityTimeout")
 	form.Add("Attribute.1.Value", "1")
 	form.Add("Attribute.2.Name", "RedrivePolicy")
-	form.Add("Attribute.2.Value", `{"maxReceiveCount": 1, "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages"}`)
+	form.Add("Attribute.2.Value", `{"maxReceiveCount": 2, "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages"}`)
 	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
@@ -268,6 +268,9 @@ func TestDeadLetterQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
+	if len(app.SyncQueues.Queues["testing-deadletter"].Messages) != 1 {
+		t.Fatal("expected a message in testing-deadletter")
+	}
 
 	// receive message
 	req, err = http.NewRequest("POST", "/", nil)
@@ -286,6 +289,13 @@ func TestDeadLetterQueue(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
+	if len(app.SyncQueues.Queues["testing-deadletter"].Messages) != 1 {
+		t.Fatal("expected message in testing-deadletter after 1 receive attempt")
+	}
+	if len(deadLetterQueue.Messages) > 0 {
+		t.Fatal("expected no message in DLQ")
+	}
+
 	// receive the message one more time
 	req, err = http.NewRequest("POST", "/", nil)
 	if err != nil {
@@ -298,18 +308,95 @@ func TestDeadLetterQueue(t *testing.T) {
 	assert.Equal(t, status, http.StatusOK)
 	time.Sleep(2 * time.Second)
 
-	// another receive attempt
+	if len(app.SyncQueues.Queues["testing-deadletter"].Messages) != 0 {
+		t.Fatal("expected no message in testing-deadletter")
+	}
+	if len(deadLetterQueue.Messages) == 0 {
+		t.Fatal("expected a message in DLQ")
+	}
+}
+
+func TestDeadLetterQueueMultiple(t *testing.T) {
+	done := make(chan struct{}, 0)
+	go PeriodicTasks(1*time.Second, done)
+
+	// create a queue
+	req, err := http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadLetterQueue := &app.Queue{
+		Name:     "failed-messages-multiple",
+		Messages: []app.Message{},
+	}
+	app.SyncQueues.Lock()
+	app.SyncQueues.Queues["failed-messages-multiple"] = deadLetterQueue
+	app.SyncQueues.Unlock()
+	form := url.Values{}
+	form.Add("Action", "CreateQueue")
+	form.Add("QueueName", "testing-deadletter-multiple")
+	form.Add("Attribute.1.Name", "VisibilityTimeout")
+	form.Add("Attribute.1.Value", "1")
+	form.Add("Attribute.2.Name", "RedrivePolicy")
+	form.Add("Attribute.2.Value", `{"maxReceiveCount": 1, "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages-multiple"}`)
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	status, _ := CreateQueueV1(req)
+	assert.Equal(t, status, http.StatusOK)
+
+	// send 2 messages
 	req, err = http.NewRequest("POST", "/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	form = url.Values{}
+	form.Add("Action", "SendMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter-multiple")
+	form.Add("MessageBody", "1")
+	form.Add("Version", "2012-11-05")
+	req.PostForm = form
+
+	status, _ = SendMessageV1(req)
+	if status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+	status, _ = SendMessageV1(req)
+	if status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got \n%v want %v",
+			status, http.StatusOK)
+	}
+
+	if len(app.SyncQueues.Queues["testing-deadletter-multiple"].Messages) != 2 {
+		t.Fatal("expected 2 messages in testing-deadletter-multiple")
+	}
+
+	// receive messages
+	req, err = http.NewRequest("POST", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	form = url.Values{}
+	form.Add("Action", "ReceiveMessage")
+	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter-multiple")
+	form.Add("MaxNumberOfMessages", "2")
+	form.Add("Version", "2012-11-05")
 	req.PostForm = form
 
 	status, _ = ReceiveMessageV1(req)
 	assert.Equal(t, status, http.StatusOK)
-	if len(deadLetterQueue.Messages) == 0 {
-		t.Fatal("expected a message")
+
+	time.Sleep(2 * time.Second)
+
+	numMessages := len(app.SyncQueues.Queues["testing-deadletter-multiple"].Messages)
+	if numMessages != 0 {
+		t.Fatalf("expected no messages in testing-deadletter-multiple, found: %d", numMessages)
+	}
+	if len(deadLetterQueue.Messages) != 2 {
+		t.Fatal("expected 2 messages in DLQ")
 	}
 }
 
