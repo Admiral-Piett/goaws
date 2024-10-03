@@ -43,10 +43,10 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 							msg.Retry++
 							if queue.MaxReceiveCount > 0 &&
 								queue.DeadLetterQueue != nil &&
-								msg.Retry > queue.MaxReceiveCount {
+								msg.Retry >= queue.MaxReceiveCount {
 								queue.DeadLetterQueue.Messages = append(queue.DeadLetterQueue.Messages, *msg)
 								queue.Messages = append(queue.Messages[:i], queue.Messages[i+1:]...)
-								i++
+								i--
 							}
 						}
 					}
