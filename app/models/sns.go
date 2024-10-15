@@ -217,6 +217,10 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 		stringValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
 		binaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
 
+		if r.MessageAttributes == nil {
+			r.MessageAttributes = make(map[string]MessageAttributeValue)
+		}
+
 		r.MessageAttributes[name] = MessageAttributeValue{
 			DataType:    dataType,
 			StringValue: stringValue,
