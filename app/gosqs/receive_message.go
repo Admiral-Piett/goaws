@@ -144,7 +144,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 func getMessageResult(m *app.Message) *models.ResultMessage {
 	msgMttrs := []*models.ResultMessageAttribute{}
 	for _, attr := range m.MessageAttributes {
-		msgMttrs = append(msgMttrs, getMessageAttributeResult(&attr))
+		msgMttrs = append(msgMttrs, getMessageAttributeResult(attr))
 	}
 
 	attrsMap := map[string]string{

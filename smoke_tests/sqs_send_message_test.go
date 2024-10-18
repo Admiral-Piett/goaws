@@ -129,34 +129,34 @@ func Test_SendMessageV1_json_with_attributes(t *testing.T) {
 			attr1.Name = k
 			attr1.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 				BinaryValue: string(attr.BinaryValue),
 			}
 		} else if k == "attr2" {
 			attr2.Name = k
 			attr2.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 				BinaryValue: string(attr.BinaryValue),
 			}
 		} else if k == "attr3" {
 			attr3.Name = k
 			attr3.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 				BinaryValue: string(attr.BinaryValue),
 			}
 		}
 	}
 	assert.Equal(t, "attr1", attr1.Name)
 	assert.Equal(t, "String", attr1.Value.DataType)
-	assert.Equal(t, "attr1_value", attr1.Value.StringValue)
+	assert.Equal(t, "attr1_value", *attr1.Value.StringValue)
 	assert.Equal(t, "attr2", attr2.Name)
 	assert.Equal(t, "Number", attr2.Value.DataType)
-	assert.Equal(t, "2", attr2.Value.StringValue)
+	assert.Equal(t, "2", *attr2.Value.StringValue)
 	assert.Equal(t, "attr3", attr3.Name)
 	assert.Equal(t, "Binary", attr3.Value.DataType)
-	assert.Equal(t, "YXR0cjNfdmFsdWU=", attr3.Value.BinaryValue) // base64 encoded "attr3_value"
+	assert.Equal(t, "attr3_value", attr3.Value.BinaryValue)
 }
 
 func Test_SendMessageV1_json_MaximumMessageSize_TooBig(t *testing.T) {
@@ -350,10 +350,10 @@ func Test_SendMessageV1_xml_with_attributes(t *testing.T) {
 	}
 	assert.Equal(t, "attr1", attr1.Name)
 	assert.Equal(t, "String", attr1.Value.DataType)
-	assert.Equal(t, "attr1_value", attr1.Value.StringValue)
+	assert.Equal(t, "attr1_value", *attr1.Value.StringValue)
 	assert.Equal(t, "attr2", attr2.Name)
 	assert.Equal(t, "Number", attr2.Value.DataType)
-	assert.Equal(t, "2", attr2.Value.StringValue)
+	assert.Equal(t, "2", *attr2.Value.StringValue)
 	assert.Equal(t, "attr3", attr3.Name)
 	assert.Equal(t, "Binary", attr3.Value.DataType)
 	assert.Equal(t, "YXR0cjNfdmFsdWU=", attr3.Value.BinaryValue) // base64 encoded "attr3_value"

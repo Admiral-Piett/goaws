@@ -2,7 +2,10 @@ package smoke_tests
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/md5"
+	"encoding/binary"
+	"encoding/hex"
+	"hash"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,8 +27,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/aws/aws-sdk-go-v2/service/sns/types"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,6 +74,12 @@ func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
 		server.Close()
 		test.ResetResources()
 	}()
+	addBytesToHash := func(hasher hash.Hash, arr []byte) {
+		bs := make([]byte, 4)
+		binary.BigEndian.PutUint32(bs, uint32(len(arr)))
+		hasher.Write(bs)
+		hasher.Write(arr)
+	}
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
@@ -89,18 +96,28 @@ func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
 		Name: topicName,
 	})
 
-	snsClient.Subscribe(context.TODO(), &sns.SubscribeInput{
+	subscribeResult, _ := snsClient.Subscribe(context.TODO(), &sns.SubscribeInput{
 		Protocol:              aws.String("sqs"),
 		TopicArn:              createTopicResult.TopicArn,
 		Attributes:            map[string]string{},
 		Endpoint:              createQueueResult.QueueUrl,
 		ReturnSubscriptionArn: true,
 	})
+
+	snsClient.SetSubscriptionAttributes(context.TODO(), &sns.SetSubscriptionAttributesInput{
+		SubscriptionArn: subscribeResult.SubscriptionArn,
+		AttributeName:   aws.String("RawMessageDelivery"),
+		AttributeValue:  aws.String("true"),
+	})
+
 	message := "{\"IAm\": \"aMessage\"}"
+	binaryValueString := "binary-value"
+	binaryValue := []byte(binaryValueString)
 	subject := "I am a subject"
+
 	attributes := map[string]types.MessageAttributeValue{
 		"someKey": {
-			BinaryValue: []byte(message),
+			BinaryValue: binaryValue,
 			DataType:    aws.String("Binary"),
 		},
 	}
@@ -113,15 +130,9 @@ func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
 	})
 
 	receiveMessageResponse, receiveErr := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl: createQueueResult.QueueUrl,
+		QueueUrl:            createQueueResult.QueueUrl,
+		MaxNumberOfMessages: 10,
 	})
-
-	type Message struct {
-		Message string `json:"Message"`
-		Subject string `json:"Subject"`
-	}
-
-	var receiveMessage Message
 
 	assert.Nil(t, publishErr)
 	assert.NotNil(t, publishResponse)
@@ -130,9 +141,22 @@ func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
 	assert.NotNil(t, receiveMessageResponse)
 
 	body := *receiveMessageResponse.Messages[0].Body
-	json.Unmarshal([]byte(body), &receiveMessage)
-	assert.Equal(t, message, receiveMessage.Message)
-	assert.Equal(t, subject, receiveMessage.Subject)
+	assert.Equal(t, message, body)
+
+	messageAttribute := receiveMessageResponse.Messages[0].MessageAttributes["someKey"]
+	assert.Equal(t, "Binary", *messageAttribute.DataType)
+	assert.Equal(t, binaryValue, messageAttribute.BinaryValue)
+
+	// check client md5hash and received md5hash
+	hasher := md5.New()
+	addBytesToHash(hasher, []byte("someKey"))
+	addBytesToHash(hasher, []byte(*messageAttribute.DataType))
+	hasher.Write([]byte{2})
+	addBytesToHash(hasher, messageAttribute.BinaryValue)
+	clientHash := hex.EncodeToString(hasher.Sum(nil))
+
+	assert.Equal(t, clientHash, *receiveMessageResponse.Messages[0].MD5OfMessageAttributes)
+
 }
 
 func Test_Publish_sqs_json_not_raw(t *testing.T) {

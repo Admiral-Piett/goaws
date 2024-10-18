@@ -27,7 +27,7 @@ var AVAILABLE_QUEUE_ATTRIBUTES = map[string]bool{
 // TODO - reconcile this with app.MessageAttributeValue - deal with ConvertToOldMessageAttributeValueStructure
 type MessageAttributeValue struct {
 	BinaryListValues []string `json:"BinaryListValues,omitempty"` // currently unsupported by AWS
-	BinaryValue      string   `json:"BinaryValue,omitempty"`
+	BinaryValue      string   `json:"BinaryValue,omitempty"`      // base64 encoded string
 	DataType         string   `json:"DataType,omitempty"`
 	StringListValues []string `json:"StringListValues,omitempty"` // currently unsupported by AWS
 	StringValue      string   `json:"StringValue,omitempty"`

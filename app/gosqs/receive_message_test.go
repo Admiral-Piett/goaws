@@ -212,5 +212,5 @@ func TestReceiveMessageAttributesV1(t *testing.T) {
 	assert.Equal(t, 1, len(result.Messages[0].MessageAttributes))
 	assert.Equal(t, "TestMessageAttrName", result.Messages[0].MessageAttributes[0].Name)
 	assert.Equal(t, "String", result.Messages[0].MessageAttributes[0].Value.DataType)
-	assert.Equal(t, "TestMessageAttrValue", result.Messages[0].MessageAttributes[0].Value.StringValue)
+	assert.Equal(t, "TestMessageAttrValue", *result.Messages[0].MessageAttributes[0].Value.StringValue)
 }

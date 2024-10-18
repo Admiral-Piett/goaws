@@ -2,6 +2,7 @@ package smoke_tests
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -253,7 +254,8 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 	stringType := "String"
 	numberType := "Number"
 
-	binaryValue := "base64-encoded-value"
+	binaryValueString := "binary-value"
+	binaryValue := []byte(binaryValueString)
 	stringValue := "hogeValue"
 	numberValue := "100"
 
@@ -268,7 +270,7 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 				MessageBody: &messageBody2,
 				MessageAttributes: map[string]types.MessageAttributeValue{
 					binaryAttribute: {
-						BinaryValue: []byte(binaryValue),
+						BinaryValue: binaryValue,
 						DataType:    &binaryType,
 					},
 					stringAttribute: {
@@ -318,27 +320,27 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 			attr2.Name = k
 			attr2.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 			}
 		} else if k == numberAttribute {
 			attr3.Name = k
 			attr3.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 			}
 		}
 	}
 	assert.Equal(t, binaryAttribute, attr1.Name)
 	assert.Equal(t, binaryType, attr1.Value.DataType)
-	assert.Equal(t, "YmFzZTY0LWVuY29kZWQtdmFsdWU=", attr1.Value.BinaryValue) // base64 encoded value
+	assert.Equal(t, binaryValueString, attr1.Value.BinaryValue)
 
 	assert.Equal(t, stringAttribute, attr2.Name)
 	assert.Equal(t, stringType, attr2.Value.DataType)
-	assert.Equal(t, stringValue, attr2.Value.StringValue)
+	assert.Equal(t, stringValue, *attr2.Value.StringValue)
 
 	assert.Equal(t, numberAttribute, attr3.Name)
 	assert.Equal(t, numberType, attr3.Value.DataType)
-	assert.Equal(t, numberValue, attr3.Value.StringValue)
+	assert.Equal(t, numberValue, *attr3.Value.StringValue)
 }
 
 func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
@@ -371,7 +373,9 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 	stringType := "String"
 	numberType := "Number"
 
-	binaryValue := "YmFzZTY0LWVuY29kZWQtdmFsdWU="
+	binaryValueString := "binary-value"
+	binaryValue := []byte(binaryValueString)
+	base64EncodedString := base64.StdEncoding.EncodeToString(binaryValue)
 	stringValue := "hogeValue"
 	numberValue := "100"
 
@@ -393,7 +397,7 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 		WithFormField("Entries.1.MessageBody", messageBody2).
 		WithFormField("Entries.1.MessageAttributes.1.Name", binaryAttribute).
 		WithFormField("Entries.1.MessageAttributes.1.Value.DataType", binaryType).
-		WithFormField("Entries.1.MessageAttributes.1.Value.BinaryValue", binaryValue).
+		WithFormField("Entries.1.MessageAttributes.1.Value.BinaryValue", base64EncodedString).
 		WithFormField("Entries.1.MessageAttributes.2.Name", stringAttribute).
 		WithFormField("Entries.1.MessageAttributes.2.Value.DataType", stringType).
 		WithFormField("Entries.1.MessageAttributes.2.Value.StringValue", stringValue).
@@ -441,26 +445,26 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 			attr2.Name = k
 			attr2.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 			}
 		} else if k == numberAttribute {
 			attr3.Name = k
 			attr3.Value = &models.ResultMessageAttributeValue{
 				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
+				StringValue: attr.StringValue,
 			}
 		}
 	}
 	assert.Equal(t, binaryAttribute, attr1.Name)
 	assert.Equal(t, binaryType, attr1.Value.DataType)
-	assert.Equal(t, "YmFzZTY0LWVuY29kZWQtdmFsdWU=", attr1.Value.BinaryValue) // base64 encoded value
+	assert.Equal(t, binaryValueString, attr1.Value.BinaryValue)
 
 	assert.Equal(t, stringAttribute, attr2.Name)
 	assert.Equal(t, stringType, attr2.Value.DataType)
-	assert.Equal(t, stringValue, attr2.Value.StringValue)
+	assert.Equal(t, stringValue, *attr2.Value.StringValue)
 
 	assert.Equal(t, numberAttribute, attr3.Name)
 	assert.Equal(t, numberType, attr3.Value.DataType)
-	assert.Equal(t, numberValue, attr3.Value.StringValue)
+	assert.Equal(t, numberValue, *attr3.Value.StringValue)
 
 }
