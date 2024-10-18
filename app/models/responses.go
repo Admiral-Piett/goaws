@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/base64"
 	"encoding/json"
 
 	"github.com/Admiral-Piett/goaws/app"
@@ -80,10 +81,12 @@ func (r *ResultMessage) MarshalJSON() ([]byte, error) {
 	}
 
 	for _, attr := range r.MessageAttributes {
+		// When encoding json, BinaryValue([]byte) are automatically converted to base64.
+		binary, _ := base64.StdEncoding.DecodeString(attr.Value.BinaryValue)
 		m.MessageAttributes[attr.Name] = sqstypes.MessageAttributeValue{
 			DataType:    &attr.Value.DataType,
-			StringValue: &attr.Value.StringValue,
-			BinaryValue: []byte(attr.Value.BinaryValue),
+			StringValue: attr.Value.StringValue,
+			BinaryValue: binary,
 		}
 	}
 
@@ -91,9 +94,9 @@ func (r *ResultMessage) MarshalJSON() ([]byte, error) {
 }
 
 type ResultMessageAttributeValue struct {
-	DataType    string `xml:"DataType,omitempty"`
-	StringValue string `xml:"StringValue,omitempty"`
-	BinaryValue string `xml:"BinaryValue,omitempty"`
+	DataType    string  `xml:"DataType,omitempty"`
+	StringValue *string `xml:"StringValue,omitempty"`
+	BinaryValue string  `xml:"BinaryValue,omitempty"`
 }
 
 type ResultMessageAttribute struct {
