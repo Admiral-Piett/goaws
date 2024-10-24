@@ -43,7 +43,7 @@ func extractMessageAttributes(req *http.Request, prefix string) map[string]app.M
 	return attributes
 }
 
-func getMessageAttributeResult(a *app.MessageAttributeValue) *models.ResultMessageAttribute {
+func getMessageAttributeResult(a app.MessageAttributeValue) *models.ResultMessageAttribute {
 	v := &models.ResultMessageAttributeValue{
 		DataType: a.DataType,
 	}
@@ -52,9 +52,9 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *models.ResultMessa
 	case "Binary":
 		v.BinaryValue = a.Value
 	case "String":
-		v.StringValue = a.Value
+		v.StringValue = &a.Value
 	case "Number":
-		v.StringValue = a.Value
+		v.StringValue = &a.Value
 	}
 
 	return &models.ResultMessageAttribute{
