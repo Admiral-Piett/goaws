@@ -4,26 +4,6 @@ import (
 	"sync"
 )
 
-type MsgAttr struct {
-	Type  string
-	Value string
-}
-type SNSMessage struct {
-	Type              string
-	Token             string `json:"Token",omitempty`
-	MessageId         string
-	TopicArn          string
-	Subject           string
-	Message           string
-	Timestamp         string
-	SignatureVersion  string
-	Signature         string `json:"Signature",omitempty`
-	SigningCertURL    string
-	UnsubscribeURL    string
-	SubscribeURL      string             `json:"SubscribeURL",omitempty`
-	MessageAttributes map[string]MsgAttr `json:"MessageAttributes",omitempty`
-}
-
 type Subscription struct {
 	TopicArn        string
 	Protocol        string

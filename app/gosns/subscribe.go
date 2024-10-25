@@ -72,7 +72,7 @@ func SubscribeV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 			//QUESTION - do we need this?
 			time.Sleep(time.Second)
 
-			snsMSG := &app.SNSMessage{
+			snsMSG := &models.SNSMessage{
 				Type:             "SubscriptionConfirmation",
 				MessageId:        id,
 				Token:            token,

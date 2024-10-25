@@ -9,6 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+
+	"github.com/aws/aws-sdk-go-v2/service/sns/types"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/Admiral-Piett/goaws/app/conf"
@@ -38,6 +42,7 @@ func Test_Publish_sqs_json_raw(t *testing.T) {
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
 
 	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
@@ -51,9 +56,15 @@ func Test_Publish_sqs_json_raw(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 
-	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
-	assert.Len(t, messages, 1)
-	assert.Equal(t, message, string(messages[0].MessageBody))
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: &app.SyncQueues.Queues["subscribed-queue1"].URL,
+	})
+
+	assert.Len(t, receivedMessage.Messages, 1)
+	assert.Equal(t, 0, len(receivedMessage.Messages[0].MessageAttributes))
+	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
 }
 
 func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
@@ -138,6 +149,8 @@ func Test_Publish_sqs_json_not_raw(t *testing.T) {
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
 
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+
 	topicArn := app.SyncTopics.Topics["unit-topic3"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
@@ -150,10 +163,16 @@ func Test_Publish_sqs_json_not_raw(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 
-	messages := app.SyncQueues.Queues["subscribed-queue3"].Messages
-	assert.Len(t, messages, 1)
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: &app.SyncQueues.Queues["subscribed-queue3"].URL,
+	})
 
-	body := string(messages[0].MessageBody)
+	assert.Len(t, receivedMessage.Messages, 1)
+	assert.Equal(t, 0, len(receivedMessage.Messages[0].MessageAttributes))
+	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+
+	body := *receivedMessage.Messages[0].Body
 	assert.Contains(t, body, "\"Message\":\"{\\\"IAm\\\": \\\"aMessage\\\"}\"")
 	assert.Contains(t, body, "Type")
 	assert.Contains(t, body, "MessageId")
@@ -162,8 +181,123 @@ func Test_Publish_sqs_json_not_raw(t *testing.T) {
 	assert.Contains(t, body, "Signature")
 	assert.Contains(t, body, "SigningCertURL")
 	assert.Contains(t, body, "UnsubscribeURL")
-	assert.Contains(t, body, "SubscribeURL")
+}
+
+func Test_Publish_sqs_json_raw_optional_fields(t *testing.T) {
+	server := generateServer()
+	defaultEnv := app.CurrentEnvironment
+	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		server.Close()
+		test.ResetResources()
+		app.CurrentEnvironment = defaultEnv
+	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	snsClient := sns.NewFromConfig(sdkConfig)
+
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+
+	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	message := "{\"IAm\": \"aMessage\"}"
+	subject := "I am a subject"
+	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
+		TopicArn: &topicArn,
+		Message:  &message,
+		Subject:  &subject,
+		MessageAttributes: map[string]types.MessageAttributeValue{
+			"test": {
+				DataType:    aws.String("String"),
+				StringValue: aws.String("value"),
+			},
+		},
+		MessageDeduplicationId: aws.String("dedupe-id"),
+		MessageGroupId:         aws.String("group-id"),
+		MessageStructure:       aws.String("json"),
+		PhoneNumber:            aws.String("phone-number"),
+		TargetArn:              aws.String("target-arn"),
+	})
+
+	assert.Nil(t, err)
+	assert.NotNil(t, response)
+
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: &app.SyncQueues.Queues["subscribed-queue1"].URL,
+	})
+
+	assert.Len(t, receivedMessage.Messages, 1)
+	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
+	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 1)
+	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "9c35d992dee4528f7d20c274d61e16f5", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+
+	assert.Equal(t, "String", *receivedMessage.Messages[0].MessageAttributes["test"].DataType)
+	assert.Equal(t, "value", *receivedMessage.Messages[0].MessageAttributes["test"].StringValue)
+	assert.Equal(t, []byte{}, receivedMessage.Messages[0].MessageAttributes["test"].BinaryValue)
+	assert.Nil(t, receivedMessage.Messages[0].MessageAttributes["test"].BinaryListValues)
+	assert.Nil(t, receivedMessage.Messages[0].MessageAttributes["test"].StringListValues)
+}
+
+func Test_Publish_sqs_json_not_raw_optional_fields(t *testing.T) {
+	server := generateServer()
+	defaultEnv := app.CurrentEnvironment
+	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		server.Close()
+		test.ResetResources()
+		app.CurrentEnvironment = defaultEnv
+	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	snsClient := sns.NewFromConfig(sdkConfig)
+
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+
+	topicArn := app.SyncTopics.Topics["unit-topic3"].Arn
+	message := "{\"default\": \"message-value\", \"http\": \"different-protocol-multi-protocol-not-supported-atm\", \"IAm\": \"toBeIgnored\"}"
+	subject := "I am a subject"
+	response, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
+		TopicArn: &topicArn,
+		Message:  &message,
+		Subject:  &subject,
+		MessageAttributes: map[string]types.MessageAttributeValue{
+			"test": {
+				DataType:    aws.String("String"),
+				StringValue: aws.String("value"),
+			},
+		},
+		MessageDeduplicationId: aws.String("dedupe-id"),
+		MessageGroupId:         aws.String("group-id"),
+		MessageStructure:       aws.String("json"),
+		PhoneNumber:            aws.String("phone-number"),
+		TargetArn:              aws.String("target-arn"),
+	})
+
+	assert.Nil(t, err)
+	assert.NotNil(t, response)
+
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: &app.SyncQueues.Queues["subscribed-queue3"].URL,
+	})
+
+	assert.Len(t, receivedMessage.Messages, 1)
+	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+
+	body := *receivedMessage.Messages[0].Body
+	assert.Contains(t, body, "\"Message\":\"message-value\"")
+	assert.Contains(t, body, "Type")
+	assert.Contains(t, body, "MessageId")
+	assert.Contains(t, body, "TopicArn")
+	assert.Contains(t, body, subject)
+	assert.Contains(t, body, "Signature")
+	assert.Contains(t, body, "SigningCertURL")
+	assert.Contains(t, body, "UnsubscribeURL")
 	assert.Contains(t, body, "MessageAttributes")
+
+	assert.Contains(t, body, "\"MessageAttributes\":{\"test\":{\"DataType\":\"String\",\"StringValue\":\"value\"}}}")
 }
 
 func Test_Publish_http_json(t *testing.T) {
@@ -311,8 +445,6 @@ func Test_Publish_https_json_not_raw(t *testing.T) {
 	assert.Contains(t, httpMessage, "Signature")
 	assert.Contains(t, httpMessage, "SigningCertURL")
 	assert.Contains(t, httpMessage, "UnsubscribeURL")
-	assert.Contains(t, httpMessage, "SubscribeURL")
-	assert.Contains(t, httpMessage, "MessageAttributes")
 }
 
 func Test_Publish_sqs_xml_raw(t *testing.T) {
@@ -324,6 +456,10 @@ func Test_Publish_sqs_xml_raw(t *testing.T) {
 		test.ResetResources()
 		app.CurrentEnvironment = defaultEnv
 	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
 
 	e := httpexpect.Default(t, server.URL)
 
@@ -349,9 +485,20 @@ func Test_Publish_sqs_xml_raw(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
-	assert.Len(t, messages, 1)
-	assert.Equal(t, message, string(messages[0].MessageBody))
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue1"].URL,
+		MaxNumberOfMessages: 3,
+	})
+
+	assert.Equal(t, 1, len(receivedMessage.Messages))
+	assert.Nil(t, err)
+
+	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
+	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
+	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
+	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
 }
 
 func Test_Publish_sqs_xml_not_raw(t *testing.T) {
@@ -363,6 +510,10 @@ func Test_Publish_sqs_xml_not_raw(t *testing.T) {
 		test.ResetResources()
 		app.CurrentEnvironment = defaultEnv
 	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
 
 	e := httpexpect.Default(t, server.URL)
 
@@ -388,20 +539,29 @@ func Test_Publish_sqs_xml_not_raw(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	messages := app.SyncQueues.Queues["subscribed-queue3"].Messages
-	assert.Len(t, messages, 1)
+	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue3"].URL,
+		MaxNumberOfMessages: 3,
+	})
 
-	body := string(messages[0].MessageBody)
-	assert.Contains(t, body, "\"Message\":\"{\\\"IAm\\\": \\\"aMessage\\\"}\"")
-	assert.Contains(t, body, "Type")
-	assert.Contains(t, body, "MessageId")
-	assert.Contains(t, body, "TopicArn")
-	assert.Contains(t, body, subject)
-	assert.Contains(t, body, "Signature")
-	assert.Contains(t, body, "SigningCertURL")
-	assert.Contains(t, body, "UnsubscribeURL")
-	assert.Contains(t, body, "SubscribeURL")
-	assert.Contains(t, body, "MessageAttributes")
+	assert.Equal(t, 1, len(receivedMessage.Messages))
+	assert.Nil(t, err)
+
+	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
+	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
+	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
+	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
+
+	body0 := *receivedMessage.Messages[0].Body
+	assert.Contains(t, body0, "\"Message\":\"{\\\"IAm\\\": \\\"aMessage\\\"}\"")
+	assert.Contains(t, body0, "Type")
+	assert.Contains(t, body0, "MessageId")
+	assert.Contains(t, body0, "TopicArn")
+	assert.Contains(t, body0, subject)
+	assert.Contains(t, body0, "Signature")
+	assert.Contains(t, body0, "SigningCertURL")
+	assert.Contains(t, body0, "UnsubscribeURL")
 }
 
 func Test_Publish_http_xml(t *testing.T) {
@@ -577,6 +737,4 @@ func Test_Publish_https_xml_not_raw(t *testing.T) {
 	assert.Contains(t, httpMessage, "Signature")
 	assert.Contains(t, httpMessage, "SigningCertURL")
 	assert.Contains(t, httpMessage, "UnsubscribeURL")
-	assert.Contains(t, httpMessage, "SubscribeURL")
-	assert.Contains(t, httpMessage, "MessageAttributes")
 }

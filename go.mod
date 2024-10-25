@@ -16,6 +16,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.7.0
+	golang.org/x/text v0.13.0
 )
 
 require (

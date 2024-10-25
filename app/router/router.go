@@ -89,6 +89,7 @@ var routingTableV1 = map[string]func(r *http.Request) (int, interfaces.AbstractR
 	"GetSubscriptionAttributes": sns.GetSubscriptionAttributesV1,
 	"SetSubscriptionAttributes": sns.SetSubscriptionAttributesV1,
 	"ListSubscriptionsByTopic":  sns.ListSubscriptionsByTopicV1,
+	"PublishBatch":              sns.PublishBatchV1,
 
 	// SNS Internal
 	"ConfirmSubscription": sns.ConfirmSubscriptionV1,
@@ -113,7 +114,7 @@ func actionHandler(w http.ResponseWriter, req *http.Request) {
 		encodeResponse(w, req, statusCode, responseBody)
 		return
 	}
-	log.Println("Bad Request - Action:", action)
+	log.Warnf("Bad Request - Action: %s", action)
 	w.WriteHeader(http.StatusBadRequest)
 	io.WriteString(w, "Bad Request")
 }
