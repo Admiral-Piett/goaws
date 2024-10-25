@@ -1,12 +1,8 @@
 package gosqs
 
 import (
-	"encoding/xml"
-	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/Admiral-Piett/goaws/app/models"
 
 	log "github.com/sirupsen/logrus"
 
@@ -83,19 +79,4 @@ func getQueueFromPath(formVal string, theUrl string) string {
 		return ""
 	}
 	return u.Path
-}
-
-func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := models.SqsErrors[err]
-	respStruct := models.ErrorResponse{
-		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
-		RequestId: "00000000-0000-0000-0000-000000000000",
-	}
-
-	w.WriteHeader(er.HttpError)
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
-	}
 }

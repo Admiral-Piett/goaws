@@ -246,7 +246,7 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 	messageBody2 := "test%20message%20body%202"
 
 	binaryAttribute := "binary"
-	stringAttribute := "string"
+	stringAttribute := "String"
 	numberAttribute := "number"
 
 	binaryType := "Binary"
@@ -364,7 +364,7 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 	messageBody2 := "test%20message%20body%202"
 
 	binaryAttribute := "binary"
-	stringAttribute := "string"
+	stringAttribute := "String"
 	numberAttribute := "number"
 
 	binaryType := "Binary"

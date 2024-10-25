@@ -2,13 +2,20 @@ package gosns
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Admiral-Piett/goaws/app/models"
+
+	"github.com/Admiral-Piett/goaws/app/interfaces"
+
+	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/Admiral-Piett/goaws/app/utils"
+
+	"github.com/google/uuid"
 
 	"bytes"
 	"crypto"
@@ -80,7 +87,7 @@ func createPemFile() (privkey *rsa.PrivateKey, pemkey []byte, err error) {
 	return
 }
 
-func signMessage(privkey *rsa.PrivateKey, snsMsg *app.SNSMessage) (string, error) {
+func signMessage(privkey *rsa.PrivateKey, snsMsg *models.SNSMessage) (string, error) {
 	fs, err := formatSignature(snsMsg)
 	if err != nil {
 		return "", nil
@@ -92,7 +99,7 @@ func signMessage(privkey *rsa.PrivateKey, snsMsg *app.SNSMessage) (string, error
 	return base64.StdEncoding.EncodeToString(signature_b), err
 }
 
-func formatSignature(msg *app.SNSMessage) (formated string, err error) {
+func formatSignature(msg *models.SNSMessage) (formated string, err error) {
 	if msg.Type == "Notification" && msg.Subject != "" {
 		formated = fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
 			"Message", msg.Message,
@@ -129,7 +136,7 @@ func formatSignature(msg *app.SNSMessage) (formated string, err error) {
 
 // NOTE: The use case for this is to use GoAWS to call some external system with the message payload.  Essentially
 // it is a localized subscription to some non-AWS endpoint.
-func callEndpoint(endpoint string, subArn string, msg app.SNSMessage, raw bool) error {
+func callEndpoint(endpoint string, subArn string, msg models.SNSMessage, raw bool) error {
 	log.WithFields(log.Fields{
 		"sns":      msg,
 		"subArn":   subArn,
@@ -222,34 +229,170 @@ func getSubscription(subsArn string) *app.Subscription {
 	return nil
 }
 
-func createErrorResponse(w http.ResponseWriter, req *http.Request, err string) {
-	er := models.SnsErrors[err]
-	respStruct := models.ErrorResponse{
-		Result:    models.ErrorResult{Type: er.Type, Code: er.Code, Message: er.Message},
-		RequestId: "00000000-0000-0000-0000-000000000000",
+func createMessageBody(subs *app.Subscription, entry interfaces.AbstractPublishEntry,
+	messageAttributes map[string]app.MessageAttributeValue) ([]byte, error) {
+
+	msgId := uuid.NewString()
+	message := models.SNSMessage{
+		Type:              "Notification",
+		MessageId:         msgId,
+		TopicArn:          subs.TopicArn,
+		Subject:           entry.GetSubject(),
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		SignatureVersion:  "1",
+		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, msgId),
+		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
+		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
-	w.WriteHeader(er.HttpError)
-	enc := xml.NewEncoder(w)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(respStruct); err != nil {
-		log.Printf("error: %v\n", err)
+	if app.MessageStructure(entry.GetMessageStructure()) == app.MessageStructureJSON {
+		m, err := extractMessageFromJSON(entry.GetMessage(), subs.Protocol)
+		if err != nil {
+			return nil, err
+		}
+		message.Message = m
+	} else {
+		message.Message = entry.GetMessage()
+	}
+
+	signature, err := signMessage(PrivateKEY, &message)
+	if err != nil {
+		log.Error(err)
+	} else {
+		message.Signature = signature
+	}
+
+	byteMsg, _ := json.Marshal(message)
+	return byteMsg, nil
+}
+
+func formatAttributes(values map[string]app.MessageAttributeValue) map[string]models.MessageAttributeValue {
+	attr := make(map[string]models.MessageAttributeValue)
+	for k, v := range values {
+		if v.DataType == "String" {
+			attr[k] = models.MessageAttributeValue{
+				DataType:    v.DataType,
+				StringValue: v.Value,
+			}
+		} else {
+			attr[k] = models.MessageAttributeValue{
+				DataType:    v.DataType,
+				BinaryValue: v.Value, // TODO - this may need to be a []byte?
+			}
+		}
+	}
+	return attr
+}
+
+func publishHTTP(subs *app.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
+	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
+	id := uuid.NewString()
+	msg := models.SNSMessage{
+		Type:              "Notification",
+		MessageId:         id,
+		TopicArn:          topicArn,
+		Subject:           entry.GetSubject(),
+		Message:           entry.GetMessage(),
+		Timestamp:         time.Now().UTC().Format(time.RFC3339),
+		SignatureVersion:  "1",
+		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, id),
+		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
+		MessageAttributes: formatAttributes(messageAttributes),
+	}
+
+	signature, err := signMessage(PrivateKEY, &msg)
+	if err != nil {
+		log.Error(err)
+	} else {
+		msg.Signature = signature
+	}
+	err = callEndpoint(subs.EndPoint, subs.SubscriptionArn, msg, subs.Raw)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"EndPoint": subs.EndPoint,
+			"ARN":      subs.SubscriptionArn,
+			"error":    err.Error(),
+		}).Error("Error calling endpoint")
 	}
 }
 
-func SendResponseBack(w http.ResponseWriter, req *http.Request, respStruct interface{}, content string) {
-	if content == "JSON" {
-		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+// NOTE: The important thing to know here is that essentially the RAW delivery means we take the message body and
+// put it in the resulting `body`, so that's all that's in that field when the message is received.  If it's not
+// raw, then we put all this other junk in there too, similar to how AWS stores its metadata in there.
+func publishSQS(subscription *app.Subscription, topic *app.Topic, entry interfaces.AbstractPublishEntry) error {
+	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
+	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messageAttributes) {
+		return nil
+	}
+
+	endPoint := subscription.EndPoint
+	uriSegments := strings.Split(endPoint, "/")
+	queueName := uriSegments[len(uriSegments)-1]
+	arnSegments := strings.Split(queueName, ":")
+	queueName = arnSegments[len(arnSegments)-1]
+
+	if _, ok := app.SyncQueues.Queues[queueName]; ok {
+		msg := app.Message{}
+
+		if subscription.Raw {
+			msg.MessageAttributes = messageAttributes
+			msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
+
+			// NOTE: Admiral-Piett - commenting this out.  I don't understand what this is supposed to achieve
+			// for raw message delivery.  I suspect this doesn't work at all, otherwise you'd have to match the
+			//json message structure pattern with a `default` key at the root to indicate your base message and
+			//all the rest.  I don't think that makes sense for raw delivery.
+			//m, err := extractMessageFromJSON(entry.GetMessage(), subscription.Protocol)
+			//if err == nil {
+			//	msg.MessageBody = []byte(m)
+			//} else {
+			//	msg.MessageBody = []byte(entry.GetMessage())
+			//}
+			msg.MessageBody = []byte(entry.GetMessage())
+		} else {
+			m, err := createMessageBody(subscription, entry, messageAttributes)
+			if err != nil {
+				return err
+			}
+
+			msg.MessageBody = m
 		}
+
+		msg.MD5OfMessageBody = common.GetMD5Hash(entry.GetMessage())
+		msg.Uuid, _ = common.NewUUID()
+		app.SyncQueues.Lock()
+		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+		app.SyncQueues.Unlock()
+
+		log.Debugf("SQS Publish Success - Topic: %s(%s), Message: %s\n", topic.Name, queueName, msg.MessageBody)
 	} else {
-		w.Header().Set("Content-Type", "application/xml")
-		enc := xml.NewEncoder(w)
-		enc.Indent("  ", "    ")
-		if err := enc.Encode(respStruct); err != nil {
-			log.Printf("error: %v\n", err)
+		log.Warnf("SQS Publish Failure - Queue %s does not exist, message discarded\n", queueName)
+	}
+	return nil
+}
+
+var publishSqsMessageFunc = publishSQS
+var publishHttpMessageFunc = publishHTTP
+var publishMessageByTopicFunc = publishMessageByTopic
+
+// publishMessageByTopic - we'll return an error (the last one) at the end if any of the publishes fail.  For
+// now, we won't worry about cataloging each one even though, if you have multiple failures, we'll stomp on the
+// first ones.  For the current callers, just knowing that any failed will consider that entry failed.
+// We will also consider it a success if you have no subscriptions. "You didn't ask us to do anything, so we won't."
+func publishMessageByTopic(topic *app.Topic, message interfaces.AbstractPublishEntry) (messageId string, err error) {
+	messageId = uuid.NewString()
+	for _, sub := range topic.Subscriptions {
+		switch app.Protocol(sub.Protocol) {
+		case app.ProtocolSQS:
+			err = publishSqsMessageFunc(sub, topic, message)
+			if err != nil {
+				log.WithFields(log.Fields{"Topic": topic.Name, "Queue": sub.EndPoint}).Warn("Failed to publish message through subscription")
+			}
+		case app.ProtocolHTTP:
+			fallthrough
+		case app.ProtocolHTTPS:
+			publishHttpMessageFunc(sub, topic.Arn, message)
 		}
 	}
+	return messageId, err
 }

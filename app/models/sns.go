@@ -6,10 +6,15 @@ import (
 	"net/url"
 	"strconv"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/Admiral-Piett/goaws/app"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var Caser = cases.Title(language.AmericanEnglish)
 
 func NewCreateTopicRequest() *CreateTopicRequest {
 	return &CreateTopicRequest{
@@ -200,6 +205,7 @@ type PublishRequest struct {
 }
 
 func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
+	attributes := map[string]MessageAttributeValue{}
 	for i := 1; true; i++ {
 		nameKey := fmt.Sprintf("MessageAttributes.entry.%d.Name", i)
 		name := values.Get(nameKey)
@@ -220,13 +226,30 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 		if r.MessageAttributes == nil {
 			r.MessageAttributes = make(map[string]MessageAttributeValue)
 		}
-
-		r.MessageAttributes[name] = MessageAttributeValue{
-			DataType:    dataType,
+		attributes[name] = MessageAttributeValue{
+			DataType:    Caser.String(dataType), // capitalize
 			StringValue: stringValue,
 			BinaryValue: binaryValue,
 		}
 	}
+	r.MessageAttributes = attributes
+}
+
+// Satisfy the AbstractPublishEntry interface
+func (r *PublishRequest) GetMessage() string {
+	return r.Message
+}
+
+func (r *PublishRequest) GetMessageAttributes() map[string]MessageAttributeValue {
+	return r.MessageAttributes
+}
+
+func (r *PublishRequest) GetMessageStructure() string {
+	return r.MessageStructure
+}
+
+func (r *PublishRequest) GetSubject() string {
+	return r.Subject
 }
 
 // ListTopics
@@ -317,3 +340,47 @@ type ConfirmSubscriptionRequest struct {
 }
 
 func (r *ConfirmSubscriptionRequest) SetAttributesFromForm(values url.Values) {}
+
+func NewPublishBatchRequest() *PublishBatchRequest {
+	return &PublishBatchRequest{}
+}
+
+type PublishBatchRequest struct {
+	PublishBatchRequestEntries PublishBatchRequestEntries `json:"PublishBatchRequestEntries" schema:"PublishBatchRequestEntries"`
+	TopicArn                   string                     `json:"TopicArn" schema:"TopicArn"`
+}
+
+func (r *PublishBatchRequest) SetAttributesFromForm(values url.Values) {
+	// TODO - Implement me
+}
+
+type PublishBatchRequestEntries struct {
+	Member []*PublishBatchRequestEntry `json:"member" schema:"member"`
+}
+
+type PublishBatchRequestEntry struct {
+	ID                     string                           `json:"Id" schema:"Id"`
+	Message                string                           `json:"Message" schema:"Message"`
+	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`           // Not implemented
+	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
+	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageStructure       string                           `json:"MessageStructure" schema:"MessageStructure"`
+	Subject                string                           `json:"Subject" schema:"Subject"`
+}
+
+// Satisfy the AbstractPublishEntry interface
+func (r *PublishBatchRequestEntry) GetMessage() string {
+	return r.Message
+}
+
+func (r *PublishBatchRequestEntry) GetMessageAttributes() map[string]MessageAttributeValue {
+	return r.MessageAttributes
+}
+
+func (r *PublishBatchRequestEntry) GetMessageStructure() string {
+	return r.MessageStructure
+}
+
+func (r *PublishBatchRequestEntry) GetSubject() string {
+	return r.Subject
+}

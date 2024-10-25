@@ -51,9 +51,7 @@ func getMessageAttributeResult(a *app.MessageAttributeValue) *models.ResultMessa
 	switch a.DataType {
 	case "Binary":
 		v.BinaryValue = a.Value
-	case "String":
-		v.StringValue = a.Value
-	case "Number":
+	default:
 		v.StringValue = a.Value
 	}
 

@@ -26,9 +26,25 @@ var AVAILABLE_QUEUE_ATTRIBUTES = map[string]bool{
 
 // TODO - reconcile this with app.MessageAttributeValue - deal with ConvertToOldMessageAttributeValueStructure
 type MessageAttributeValue struct {
-	BinaryListValues []string `json:"BinaryListValues"` // currently unsupported by AWS
-	BinaryValue      string   `json:"BinaryValue"`
-	DataType         string   `json:"DataType"`
-	StringListValues []string `json:"StringListValues"` // currently unsupported by AWS
-	StringValue      string   `json:"StringValue"`
+	BinaryListValues []string `json:"BinaryListValues,omitempty"` // currently unsupported by AWS
+	BinaryValue      string   `json:"BinaryValue,omitempty"`
+	DataType         string   `json:"DataType,omitempty"`
+	StringListValues []string `json:"StringListValues,omitempty"` // currently unsupported by AWS
+	StringValue      string   `json:"StringValue,omitempty"`
+}
+
+type SNSMessage struct {
+	Type              string                           `json:"Type"`
+	Token             string                           `json:"Token,omitempty"`
+	MessageId         string                           `json:"MessageId"`
+	TopicArn          string                           `json:"TopicArn"`
+	Subject           string                           `json:"Subject"`
+	Message           string                           `json:"Message"`
+	Timestamp         string                           `json:"Timestamp"`
+	SignatureVersion  string                           `json:"SignatureVersion"`
+	Signature         string                           `json:"Signature,omitempty"`
+	SigningCertURL    string                           `json:"SigningCertURL"`
+	UnsubscribeURL    string                           `json:"UnsubscribeURL"`
+	SubscribeURL      string                           `json:"SubscribeURL,omitempty"`
+	MessageAttributes map[string]MessageAttributeValue `json:"MessageAttributes,omitempty"`
 }

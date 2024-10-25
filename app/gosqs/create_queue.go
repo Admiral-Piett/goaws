@@ -29,7 +29,7 @@ func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
 
 	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
-		log.Println("Creating Queue:", queueName)
+		log.Infof("Creating Queue: %s", queueName)
 		queue := &app.Queue{
 			Name:             queueName,
 			URL:              queueUrl,

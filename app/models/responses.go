@@ -568,3 +568,36 @@ func (r ListSubscriptionsByTopicResponse) GetResult() interface{} {
 func (r ListSubscriptionsByTopicResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
+
+/*** Publish Batch ***/
+type PublishBatchFailed struct {
+	ErrorEntries []BatchResultErrorEntry `xml:"member"`
+}
+
+type PublishBatchResultEntry struct {
+	Id        string `xml:"Id"`
+	MessageId string `xml:"MessageId"`
+}
+
+type PublishBatchSuccessful struct {
+	SuccessEntries []PublishBatchResultEntry `xml:"member"`
+}
+
+type PublishBatchResult struct {
+	Failed     PublishBatchFailed     `xml:"Failed"`
+	Successful PublishBatchSuccessful `xml:"Successful"`
+}
+
+type PublishBatchResponse struct {
+	Xmlns    string               `xml:"xmlns,attr"`
+	Result   PublishBatchResult   `xml:"PublishBatchResult"`
+	Metadata app.ResponseMetadata `xml:"ResponseMetadata"`
+}
+
+func (r PublishBatchResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r PublishBatchResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}

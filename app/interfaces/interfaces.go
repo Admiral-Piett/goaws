@@ -19,3 +19,10 @@ type AbstractErrorResponse interface {
 	Response() models.ErrorResult
 	StatusCode() int
 }
+
+type AbstractPublishEntry interface {
+	GetMessage() string
+	GetMessageAttributes() map[string]models.MessageAttributeValue
+	GetMessageStructure() string
+	GetSubject() string
+}
