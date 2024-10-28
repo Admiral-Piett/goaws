@@ -7,7 +7,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,9 +29,9 @@ func SetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	queueName := uriSegments[len(uriSegments)-1]
 
 	log.Infof("Set Queue QueueAttributes: %s", queueName)
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
-	queue, ok := app.SyncQueues.Queues[queueName]
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
+	queue, ok := models.SyncQueues.Queues[queueName]
 	if !ok {
 		log.Warningf("Get Queue URL: %s, queue does not exist!!!", queueName)
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
@@ -42,8 +41,8 @@ func SetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	}
 
 	respStruct := models.SetQueueAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	return http.StatusOK, respStruct
 }

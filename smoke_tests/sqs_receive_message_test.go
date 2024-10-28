@@ -8,8 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
@@ -24,7 +22,7 @@ func Test_ReceiveMessageV1_json(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -59,7 +57,7 @@ func Test_ReceiveMessageV1_json_while_concurrent_delete(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -96,7 +94,7 @@ func Test_ReceiveMessageV1_xml(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

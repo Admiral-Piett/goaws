@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -40,7 +40,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
@@ -49,30 +49,30 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 
 	waitTimeSeconds := requestBody.WaitTimeSeconds
 	if waitTimeSeconds == 0 {
-		app.SyncQueues.RLock()
-		waitTimeSeconds = app.SyncQueues.Queues[queueName].ReceiveMessageWaitTimeSeconds
-		app.SyncQueues.RUnlock()
+		models.SyncQueues.RLock()
+		waitTimeSeconds = models.SyncQueues.Queues[queueName].ReceiveMessageWaitTimeSeconds
+		models.SyncQueues.RUnlock()
 	}
 
 	loops := waitTimeSeconds * 10
 	for loops > 0 {
-		app.SyncQueues.RLock()
-		_, queueFound := app.SyncQueues.Queues[queueName]
+		models.SyncQueues.RLock()
+		_, queueFound := models.SyncQueues.Queues[queueName]
 		if !queueFound {
-			app.SyncQueues.RUnlock()
+			models.SyncQueues.RUnlock()
 			return utils.CreateErrorResponseV1("QueueNotFound", true)
 		}
-		messageFound := len(app.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*app.SyncQueues.Queues[queueName]) != 0
-		app.SyncQueues.RUnlock()
+		messageFound := len(models.SyncQueues.Queues[queueName].Messages)-numberOfHiddenMessagesInQueue(*models.SyncQueues.Queues[queueName]) != 0
+		models.SyncQueues.RUnlock()
 		if !messageFound {
 			continueTimer := time.NewTimer(100 * time.Millisecond)
 			select {
 			case <-req.Context().Done():
 				continueTimer.Stop()
 				return http.StatusOK, models.ReceiveMessageResponse{
-					Xmlns:    models.BASE_XMLNS,
+					Xmlns:    models.BaseXmlns,
 					Result:   models.ReceiveMessageResult{},
-					Metadata: models.BASE_RESPONSE_METADATA,
+					Metadata: models.BaseResponseMetadata,
 				}
 			case <-continueTimer.C:
 				continueTimer.Stop()
@@ -85,38 +85,38 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 	}
 	log.Debugf("Getting Message from Queue:%s", queueName)
 
-	app.SyncQueues.Lock()         // Lock the Queues
-	defer app.SyncQueues.Unlock() // Unlock the Queues
+	models.SyncQueues.Lock()         // Lock the Queues
+	defer models.SyncQueues.Unlock() // Unlock the Queues
 
-	if len(app.SyncQueues.Queues[queueName].Messages) > 0 {
+	if len(models.SyncQueues.Queues[queueName].Messages) > 0 {
 		numMsg := 0
 		messages = make([]*models.ResultMessage, 0)
-		for i := range app.SyncQueues.Queues[queueName].Messages {
+		for i := range models.SyncQueues.Queues[queueName].Messages {
 			if numMsg >= maxNumberOfMessages {
 				break
 			}
 
-			if app.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
+			if models.SyncQueues.Queues[queueName].Messages[i].ReceiptHandle != "" {
 				continue
 			}
 
-			uuid, _ := common.NewUUID()
+			randomId := uuid.NewString()
 
-			msg := &app.SyncQueues.Queues[queueName].Messages[i]
+			msg := &models.SyncQueues.Queues[queueName].Messages[i]
 			if !msg.IsReadyForReceipt() {
 				continue
 			}
-			msg.ReceiptHandle = msg.Uuid + "#" + uuid
+			msg.ReceiptHandle = msg.Uuid + "#" + randomId
 			msg.ReceiptTime = time.Now().UTC()
-			msg.VisibilityTimeout = time.Now().Add(time.Duration(app.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
+			msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
 
-			if app.SyncQueues.Queues[queueName].IsFIFO {
+			if models.SyncQueues.Queues[queueName].IsFIFO {
 				// If we got messages here it means we have not processed it yet, so get next
-				if app.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
+				if models.SyncQueues.Queues[queueName].IsLocked(msg.GroupID) {
 					continue
 				}
 				// Otherwise lock messages for group ID
-				app.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
+				models.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 			}
 
 			messages = append(messages, getMessageResult(msg))
@@ -129,19 +129,19 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 			models.ReceiveMessageResult{
 				Messages: messages,
 			},
-			app.ResponseMetadata{
+			models.ResponseMetadata{
 				RequestId: "00000000-0000-0000-0000-000000000000",
 			},
 		}
 	} else {
 		log.Warning("No messages in Queue:", queueName)
-		respStruct = models.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: models.ReceiveMessageResult{}, Metadata: app.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
+		respStruct = models.ReceiveMessageResponse{Xmlns: "http://queue.amazonaws.com/doc/2012-11-05/", Result: models.ReceiveMessageResult{}, Metadata: models.ResponseMetadata{RequestId: "00000000-0000-0000-0000-000000000000"}}
 	}
 
 	return http.StatusOK, respStruct
 }
 
-func getMessageResult(m *app.Message) *models.ResultMessage {
+func getMessageResult(m *models.SqsMessage) *models.ResultMessage {
 	msgMttrs := []*models.ResultMessageAttribute{}
 	for _, attr := range m.MessageAttributes {
 		msgMttrs = append(msgMttrs, getMessageAttributeResult(&attr))
@@ -149,7 +149,7 @@ func getMessageResult(m *app.Message) *models.ResultMessage {
 
 	attrsMap := map[string]string{
 		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.UnixNano()/int64(time.Millisecond)),
-		"SenderId":                         app.CurrentEnvironment.AccountID,
+		"SenderId":                         models.CurrentEnvironment.AccountID,
 		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
 		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().UnixNano()/int64(time.Millisecond)),
 	}
@@ -166,7 +166,7 @@ func getMessageResult(m *app.Message) *models.ResultMessage {
 		MessageId:              m.Uuid,
 		Body:                   m.MessageBody,
 		ReceiptHandle:          m.ReceiptHandle,
-		MD5OfBody:              common.GetMD5Hash(string(m.MessageBody)),
+		MD5OfBody:              utils.GetMD5Hash(string(m.MessageBody)),
 		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
 		MessageAttributes:      msgMttrs,
 		Attributes:             attrs,

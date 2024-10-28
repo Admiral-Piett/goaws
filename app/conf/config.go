@@ -10,14 +10,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+	"github.com/Admiral-Piett/goaws/app/utils"
+
+	"github.com/google/uuid"
+
 	log "github.com/sirupsen/logrus"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
 	"github.com/ghodss/yaml"
 )
 
-var envs map[string]app.Environment
+var envs map[string]models.Environment
 
 func LoadYamlConfig(filename string, env string) []string {
 	ports := []string{"4100"}
@@ -58,81 +61,80 @@ func LoadYamlConfig(filename string, env string) []string {
 	}
 
 	if envs[env].Region == "" {
-		app.CurrentEnvironment.Region = "local"
+		models.CurrentEnvironment.Region = "local"
 	}
 
-	app.CurrentEnvironment = envs[env]
+	models.CurrentEnvironment = envs[env]
 
 	if envs[env].Port != "" {
 		ports = []string{envs[env].Port}
 	} else if envs[env].SqsPort != "" && envs[env].SnsPort != "" {
 		ports = []string{envs[env].SqsPort, envs[env].SnsPort}
-		app.CurrentEnvironment.Port = envs[env].SqsPort
+		models.CurrentEnvironment.Port = envs[env].SqsPort
 	}
 
-	common.LogMessages = false
-	common.LogFile = "./goaws_messages.log"
-
+	models.LogMessages = false
+	models.LogFile = "./goaws_messages.log"
 	if envs[env].LogToFile == true {
-		common.LogMessages = true
+		models.LogMessages = true
 		if envs[env].LogFile != "" {
-			common.LogFile = envs[env].LogFile
+			models.LogFile = envs[env].LogFile
 		}
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout <= 0 {
-		app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
+	if models.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout <= 0 {
+		models.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout = 30
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize <= 0 {
-		app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
+	if models.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize <= 0 {
+		models.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize = 262144 // 256K
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod <= 0 {
-		app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod = 345600 // 4 days
+	if models.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod <= 0 {
+		models.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod = 345600 // 4 days
 	}
 
-	if app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds <= 0 {
-		app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds = 0
+	if models.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds <= 0 {
+		models.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds = 0
 	}
 
-	if app.CurrentEnvironment.AccountID == "" {
-		app.CurrentEnvironment.AccountID = "queue"
+	if models.CurrentEnvironment.AccountID == "" {
+		models.CurrentEnvironment.AccountID = "queue"
 	}
 
-	if app.CurrentEnvironment.Host == "" {
-		app.CurrentEnvironment.Host = "localhost"
-		app.CurrentEnvironment.Port = "4100"
+	if models.CurrentEnvironment.Host == "" {
+		models.CurrentEnvironment.Host = "localhost"
+		models.CurrentEnvironment.Port = "4100"
 	}
 
-	app.SyncQueues.Lock()
-	app.SyncTopics.Lock()
+	models.SyncQueues.Lock()
+	models.SyncTopics.Lock()
 	for _, queue := range envs[env].Queues {
-		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
-			"/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
-		if app.CurrentEnvironment.Region != "" {
-			queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
-				app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queue.Name
+		queueUrl := "http://" + models.CurrentEnvironment.Host + ":" + models.CurrentEnvironment.Port +
+			"/" + models.CurrentEnvironment.AccountID + "/" + queue.Name
+		if models.CurrentEnvironment.Region != "" {
+			queueUrl = "http://" + models.CurrentEnvironment.Region + "." + models.CurrentEnvironment.Host + ":" +
+				models.CurrentEnvironment.Port + "/" + models.CurrentEnvironment.AccountID + "/" + queue.Name
 		}
-		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queue.Name
+		queueArn := "arn:aws:sqs:" + models.CurrentEnvironment.Region + ":" + models.CurrentEnvironment.AccountID + ":" + queue.Name
 
 		if queue.ReceiveMessageWaitTimeSeconds == 0 {
-			queue.ReceiveMessageWaitTimeSeconds = app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
+			queue.ReceiveMessageWaitTimeSeconds = models.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds
 		}
 
 		if queue.MaximumMessageSize == 0 {
-			queue.MaximumMessageSize = app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize
+			queue.MaximumMessageSize = models.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize
 		}
 
 		if queue.VisibilityTimeout == 0 {
-			queue.VisibilityTimeout = app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout
+			queue.VisibilityTimeout = models.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout
 		}
 
 		if queue.MessageRetentionPeriod == 0 {
-			queue.MessageRetentionPeriod = app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod
+			queue.MessageRetentionPeriod = models.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod
 		}
 
-		app.SyncQueues.Queues[queue.Name] = &app.Queue{
+		models.SyncQueues.Queues[queue.Name] = &models.Queue{
 			Name:                          queue.Name,
 			VisibilityTimeout:             queue.VisibilityTimeout,
 			Arn:                           queueArn,
@@ -140,17 +142,17 @@ func LoadYamlConfig(filename string, env string) []string {
 			ReceiveMessageWaitTimeSeconds: queue.ReceiveMessageWaitTimeSeconds,
 			MaximumMessageSize:            queue.MaximumMessageSize,
 			MessageRetentionPeriod:        queue.MessageRetentionPeriod,
-			IsFIFO:                        app.HasFIFOQueueName(queue.Name),
-			EnableDuplicates:              app.CurrentEnvironment.EnableDuplicates,
+			IsFIFO:                        utils.HasFIFOQueueName(queue.Name),
+			EnableDuplicates:              models.CurrentEnvironment.EnableDuplicates,
 			Duplicates:                    make(map[string]time.Time),
 		}
 	}
 
 	// loop one more time to create queue's RedrivePolicy and assign deadletter queues in case dead letter queue is defined first in the config
 	for _, queue := range envs[env].Queues {
-		q := app.SyncQueues.Queues[queue.Name]
+		q := models.SyncQueues.Queues[queue.Name]
 		if queue.RedrivePolicy != "" {
-			err := setQueueRedrivePolicy(app.SyncQueues.Queues, q, queue.RedrivePolicy)
+			err := setQueueRedrivePolicy(models.SyncQueues.Queues, q, queue.RedrivePolicy)
 			if err != nil {
 				log.Errorf("err: %s", err)
 				return ports
@@ -160,13 +162,13 @@ func LoadYamlConfig(filename string, env string) []string {
 	}
 
 	for _, topic := range envs[env].Topics {
-		topicArn := "arn:aws:sns:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + topic.Name
+		topicArn := "arn:aws:sns:" + models.CurrentEnvironment.Region + ":" + models.CurrentEnvironment.AccountID + ":" + topic.Name
 
-		newTopic := &app.Topic{Name: topic.Name, Arn: topicArn}
-		newTopic.Subscriptions = make([]*app.Subscription, 0, 0)
+		newTopic := &models.Topic{Name: topic.Name, Arn: topicArn}
+		newTopic.Subscriptions = make([]*models.Subscription, 0, 0)
 
 		for _, subs := range topic.Subscriptions {
-			var newSub *app.Subscription
+			var newSub *models.Subscription
 			if strings.Contains(subs.Protocol, "http") {
 				newSub = createHttpSubscription(subs)
 			} else {
@@ -174,7 +176,7 @@ func LoadYamlConfig(filename string, env string) []string {
 				newSub = createSqsSubscription(subs, topicArn)
 			}
 			if subs.FilterPolicy != "" {
-				filterPolicy := &app.FilterPolicy{}
+				filterPolicy := &models.FilterPolicy{}
 				err = json.Unmarshal([]byte(subs.FilterPolicy), filterPolicy)
 				if err != nil {
 					log.Errorf("err: %s", err)
@@ -185,53 +187,53 @@ func LoadYamlConfig(filename string, env string) []string {
 
 			newTopic.Subscriptions = append(newTopic.Subscriptions, newSub)
 		}
-		app.SyncTopics.Topics[topic.Name] = newTopic
+		models.SyncTopics.Topics[topic.Name] = newTopic
 	}
 
-	app.SyncQueues.Unlock()
-	app.SyncTopics.Unlock()
+	models.SyncQueues.Unlock()
+	models.SyncTopics.Unlock()
 
 	return ports
 }
 
-func createHttpSubscription(configSubscription app.EnvSubsciption) *app.Subscription {
-	newSub := &app.Subscription{EndPoint: configSubscription.EndPoint, Protocol: configSubscription.Protocol, TopicArn: configSubscription.TopicArn, Raw: configSubscription.Raw}
-	subArn, _ := common.NewUUID()
+func createHttpSubscription(configSubscription models.EnvSubsciption) *models.Subscription {
+	newSub := &models.Subscription{EndPoint: configSubscription.EndPoint, Protocol: configSubscription.Protocol, TopicArn: configSubscription.TopicArn, Raw: configSubscription.Raw}
+	subArn := uuid.NewString()
 	subArn = configSubscription.TopicArn + ":" + subArn
 	newSub.SubscriptionArn = subArn
 	return newSub
 }
 
-func createSqsSubscription(configSubscription app.EnvSubsciption, topicArn string) *app.Subscription {
-	if _, ok := app.SyncQueues.Queues[configSubscription.QueueName]; !ok {
-		queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
-			"/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
-		if app.CurrentEnvironment.Region != "" {
-			queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
-				app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
+func createSqsSubscription(configSubscription models.EnvSubsciption, topicArn string) *models.Subscription {
+	if _, ok := models.SyncQueues.Queues[configSubscription.QueueName]; !ok {
+		queueUrl := "http://" + models.CurrentEnvironment.Host + ":" + models.CurrentEnvironment.Port +
+			"/" + models.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
+		if models.CurrentEnvironment.Region != "" {
+			queueUrl = "http://" + models.CurrentEnvironment.Region + "." + models.CurrentEnvironment.Host + ":" +
+				models.CurrentEnvironment.Port + "/" + models.CurrentEnvironment.AccountID + "/" + configSubscription.QueueName
 		}
-		queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
-		app.SyncQueues.Queues[configSubscription.QueueName] = &app.Queue{
+		queueArn := "arn:aws:sqs:" + models.CurrentEnvironment.Region + ":" + models.CurrentEnvironment.AccountID + ":" + configSubscription.QueueName
+		models.SyncQueues.Queues[configSubscription.QueueName] = &models.Queue{
 			Name:                          configSubscription.QueueName,
-			VisibilityTimeout:             app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
+			VisibilityTimeout:             models.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout,
 			Arn:                           queueArn,
 			URL:                           queueUrl,
-			ReceiveMessageWaitTimeSeconds: app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
-			MaximumMessageSize:            app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
-			IsFIFO:                        app.HasFIFOQueueName(configSubscription.QueueName),
-			EnableDuplicates:              app.CurrentEnvironment.EnableDuplicates,
+			ReceiveMessageWaitTimeSeconds: models.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds,
+			MaximumMessageSize:            models.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize,
+			IsFIFO:                        utils.HasFIFOQueueName(configSubscription.QueueName),
+			EnableDuplicates:              models.CurrentEnvironment.EnableDuplicates,
 			Duplicates:                    make(map[string]time.Time),
 		}
 	}
-	qArn := app.SyncQueues.Queues[configSubscription.QueueName].Arn
-	newSub := &app.Subscription{EndPoint: qArn, Protocol: "sqs", TopicArn: topicArn, Raw: configSubscription.Raw}
-	subArn, _ := common.NewUUID()
+	qArn := models.SyncQueues.Queues[configSubscription.QueueName].Arn
+	newSub := &models.Subscription{EndPoint: qArn, Protocol: "sqs", TopicArn: topicArn, Raw: configSubscription.Raw}
+	subArn := uuid.NewString()
 	subArn = topicArn + ":" + subArn
 	newSub.SubscriptionArn = subArn
 	return newSub
 }
 
-func setQueueRedrivePolicy(queues map[string]*app.Queue, q *app.Queue, strRedrivePolicy string) error {
+func setQueueRedrivePolicy(queues map[string]*models.Queue, q *models.Queue, strRedrivePolicy string) error {
 	// support both int and string maxReceiveCount (Amazon clients use string)
 	redrivePolicy1 := struct {
 		MaxReceiveCount     int    `json:"maxReceiveCount"`

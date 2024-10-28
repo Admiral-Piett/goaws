@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -54,7 +53,7 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	arnSegments := strings.Split(requestBody.TopicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
-	topic, ok := app.SyncTopics.Topics[topicName]
+	topic, ok := models.SyncTopics.Topics[topicName]
 	if !ok {
 		return utils.CreateErrorResponseV1("TopicNotFound", false)
 	}
@@ -80,12 +79,12 @@ func PublishBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 
 	respStruct := models.PublishBatchResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.PublishBatchResult{
 			Successful: models.PublishBatchSuccessful{SuccessEntries: successfulEntries},
 			Failed:     models.PublishBatchFailed{ErrorEntries: failedEntries},
 		},
-		Metadata: app.ResponseMetadata{RequestId: uuid.NewString()},
+		Metadata: models.ResponseMetadata{RequestId: uuid.NewString()},
 	}
 	return http.StatusOK, respStruct
 }

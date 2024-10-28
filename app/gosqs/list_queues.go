@@ -8,7 +8,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/models"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,17 +25,17 @@ func ListQueuesV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	log.Info("Listing Queues")
 	queueUrls := make([]string, 0)
-	app.SyncQueues.Lock()
-	for _, queue := range app.SyncQueues.Queues {
+	models.SyncQueues.Lock()
+	for _, queue := range models.SyncQueues.Queues {
 		if strings.HasPrefix(queue.Name, requestBody.QueueNamePrefix) {
 			queueUrls = append(queueUrls, queue.URL)
 		}
 	}
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 
 	respStruct := models.ListQueuesResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 		Result: models.ListQueuesResult{
 			QueueUrls: queueUrls,
 		},

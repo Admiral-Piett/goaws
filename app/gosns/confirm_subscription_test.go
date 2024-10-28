@@ -15,7 +15,7 @@ import (
 func TestConfirmSubscriptionV1_Success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		TOPIC_DATA = make(map[string]*pendingConfirm)
 	}()
@@ -49,7 +49,7 @@ func TestConfirmSubscriptionV1_Success(t *testing.T) {
 func TestConfirmSubscriptionV1_NotFoundSubscription(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		TOPIC_DATA = make(map[string]*pendingConfirm)
 	}()
@@ -76,7 +76,7 @@ func TestConfirmSubscriptionV1_MismatchToken(t *testing.T) {
 
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		TOPIC_DATA = make(map[string]*pendingConfirm)
 	}()
@@ -110,7 +110,7 @@ func TestConfirmSubscriptionV1_MismatchToken(t *testing.T) {
 func TestConfirmSubscriptionV1_TransformerError(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		TOPIC_DATA = make(map[string]*pendingConfirm)
 	}()

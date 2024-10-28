@@ -7,8 +7,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Admiral-Piett/goaws/app/conf"
@@ -21,7 +19,7 @@ import (
 func TestDeleteQueueV1_success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -34,8 +32,8 @@ func TestDeleteQueueV1_success(t *testing.T) {
 	}
 
 	expectedResponse := models.DeleteQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -44,14 +42,14 @@ func TestDeleteQueueV1_success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, expectedResponse, response)
 
-	_, ok := app.SyncQueues.Queues["unit-queue1"]
+	_, ok := models.SyncQueues.Queues["unit-queue1"]
 	assert.False(t, ok)
 }
 
 func TestDeleteQueueV1_success_unknown_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -64,8 +62,8 @@ func TestDeleteQueueV1_success_unknown_queue(t *testing.T) {
 	}
 
 	expectedResponse := models.DeleteQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -78,7 +76,7 @@ func TestDeleteQueueV1_success_unknown_queue(t *testing.T) {
 func TestDeleteQueueV1_error_invalid_request(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

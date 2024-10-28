@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/Admiral-Piett/goaws/app/conf"
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/gavv/httpexpect/v2"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/stretchr/testify/assert"
@@ -20,19 +19,19 @@ import (
 
 func Test_Unsubscribe_json(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
 
-	subArn := app.SyncTopics.Topics["unit-topic1"].Subscriptions[0].SubscriptionArn
+	subArn := models.SyncTopics.Topics["unit-topic1"].Subscriptions[0].SubscriptionArn
 	response, err := snsClient.Unsubscribe(context.TODO(), &sns.UnsubscribeInput{
 		SubscriptionArn: &subArn,
 	})
@@ -40,26 +39,26 @@ func Test_Unsubscribe_json(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 
-	app.SyncTopics.Lock()
-	defer app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	defer models.SyncTopics.Unlock()
 
-	subscriptions := app.SyncTopics.Topics["unit-topic1"].Subscriptions
+	subscriptions := models.SyncTopics.Topics["unit-topic1"].Subscriptions
 	assert.Len(t, subscriptions, 0)
 }
 
 func Test_Unsubscribe_xml(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	e := httpexpect.Default(t, server.URL)
 
-	subArn := app.SyncTopics.Topics["unit-topic1"].Subscriptions[0].SubscriptionArn
+	subArn := models.SyncTopics.Topics["unit-topic1"].Subscriptions[0].SubscriptionArn
 	requestBody := struct {
 		Action          string `xml:"Action"`
 		SubscriptionArn string `schema:"SubscriptionArn"`
@@ -74,6 +73,6 @@ func Test_Unsubscribe_xml(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	subscriptions := app.SyncTopics.Topics["unit-topic1"].Subscriptions
+	subscriptions := models.SyncTopics.Topics["unit-topic1"].Subscriptions
 	assert.Len(t, subscriptions, 0)
 }

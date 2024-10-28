@@ -9,7 +9,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/stretchr/testify/assert"
@@ -18,17 +17,17 @@ import (
 // TODO - figure out a better way to handle the wait time in these tests.  Maybe in the smoke tests alone
 // if there's nothing else?
 func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:                          "waiting-queue",
 		ReceiveMessageWaitTimeSeconds: 2,
 		//MaximumMessageSize:            262144,
 	}
-	app.SyncQueues.Queues["waiting-queue"] = q
+	models.SyncQueues.Queues["waiting-queue"] = q
 
 	// receive message ensure delay
 	_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
@@ -45,7 +44,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	}
 
 	// mock sending a message
-	q.Messages = append(q.Messages, app.Message{MessageBody: []byte("1")})
+	q.Messages = append(q.Messages, models.SqsMessage{MessageBody: []byte("1")})
 
 	// receive message
 	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
@@ -65,16 +64,16 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 
 func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	// create a queue
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:                          "cancel-queue",
 		ReceiveMessageWaitTimeSeconds: 20,
 	}
-	app.SyncQueues.Queues["cancel-queue"] = q
+	models.SyncQueues.Queues["cancel-queue"] = q
 
 	var wg sync.WaitGroup
 	ctx, cancelReceive := context.WithCancel(context.Background())
@@ -137,16 +136,16 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 
 func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 	// create a queue
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:         "delay-seconds-queue",
 		DelaySeconds: 2,
 	}
-	app.SyncQueues.Queues["delay-seconds-queue"] = q
+	models.SyncQueues.Queues["delay-seconds-queue"] = q
 
 	// send a message
 	_, r := test.GenerateRequestInfo("POST", "/", models.SendMessageRequest{
@@ -182,18 +181,18 @@ func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 
 func TestReceiveMessageAttributesV1(t *testing.T) {
 	// create a queue
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{Name: "waiting-queue"}
-	app.SyncQueues.Queues["waiting-queue"] = q
+	q := &models.Queue{Name: "waiting-queue"}
+	models.SyncQueues.Queues["waiting-queue"] = q
 
 	// send a message
-	q.Messages = append(q.Messages, app.Message{
+	q.Messages = append(q.Messages, models.SqsMessage{
 		MessageBody: []byte("1"),
-		MessageAttributes: map[string]app.MessageAttributeValue{
+		MessageAttributes: map[string]models.SqsMessageAttributeValue{
 			"TestMessageAttrName": {
 				Name:     "TestMessageAttrName",
 				DataType: "String",

@@ -7,15 +7,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
@@ -27,7 +24,7 @@ func Test_ListQueues_json_no_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -44,7 +41,7 @@ func Test_ListQueues_json_multiple_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -76,7 +73,7 @@ func Test_ListQueues_json_multiple_queues_with_queue_name_prefix(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -108,7 +105,7 @@ func Test_ListQueues_xml_no_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -124,7 +121,7 @@ func Test_ListQueues_xml_no_queues(t *testing.T) {
 		Result: models.ListQueuesResult{
 			QueueUrls: []string(nil),
 		},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 	response := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &response)
@@ -135,7 +132,7 @@ func Test_ListQueues_xml_multiple_queues(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -173,7 +170,7 @@ func Test_ListQueues_xml_multiple_queues_with_queue_name_prefix(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -213,7 +210,7 @@ func Test_ListQueues_xml_multiple_queues_with_queue_name_prefix(t *testing.T) {
 	expected := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/%s", af.BASE_URL, queueName1)}},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 	response := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &response)

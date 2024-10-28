@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -18,7 +16,6 @@ import (
 
 	"github.com/mitchellh/copystructure"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
@@ -31,7 +28,7 @@ func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -54,7 +51,7 @@ func Test_CreateQueueV1_json_no_attributes(t *testing.T) {
 	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
@@ -75,7 +72,7 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -116,8 +113,8 @@ func Test_CreateQueueV1_json_with_attributes(t *testing.T) {
 	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
 
-	assert.Equal(t, models.BASE_XMLNS, r2.Xmlns)
-	assert.Equal(t, models.BASE_RESPONSE_METADATA, r2.Metadata)
+	assert.Equal(t, models.BaseXmlns, r2.Xmlns)
+	assert.Equal(t, models.BaseResponseMetadata, r2.Metadata)
 	assert.Equal(t, 2, len(r2.Result.QueueUrls))
 	assert.Contains(t, r2.Result.QueueUrls, fmt.Sprintf("%s/%s", af.BASE_URL, redriveQueue))
 	assert.Contains(t, r2.Result.QueueUrls, fmt.Sprintf("%s/new-queue-1", af.BASE_URL))
@@ -149,7 +146,7 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -179,7 +176,7 @@ func Test_CreateQueueV1_json_with_attributes_as_ints(t *testing.T) {
 	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
@@ -209,7 +206,7 @@ func Test_CreateQueueV1_json_with_attributes_ints_as_strings(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -319,7 +316,7 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -333,7 +330,7 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 	exp1 := models.CreateQueueResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.CreateQueueResult{QueueUrl: fmt.Sprintf("%s/new-queue-1", af.BASE_URL)},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 
 	r1 := models.CreateQueueResponse{}
@@ -349,7 +346,7 @@ func Test_CreateQueueV1_xml_no_attributes(t *testing.T) {
 	exp2 := models.ListQueuesResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.ListQueuesResult{QueueUrls: []string{fmt.Sprintf("%s/new-queue-1", af.BASE_URL)}},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 	r2 := models.ListQueuesResponse{}
 	xml.Unmarshal([]byte(r), &r2)
@@ -370,7 +367,7 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -418,7 +415,7 @@ func Test_CreateQueueV1_xml_with_attributes(t *testing.T) {
 	exp1 := models.CreateQueueResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
 		Result:   models.CreateQueueResult{QueueUrl: fmt.Sprintf("%s/new-queue-2", af.BASE_URL)},
-		Metadata: app.ResponseMetadata{RequestId: sf.REQUEST_ID},
+		Metadata: models.ResponseMetadata{RequestId: sf.REQUEST_ID},
 	}
 
 	r1 := models.CreateQueueResponse{}

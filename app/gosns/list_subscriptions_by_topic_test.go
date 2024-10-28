@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,7 +15,7 @@ import (
 func TestListSubscriptionsByTopicV1_Not_Found(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -40,7 +39,7 @@ func TestListSubscriptionsByTopicV1_Not_Found(t *testing.T) {
 func TestListSubscriptionsByTopicV1_Transform_Error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -56,12 +55,12 @@ func TestListSubscriptionsByTopicV1_Transform_Error(t *testing.T) {
 func TestListSubscriptionsByTopicV1_Success_Multiple_Subscription(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	topicArn := app.SyncTopics.Topics["local-topic1"].Arn
-	subscriptions := app.SyncTopics.Topics["local-topic1"].Subscriptions
+	topicArn := models.SyncTopics.Topics["local-topic1"].Arn
+	subscriptions := models.SyncTopics.Topics["local-topic1"].Subscriptions
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListSubscriptionsByTopicRequest)
 		*v = models.ListSubscriptionsByTopicRequest{
@@ -83,14 +82,14 @@ func TestListSubscriptionsByTopicV1_Success_Multiple_Subscription(t *testing.T) 
 			TopicArn:        subscriptions[0].TopicArn,
 			SubscriptionArn: subscriptions[0].SubscriptionArn,
 			Protocol:        subscriptions[0].Protocol,
-			Owner:           app.CurrentEnvironment.AccountID,
+			Owner:           models.CurrentEnvironment.AccountID,
 			Endpoint:        subscriptions[0].EndPoint,
 		},
 		{
 			TopicArn:        subscriptions[1].TopicArn,
 			SubscriptionArn: subscriptions[1].SubscriptionArn,
 			Protocol:        subscriptions[1].Protocol,
-			Owner:           app.CurrentEnvironment.AccountID,
+			Owner:           models.CurrentEnvironment.AccountID,
 			Endpoint:        subscriptions[1].EndPoint,
 		},
 	}

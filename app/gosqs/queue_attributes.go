@@ -7,15 +7,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Admiral-Piett/goaws/app/models"
-
-	"github.com/Admiral-Piett/goaws/app"
 )
 
 // TODO - Support:
 //   - attr.MessageRetentionPeriod
 //   - attr.Policy
 //   - attr.RedriveAllowPolicy
-func setQueueAttributesV1(q *app.Queue, attr models.QueueAttributes) error {
+func setQueueAttributesV1(q *models.Queue, attr models.QueueAttributes) error {
 	// FIXME - are there better places to put these bottom-limit validations?
 	if attr.DelaySeconds >= 0 {
 		q.DelaySeconds = attr.DelaySeconds.Int()
@@ -37,7 +35,7 @@ func setQueueAttributesV1(q *app.Queue, attr models.QueueAttributes) error {
 	if attr.RedrivePolicy != (models.RedrivePolicy{}) {
 		arnArray := strings.Split(attr.RedrivePolicy.DeadLetterTargetArn, ":")
 		queueName := arnArray[len(arnArray)-1]
-		deadLetterQueue, ok := app.SyncQueues.Queues[queueName]
+		deadLetterQueue, ok := models.SyncQueues.Queues[queueName]
 		if !ok {
 			log.Error("Invalid RedrivePolicy Attribute")
 			return fmt.Errorf("InvalidAttributeValue")

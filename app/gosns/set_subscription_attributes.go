@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -32,23 +31,23 @@ func SetSubscriptionAttributesV1(req *http.Request) (int, interfaces.AbstractRes
 
 	switch attrName {
 	case "RawMessageDelivery":
-		app.SyncTopics.Lock()
+		models.SyncTopics.Lock()
 		if attrValue == "true" {
 			sub.Raw = true
 		} else {
 			sub.Raw = false
 		}
-		app.SyncTopics.Unlock()
+		models.SyncTopics.Unlock()
 
 	case "FilterPolicy":
-		filterPolicy := &app.FilterPolicy{}
+		filterPolicy := &models.FilterPolicy{}
 		err := json.Unmarshal([]byte(attrValue), filterPolicy)
 		if err != nil {
 			return utils.CreateErrorResponseV1("InvalidParameterValue", false)
 		}
-		app.SyncTopics.Lock()
+		models.SyncTopics.Lock()
 		sub.FilterPolicy = filterPolicy
-		app.SyncTopics.Unlock()
+		models.SyncTopics.Unlock()
 
 	case "DeliveryPolicy", "FilterPolicyScope", "RedrivePolicy", "SubscriptionRoleArn":
 		log.Info(fmt.Sprintf("AttributeName [%s] is valid on AWS but it is not implemented.", attrName))
@@ -59,8 +58,8 @@ func SetSubscriptionAttributesV1(req *http.Request) (int, interfaces.AbstractRes
 
 	uuid := uuid.NewString()
 	respStruct := models.SetSubscriptionAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: app.ResponseMetadata{RequestId: uuid}}
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.ResponseMetadata{RequestId: uuid}}
 
 	return http.StatusOK, respStruct
 }

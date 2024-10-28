@@ -4,17 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Admiral-Piett/goaws/app/models"
-
-	"github.com/Admiral-Piett/goaws/app"
 )
 
 func TestSetQueueAttributesV1_success_no_redrive_policy(t *testing.T) {
-	var emptyQueue *app.Queue
-	q := &app.Queue{}
+	var emptyQueue *models.Queue
+	q := &models.Queue{}
 	attrs := models.QueueAttributes{
 		DelaySeconds:                  1,
 		MaximumMessageSize:            2,
@@ -35,8 +32,8 @@ func TestSetQueueAttributesV1_success_no_redrive_policy(t *testing.T) {
 }
 
 func TestSetQueueAttributesV1_success_no_request_attributes(t *testing.T) {
-	var emptyQueue *app.Queue
-	q := &app.Queue{}
+	var emptyQueue *models.Queue
+	q := &models.Queue{}
 	attrs := models.QueueAttributes{}
 	err := setQueueAttributesV1(q, attrs)
 
@@ -51,8 +48,8 @@ func TestSetQueueAttributesV1_success_no_request_attributes(t *testing.T) {
 }
 
 func TestSetQueueAttributesV1_success_can_set_0_values_where_applicable(t *testing.T) {
-	var emptyQueue *app.Queue
-	q := &app.Queue{
+	var emptyQueue *models.Queue
+	q := &models.Queue{
 		DelaySeconds:                  1,
 		MaximumMessageSize:            2,
 		MessageRetentionPeriod:        3,
@@ -74,14 +71,14 @@ func TestSetQueueAttributesV1_success_can_set_0_values_where_applicable(t *testi
 
 func TestSetQueueAttributesV1_success_with_redrive_policy(t *testing.T) {
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
 	existingQueueName := "existing-queue"
-	existingQueue := &app.Queue{Name: existingQueueName}
-	app.SyncQueues.Queues[existingQueueName] = existingQueue
+	existingQueue := &models.Queue{Name: existingQueueName}
+	models.SyncQueues.Queues[existingQueueName] = existingQueue
 
-	q := &app.Queue{}
+	q := &models.Queue{}
 	attrs := models.QueueAttributes{
 		DelaySeconds:                  1,
 		MaximumMessageSize:            2,
@@ -108,7 +105,7 @@ func TestSetQueueAttributesV1_success_with_redrive_policy(t *testing.T) {
 func TestSetQueueAttributesV1_error_redrive_policy_targets_missing_queue(t *testing.T) {
 	existingQueueName := "existing-queue"
 
-	q := &app.Queue{}
+	q := &models.Queue{}
 	attrs := models.QueueAttributes{
 		DelaySeconds:                  1,
 		MaximumMessageSize:            2,

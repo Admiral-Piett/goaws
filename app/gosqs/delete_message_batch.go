@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -33,7 +32,7 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
@@ -53,8 +52,8 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 		ids[v.Id] = struct{}{}
 	}
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
 
 	// create deleteMessageMap
 	deleteMessageMap := make(map[string]*deleteEntry)
@@ -68,15 +67,15 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 
 	deletedEntries := make([]models.DeleteMessageBatchResultEntry, 0)
 	// create a slice to hold messages that are not deleted
-	remainingMessages := make([]app.Message, 0, len(app.SyncQueues.Queues[queueName].Messages))
+	remainingMessages := make([]models.SqsMessage, 0, len(models.SyncQueues.Queues[queueName].Messages))
 
 	// delete message from queue
-	for _, message := range app.SyncQueues.Queues[queueName].Messages {
+	for _, message := range models.SyncQueues.Queues[queueName].Messages {
 		if deleteEntry, found := deleteMessageMap[message.ReceiptHandle]; found {
 			// Unlock messages for the group
 			log.Debugf("FIFO Queue %s unlocking group %s:", queueName, message.GroupID)
-			app.SyncQueues.Queues[queueName].UnlockGroup(message.GroupID)
-			delete(app.SyncQueues.Queues[queueName].Duplicates, message.DeduplicationID)
+			models.SyncQueues.Queues[queueName].UnlockGroup(message.GroupID)
+			delete(models.SyncQueues.Queues[queueName].Duplicates, message.DeduplicationID)
 			deleteEntry.Deleted = true
 			deletedEntries = append(deletedEntries, models.DeleteMessageBatchResultEntry{Id: deleteEntry.Id})
 		} else {
@@ -85,7 +84,7 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	}
 
 	// Update the queue with the remaining mesages
-	app.SyncQueues.Queues[queueName].Messages = remainingMessages
+	models.SyncQueues.Queues[queueName].Messages = remainingMessages
 
 	// Process not found entries
 	notFoundEntries := make([]models.BatchResultErrorEntry, 0)
@@ -101,12 +100,12 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	}
 
 	respStruct := models.DeleteMessageBatchResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.DeleteMessageBatchResult{
 			Successful: deletedEntries,
 			Failed:     notFoundEntries,
 		},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	return http.StatusOK, respStruct

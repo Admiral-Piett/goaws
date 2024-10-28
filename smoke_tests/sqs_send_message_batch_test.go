@@ -9,7 +9,6 @@ import (
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -23,7 +22,7 @@ func Test_SendMessageBatchV1_Json_Error_Queue_Not_Found(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -55,7 +54,7 @@ func Test_SendMessageBatchV1_Json_Error_No_Entry(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -84,7 +83,7 @@ func TestSendMessageBatchV1_Json_Error_IdNotDistinct(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -130,7 +129,7 @@ func TestSendMessageBatchV1_Json_Error_TooManyEntries(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -227,7 +226,7 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -345,7 +344,7 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())

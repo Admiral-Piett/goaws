@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -29,7 +28,7 @@ func GetSubscriptionAttributesV1(req *http.Request) (int, interfaces.AbstractRes
 	}
 
 	entries := make([]models.SubscriptionAttributeEntry, 0, 0)
-	entry := models.SubscriptionAttributeEntry{Key: "Owner", Value: app.CurrentEnvironment.AccountID}
+	entry := models.SubscriptionAttributeEntry{Key: "Owner", Value: models.CurrentEnvironment.AccountID}
 	entries = append(entries, entry)
 	entry = models.SubscriptionAttributeEntry{Key: "RawMessageDelivery", Value: strconv.FormatBool(sub.Raw)}
 	entries = append(entries, entry)
@@ -55,9 +54,9 @@ func GetSubscriptionAttributesV1(req *http.Request) (int, interfaces.AbstractRes
 	result := models.GetSubscriptionAttributesResult{Attributes: models.GetSubscriptionAttributes{Entries: entries}}
 	uuid := uuid.NewString()
 	respStruct := models.GetSubscriptionAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   result,
-		Metadata: app.ResponseMetadata{RequestId: uuid}}
+		Metadata: models.ResponseMetadata{RequestId: uuid}}
 
 	return http.StatusOK, respStruct
 }

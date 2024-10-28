@@ -10,7 +10,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/conf"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -21,7 +20,7 @@ import (
 func TestPurgeQueueV1_success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -34,17 +33,17 @@ func TestPurgeQueueV1_success(t *testing.T) {
 	}
 
 	// Put a message on the queue
-	targetQueue := app.SyncQueues.Queues["unit-queue1"]
-	app.SyncQueues.Lock()
-	targetQueue.Messages = []app.Message{app.Message{}}
+	targetQueue := models.SyncQueues.Queues["unit-queue1"]
+	models.SyncQueues.Lock()
+	targetQueue.Messages = []models.SqsMessage{models.SqsMessage{}}
 	targetQueue.Duplicates = map[string]time.Time{
 		"dedupe-id": time.Now(),
 	}
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 
 	expectedResponse := models.PurgeQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -60,7 +59,7 @@ func TestPurgeQueueV1_success(t *testing.T) {
 func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -73,8 +72,8 @@ func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 	}
 
 	expectedResponse := models.PurgeQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -83,7 +82,7 @@ func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, expectedResponse, response)
 
-	targetQueue := app.SyncQueues.Queues["unit-queue1"]
+	targetQueue := models.SyncQueues.Queues["unit-queue1"]
 	assert.Nil(t, targetQueue.Messages)
 	assert.Equal(t, map[string]time.Time{}, targetQueue.Duplicates)
 }
@@ -91,7 +90,7 @@ func TestPurgeQueueV1_success_no_messages_on_queue(t *testing.T) {
 func TestPurgeQueueV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -108,7 +107,7 @@ func TestPurgeQueueV1_request_transformer_error(t *testing.T) {
 func TestPurgeQueueV1_requested_queue_does_not_exist(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

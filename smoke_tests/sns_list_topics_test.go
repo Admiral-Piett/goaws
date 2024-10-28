@@ -8,8 +8,6 @@ import (
 	"encoding/xml"
 
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -26,7 +24,7 @@ func Test_List_Topics_json_no_topics(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -44,7 +42,7 @@ func Test_List_Topics_json_multiple_topics(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -72,7 +70,7 @@ func Test_List_Topics_xml_no_topics(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -95,7 +93,7 @@ func Test_ListTopics_xml_multiple_topics(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())

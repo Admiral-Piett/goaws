@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/gavv/httpexpect/v2"
 
@@ -17,22 +15,21 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 )
 
 func Test_PurgeQueueV1_json(t *testing.T) {
-	defaultEnvironment := app.CurrentEnvironment
-	app.CurrentEnvironment = app.Environment{
+	defaultEnvironment := models.CurrentEnvironment
+	models.CurrentEnvironment = models.Environment{
 		EnableDuplicates: true,
 	}
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetApp()
-		app.CurrentEnvironment = defaultEnvironment
+		models.ResetApp()
+		models.CurrentEnvironment = defaultEnvironment
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -59,23 +56,23 @@ func Test_PurgeQueueV1_json(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sdkResponse)
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
-	targetQueue := app.SyncQueues.Queues[qName]
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
+	targetQueue := models.SyncQueues.Queues[qName]
 	assert.Nil(t, targetQueue.Messages)
 	assert.Equal(t, map[string]time.Time{}, targetQueue.Duplicates)
 }
 
 func Test_PurgeQueueV1_xml(t *testing.T) {
-	defaultEnvironment := app.CurrentEnvironment
-	app.CurrentEnvironment = app.Environment{
+	defaultEnvironment := models.CurrentEnvironment
+	models.CurrentEnvironment = models.Environment{
 		EnableDuplicates: true,
 	}
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetApp()
-		app.CurrentEnvironment = defaultEnvironment
+		models.ResetApp()
+		models.CurrentEnvironment = defaultEnvironment
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -110,16 +107,16 @@ func Test_PurgeQueueV1_xml(t *testing.T) {
 		Body().Raw()
 
 	expected := models.PurgeQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	response := models.PurgeQueueResponse{}
 	xml.Unmarshal([]byte(r), &response)
 	assert.Equal(t, expected, response)
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
-	targetQueue := app.SyncQueues.Queues[qName]
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
+	targetQueue := models.SyncQueues.Queues[qName]
 	assert.Nil(t, targetQueue.Messages)
 	assert.Equal(t, map[string]time.Time{}, targetQueue.Duplicates)
 }

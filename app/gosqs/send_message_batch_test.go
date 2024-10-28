@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -18,7 +17,7 @@ import (
 func TestSendMessageBatchV1_Success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -85,7 +84,7 @@ func TestSendMessageBatchV1_Success(t *testing.T) {
 func TestSendMessageBatchV1_Success_Fifo_Queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -112,12 +111,12 @@ func TestSendMessageBatchV1_Success_Fifo_Queue(t *testing.T) {
 		return true
 	}
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:               "fifo-queue-1",
 		MaximumMessageSize: 1024,
 		IsFIFO:             true,
 	}
-	app.SyncQueues.Queues["fifo-queue-1"] = q
+	models.SyncQueues.Queues["fifo-queue-1"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageBatchV1(r)
@@ -139,7 +138,7 @@ func TestSendMessageBatchV1_Success_Fifo_Queue(t *testing.T) {
 func TestSendMessageBatchV1_Error_QueueNotFound(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -183,7 +182,7 @@ func TestSendMessageBatchV1_Error_QueueNotFound(t *testing.T) {
 func TestSendMessageBatchV1_Error_NoEntry(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -213,7 +212,7 @@ func TestSendMessageBatchV1_Error_NoEntry(t *testing.T) {
 func TestSendMessageBatchV1_Error_IdNotDistinct(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -257,7 +256,7 @@ func TestSendMessageBatchV1_Error_IdNotDistinct(t *testing.T) {
 func TestSendMessageBatchV1_Error_TooManyEntries(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -334,7 +333,7 @@ func TestSendMessageBatchV1_Error_TooManyEntries(t *testing.T) {
 func TestSendMessageBatchV1_Error_transformer(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

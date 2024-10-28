@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -27,19 +27,19 @@ func DeleteTopicV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	log.Info("Delete Topic - TopicName:", topicName)
 
-	_, ok = app.SyncTopics.Topics[topicName]
+	_, ok = models.SyncTopics.Topics[topicName]
 
 	if !ok {
 		return utils.CreateErrorResponseV1("TopicNotFound", false)
 	}
 
-	app.SyncTopics.Lock()
-	delete(app.SyncTopics.Topics, topicName)
-	app.SyncTopics.Unlock()
-	uuid, _ := common.NewUUID()
+	models.SyncTopics.Lock()
+	delete(models.SyncTopics.Topics, topicName)
+	models.SyncTopics.Unlock()
+	requestUuid := uuid.NewString()
 	respStruct := models.DeleteTopicResponse{
 		Xmlns:    "http://queue.amazonaws.com/doc/2012-11-05/",
-		Metadata: app.ResponseMetadata{RequestId: uuid},
+		Metadata: models.ResponseMetadata{RequestId: requestUuid},
 	}
 
 	return http.StatusOK, respStruct

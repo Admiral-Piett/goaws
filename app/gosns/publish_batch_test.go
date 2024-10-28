@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
-
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -19,13 +17,13 @@ import (
 func Test_PublishBatchV1_success_all_entries_successful(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return fmt.Sprintf("messageId-%d", callCount), nil
 	}
@@ -56,7 +54,7 @@ func Test_PublishBatchV1_success_all_entries_successful(t *testing.T) {
 	response, _ := res.(models.PublishBatchResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata.RequestId)
 
 	expectedSuccessEntries := models.PublishBatchSuccessful{
@@ -83,13 +81,13 @@ func Test_PublishBatchV1_success_all_entries_successful(t *testing.T) {
 func Test_PublishBatchV1_success_some_entries_fail(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		if callCount%2 == 0 {
 			return "", fmt.Errorf("ValidationError")
@@ -127,7 +125,7 @@ func Test_PublishBatchV1_success_some_entries_fail(t *testing.T) {
 	response, _ := res.(models.PublishBatchResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata.RequestId)
 
 	expectedSuccessEntries := models.PublishBatchSuccessful{
@@ -162,13 +160,13 @@ func Test_PublishBatchV1_success_some_entries_fail(t *testing.T) {
 func Test_PublishBatchV1_error_invalid_request(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -187,13 +185,13 @@ func Test_PublishBatchV1_error_invalid_request(t *testing.T) {
 func Test_PublishBatchV1_error_missing_topic_arn(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -227,13 +225,13 @@ func Test_PublishBatchV1_error_missing_topic_arn(t *testing.T) {
 func Test_PublishBatchV1_error_no_requested_messages(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -259,13 +257,13 @@ func Test_PublishBatchV1_error_no_requested_messages(t *testing.T) {
 func Test_PublishBatchV1_error_too_many_requested_messages(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -303,13 +301,13 @@ func Test_PublishBatchV1_error_too_many_requested_messages(t *testing.T) {
 func Test_PublishBatchV1_error_message_missing_message_id(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -338,13 +336,13 @@ func Test_PublishBatchV1_error_message_missing_message_id(t *testing.T) {
 func Test_PublishBatchV1_error_duplicate_message_id(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}
@@ -373,13 +371,13 @@ func Test_PublishBatchV1_error_duplicate_message_id(t *testing.T) {
 func Test_PublishBatchV1_error_missing_topic(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
 	callCount := 0
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		callCount++
 		return "", nil
 	}

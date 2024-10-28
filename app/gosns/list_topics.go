@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
@@ -24,16 +23,16 @@ func ListTopicsV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	log.Debug("Listing Topics")
 	arnList := make([]models.TopicArnResult, 0)
 
-	for _, topic := range app.SyncTopics.Topics {
+	for _, topic := range models.SyncTopics.Topics {
 		ta := models.TopicArnResult{TopicArn: topic.Arn}
 		arnList = append(arnList, ta)
 	}
 
 	requestId := uuid.NewString()
 	respStruct := models.ListTopicsResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   models.ListTopicsResult{Topics: models.TopicNamestype{Member: arnList}},
-		Metadata: app.ResponseMetadata{RequestId: requestId},
+		Metadata: models.ResponseMetadata{RequestId: requestId},
 	}
 
 	return http.StatusOK, respStruct

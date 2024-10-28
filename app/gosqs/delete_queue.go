@@ -9,7 +9,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
-	"github.com/Admiral-Piett/goaws/app"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,13 +25,13 @@ func DeleteQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	log.Infof("Deleting Queue: %s", queueName)
 
-	app.SyncQueues.Lock()
-	delete(app.SyncQueues.Queues, queueName)
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	delete(models.SyncQueues.Queues, queueName)
+	models.SyncQueues.Unlock()
 
 	respStruct := models.DeleteQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	return http.StatusOK, respStruct
 }

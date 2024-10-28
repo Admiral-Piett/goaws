@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -22,26 +22,26 @@ func CreateTopicV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	topicName := requestBody.Name
 	topicArn := ""
-	if _, ok := app.SyncTopics.Topics[topicName]; ok {
-		topicArn = app.SyncTopics.Topics[topicName].Arn
+	if _, ok := models.SyncTopics.Topics[topicName]; ok {
+		topicArn = models.SyncTopics.Topics[topicName].Arn
 	} else {
-		topicArn = fmt.Sprintf("arn:aws:sns:%s:%s:%s", app.CurrentEnvironment.Region, app.CurrentEnvironment.AccountID, topicName)
+		topicArn = fmt.Sprintf("arn:aws:sns:%s:%s:%s", models.CurrentEnvironment.Region, models.CurrentEnvironment.AccountID, topicName)
 
 		log.Info("Creating Topic:", topicName)
-		topic := &app.Topic{Name: topicName, Arn: topicArn}
-		topic.Subscriptions = make([]*app.Subscription, 0)
-		app.SyncTopics.Lock()
-		app.SyncTopics.Topics[topicName] = topic
-		app.SyncTopics.Unlock()
+		topic := &models.Topic{Name: topicName, Arn: topicArn}
+		topic.Subscriptions = make([]*models.Subscription, 0)
+		models.SyncTopics.Lock()
+		models.SyncTopics.Topics[topicName] = topic
+		models.SyncTopics.Unlock()
 	}
 
-	uuid, _ := common.NewUUID()
+	uuid := uuid.NewString()
 	respStruct := models.CreateTopicResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.CreateTopicResult{
 			TopicArn: topicArn,
 		},
-		Metadata: app.ResponseMetadata{RequestId: uuid},
+		Metadata: models.ResponseMetadata{RequestId: uuid},
 	}
 
 	return http.StatusOK, respStruct

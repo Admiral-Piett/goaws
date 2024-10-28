@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -23,9 +22,9 @@ func ListSubscriptionsByTopicV1(req *http.Request) (int, interfaces.AbstractResp
 	topicArn := requestBody.TopicArn
 	uriSegments := strings.Split(topicArn, ":")
 	topicName := uriSegments[len(uriSegments)-1]
-	var topic app.Topic
+	var topic models.Topic
 
-	if value, ok := app.SyncTopics.Topics[topicName]; ok {
+	if value, ok := models.SyncTopics.Topics[topicName]; ok {
 		topic = *value
 	} else {
 		return utils.CreateErrorResponseV1("TopicNotFound", false)
@@ -35,18 +34,18 @@ func ListSubscriptionsByTopicV1(req *http.Request) (int, interfaces.AbstractResp
 
 	for _, sub := range topic.Subscriptions {
 		tar := models.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-			SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
+			SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: models.CurrentEnvironment.AccountID}
 		resultMember = append(resultMember, tar)
 	}
 
 	respStruct := models.ListSubscriptionsByTopicResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.ListSubscriptionsByTopicResult{
 			Subscriptions: models.TopicSubscriptions{
 				Member: resultMember,
 			},
 		},
-		Metadata: app.ResponseMetadata{RequestId: uuid.NewString()},
+		Metadata: models.ResponseMetadata{RequestId: uuid.NewString()},
 	}
 	return http.StatusOK, respStruct
 

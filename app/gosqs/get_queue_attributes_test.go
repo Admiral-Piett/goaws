@@ -21,7 +21,7 @@ import (
 func TestGetQueueAttributesV1_success_all(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -41,7 +41,7 @@ func TestGetQueueAttributesV1_success_all(t *testing.T) {
 func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -63,7 +63,7 @@ func TestGetQueueAttributesV1_success_no_request_attrs_returns_all(t *testing.T)
 func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -96,7 +96,7 @@ func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 func TestGetQueueAttributesV1_success_specific_fields(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -113,14 +113,14 @@ func TestGetQueueAttributesV1_success_specific_fields(t *testing.T) {
 	code, response := GetQueueAttributesV1(r)
 
 	expectedResponse := models.GetQueueAttributesResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.GetQueueAttributesResult{Attrs: []models.Attribute{
 			models.Attribute{
 				Name:  "DelaySeconds",
 				Value: "0",
 			},
 		}},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	assert.Equal(t, http.StatusOK, code)

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -39,17 +38,17 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 		return utils.CreateErrorResponseV1("ValidationError", true)
 	}
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
-	app.SyncQueues.Lock()
+	models.SyncQueues.Lock()
 	messageFound := false
-	for i := 0; i < len(app.SyncQueues.Queues[queueName].Messages); i++ {
-		queue := app.SyncQueues.Queues[queueName]
+	for i := 0; i < len(models.SyncQueues.Queues[queueName].Messages); i++ {
+		queue := models.SyncQueues.Queues[queueName]
 		msgs := queue.Messages
 		if msgs[i].ReceiptHandle == receiptHandle {
-			timeout := app.SyncQueues.Queues[queueName].VisibilityTimeout
+			timeout := models.SyncQueues.Queues[queueName].VisibilityTimeout
 			if visibilityTimeout == 0 {
 				msgs[i].ReceiptTime = time.Now().UTC()
 				msgs[i].ReceiptHandle = ""
@@ -69,14 +68,14 @@ func ChangeMessageVisibilityV1(req *http.Request) (int, interfaces.AbstractRespo
 			break
 		}
 	}
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Unlock()
 	if !messageFound {
 		return utils.CreateErrorResponseV1("MessageNotInFlight", true)
 	}
 
 	respStruct := models.ChangeMessageVisibilityResult{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	return http.StatusOK, &respStruct

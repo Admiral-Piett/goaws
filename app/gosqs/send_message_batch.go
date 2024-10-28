@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -36,7 +36,7 @@ func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
@@ -60,32 +60,32 @@ func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody
 	sentEntries := make([]models.SendMessageBatchResultEntry, 0)
 	log.Debug("Putting Message in Queue:", queueName)
 	for _, sendEntry := range sendEntries {
-		msg := app.Message{MessageBody: []byte(sendEntry.MessageBody)}
+		msg := models.SqsMessage{MessageBody: []byte(sendEntry.MessageBody)}
 		if len(sendEntry.MessageAttributes) > 0 {
 			oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(sendEntry.MessageAttributes)
 			msg.MessageAttributes = oldStyleMessageAttributes
-			msg.MD5OfMessageAttributes = common.HashAttributes(oldStyleMessageAttributes)
+			msg.MD5OfMessageAttributes = utils.HashAttributes(oldStyleMessageAttributes)
 		}
-		msg.MD5OfMessageBody = common.GetMD5Hash(sendEntry.MessageBody)
+		msg.MD5OfMessageBody = utils.GetMD5Hash(sendEntry.MessageBody)
 		msg.GroupID = sendEntry.MessageGroupId
 		msg.DeduplicationID = sendEntry.MessageDeduplicationId
-		msg.Uuid, _ = common.NewUUID()
+		msg.Uuid = uuid.NewString()
 		msg.SentTime = time.Now()
-		app.SyncQueues.Lock()
+		models.SyncQueues.Lock()
 		fifoSeqNumber := ""
-		if app.SyncQueues.Queues[queueName].IsFIFO {
-			fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(sendEntry.MessageGroupId)
+		if models.SyncQueues.Queues[queueName].IsFIFO {
+			fifoSeqNumber = models.SyncQueues.Queues[queueName].NextSequenceNumber(sendEntry.MessageGroupId)
 		}
 
-		if !app.SyncQueues.Queues[queueName].IsDuplicate(sendEntry.MessageDeduplicationId) {
-			app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+		if !models.SyncQueues.Queues[queueName].IsDuplicate(sendEntry.MessageDeduplicationId) {
+			models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages, msg)
 		} else {
 			log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", sendEntry.MessageDeduplicationId, queueName)
 		}
 
-		app.SyncQueues.Queues[queueName].InitDuplicatation(sendEntry.MessageDeduplicationId)
+		models.SyncQueues.Queues[queueName].InitDuplicatation(sendEntry.MessageDeduplicationId)
 
-		app.SyncQueues.Unlock()
+		models.SyncQueues.Unlock()
 		se := models.SendMessageBatchResultEntry{
 			Id:                     sendEntry.Id,
 			MessageId:              msg.Uuid,
@@ -98,9 +98,9 @@ func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody
 	}
 
 	respStruct := models.SendMessageBatchResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   models.SendMessageBatchResult{Entry: sentEntries},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	return http.StatusOK, respStruct

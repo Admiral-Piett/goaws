@@ -4,13 +4,13 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/Admiral-Piett/goaws/app/models"
 
-	"github.com/Admiral-Piett/goaws/app"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
-	app.SyncQueues.Queues = make(map[string]*app.Queue)
+	models.SyncQueues.Queues = make(map[string]*models.Queue)
 }
 
 func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
@@ -18,9 +18,9 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			app.SyncQueues.Lock()
-			for j := range app.SyncQueues.Queues {
-				queue := app.SyncQueues.Queues[j]
+			models.SyncQueues.Lock()
+			for j := range models.SyncQueues.Queues {
+				queue := models.SyncQueues.Queues[j]
 
 				log.Debugf("Queue [%s] length [%d]", queue.Name, len(queue.Messages))
 				for i := 0; i < len(queue.Messages); i++ {
@@ -28,7 +28,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 
 					// Reset deduplication period
 					for dedupId, startTime := range queue.Duplicates {
-						if time.Now().After(startTime.Add(app.DeduplicationPeriod)) {
+						if time.Now().After(startTime.Add(models.DeduplicationPeriod)) {
 							log.Debugf("deduplication period for message with deduplicationId [%s] expired", dedupId)
 							delete(queue.Duplicates, dedupId)
 						}
@@ -52,7 +52,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 					}
 				}
 			}
-			app.SyncQueues.Unlock()
+			models.SyncQueues.Unlock()
 		case <-quit:
 			ticker.Stop()
 			return
@@ -60,7 +60,7 @@ func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
 	}
 }
 
-func numberOfHiddenMessagesInQueue(queue app.Queue) int {
+func numberOfHiddenMessagesInQueue(queue models.Queue) int {
 	num := 0
 	for _, m := range queue.Messages {
 		if m.ReceiptHandle != "" || m.DelaySecs > 0 && time.Now().Before(m.SentTime.Add(time.Duration(m.DelaySecs)*time.Second)) {
