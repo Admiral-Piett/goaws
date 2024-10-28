@@ -12,7 +12,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 
-	"github.com/Admiral-Piett/goaws/app/common"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
 	"github.com/google/uuid"
@@ -29,7 +28,6 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/Admiral-Piett/goaws/app"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +41,7 @@ var PrivateKEY *rsa.PrivateKey
 var TOPIC_DATA map[string]*pendingConfirm
 
 func init() {
-	app.SyncTopics.Topics = make(map[string]*app.Topic)
+	models.SyncTopics.Topics = make(map[string]*models.Topic)
 	TOPIC_DATA = make(map[string]*pendingConfirm)
 
 	PrivateKEY, PemKEY, _ = createPemFile()
@@ -206,9 +204,9 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 		return "", err
 	}
 
-	defaultMsg, ok := msgWithProtocols[string(app.ProtocolDefault)]
+	defaultMsg, ok := msgWithProtocols[string(models.ProtocolDefault)]
 	if !ok {
-		return "", errors.New(app.ErrNoDefaultElementInJSON)
+		return "", errors.New("Invalid parameter: Message Structure - No default entry in JSON message body")
 	}
 
 	if m, ok := msgWithProtocols[protocol]; ok {
@@ -218,8 +216,8 @@ func extractMessageFromJSON(msg string, protocol string) (string, error) {
 	return defaultMsg, nil
 }
 
-func getSubscription(subsArn string) *app.Subscription {
-	for _, topic := range app.SyncTopics.Topics {
+func getSubscription(subsArn string) *models.Subscription {
+	for _, topic := range models.SyncTopics.Topics {
 		for _, sub := range topic.Subscriptions {
 			if sub.SubscriptionArn == subsArn {
 				return sub
@@ -229,8 +227,8 @@ func getSubscription(subsArn string) *app.Subscription {
 	return nil
 }
 
-func createMessageBody(subs *app.Subscription, entry interfaces.AbstractPublishEntry,
-	messageAttributes map[string]app.MessageAttributeValue) ([]byte, error) {
+func createMessageBody(subs *models.Subscription, entry interfaces.AbstractPublishEntry,
+	messageAttributes map[string]models.SqsMessageAttributeValue) ([]byte, error) {
 
 	msgId := uuid.NewString()
 	message := models.SNSMessage{
@@ -240,12 +238,12 @@ func createMessageBody(subs *app.Subscription, entry interfaces.AbstractPublishE
 		Subject:           entry.GetSubject(),
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, msgId),
-		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
+		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, msgId),
+		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, subs.SubscriptionArn),
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
-	if app.MessageStructure(entry.GetMessageStructure()) == app.MessageStructureJSON {
+	if models.MessageStructure(entry.GetMessageStructure()) == models.MessageStructureJSON {
 		m, err := extractMessageFromJSON(entry.GetMessage(), subs.Protocol)
 		if err != nil {
 			return nil, err
@@ -266,7 +264,7 @@ func createMessageBody(subs *app.Subscription, entry interfaces.AbstractPublishE
 	return byteMsg, nil
 }
 
-func formatAttributes(values map[string]app.MessageAttributeValue) map[string]models.MessageAttributeValue {
+func formatAttributes(values map[string]models.SqsMessageAttributeValue) map[string]models.MessageAttributeValue {
 	attr := make(map[string]models.MessageAttributeValue)
 	for k, v := range values {
 		if v.DataType == "String" {
@@ -284,7 +282,7 @@ func formatAttributes(values map[string]app.MessageAttributeValue) map[string]mo
 	return attr
 }
 
-func publishHTTP(subs *app.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
+func publishHTTP(subs *models.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
 	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
 	id := uuid.NewString()
 	msg := models.SNSMessage{
@@ -295,8 +293,8 @@ func publishHTTP(subs *app.Subscription, topicArn string, entry interfaces.Abstr
 		Message:           entry.GetMessage(),
 		Timestamp:         time.Now().UTC().Format(time.RFC3339),
 		SignatureVersion:  "1",
-		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, id),
-		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, subs.SubscriptionArn),
+		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, id),
+		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, subs.SubscriptionArn),
 		MessageAttributes: formatAttributes(messageAttributes),
 	}
 
@@ -319,7 +317,7 @@ func publishHTTP(subs *app.Subscription, topicArn string, entry interfaces.Abstr
 // NOTE: The important thing to know here is that essentially the RAW delivery means we take the message body and
 // put it in the resulting `body`, so that's all that's in that field when the message is received.  If it's not
 // raw, then we put all this other junk in there too, similar to how AWS stores its metadata in there.
-func publishSQS(subscription *app.Subscription, topic *app.Topic, entry interfaces.AbstractPublishEntry) error {
+func publishSQS(subscription *models.Subscription, topic *models.Topic, entry interfaces.AbstractPublishEntry) error {
 	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
 	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messageAttributes) {
 		return nil
@@ -331,12 +329,12 @@ func publishSQS(subscription *app.Subscription, topic *app.Topic, entry interfac
 	arnSegments := strings.Split(queueName, ":")
 	queueName = arnSegments[len(arnSegments)-1]
 
-	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		msg := app.Message{}
+	if _, ok := models.SyncQueues.Queues[queueName]; ok {
+		msg := models.SqsMessage{}
 
 		if subscription.Raw {
 			msg.MessageAttributes = messageAttributes
-			msg.MD5OfMessageAttributes = common.HashAttributes(messageAttributes)
+			msg.MD5OfMessageAttributes = utils.HashAttributes(messageAttributes)
 
 			// NOTE: Admiral-Piett - commenting this out.  I don't understand what this is supposed to achieve
 			// for raw message delivery.  I suspect this doesn't work at all, otherwise you'd have to match the
@@ -358,11 +356,11 @@ func publishSQS(subscription *app.Subscription, topic *app.Topic, entry interfac
 			msg.MessageBody = m
 		}
 
-		msg.MD5OfMessageBody = common.GetMD5Hash(entry.GetMessage())
-		msg.Uuid, _ = common.NewUUID()
-		app.SyncQueues.Lock()
-		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
-		app.SyncQueues.Unlock()
+		msg.MD5OfMessageBody = utils.GetMD5Hash(entry.GetMessage())
+		msg.Uuid = uuid.NewString()
+		models.SyncQueues.Lock()
+		models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages, msg)
+		models.SyncQueues.Unlock()
 
 		log.Debugf("SQS Publish Success - Topic: %s(%s), Message: %s\n", topic.Name, queueName, msg.MessageBody)
 	} else {
@@ -379,18 +377,18 @@ var publishMessageByTopicFunc = publishMessageByTopic
 // now, we won't worry about cataloging each one even though, if you have multiple failures, we'll stomp on the
 // first ones.  For the current callers, just knowing that any failed will consider that entry failed.
 // We will also consider it a success if you have no subscriptions. "You didn't ask us to do anything, so we won't."
-func publishMessageByTopic(topic *app.Topic, message interfaces.AbstractPublishEntry) (messageId string, err error) {
+func publishMessageByTopic(topic *models.Topic, message interfaces.AbstractPublishEntry) (messageId string, err error) {
 	messageId = uuid.NewString()
 	for _, sub := range topic.Subscriptions {
-		switch app.Protocol(sub.Protocol) {
-		case app.ProtocolSQS:
+		switch models.Protocol(sub.Protocol) {
+		case models.ProtocolSQS:
 			err = publishSqsMessageFunc(sub, topic, message)
 			if err != nil {
 				log.WithFields(log.Fields{"Topic": topic.Name, "Queue": sub.EndPoint}).Warn("Failed to publish message through subscription")
 			}
-		case app.ProtocolHTTP:
+		case models.ProtocolHTTP:
 			fallthrough
-		case app.ProtocolHTTPS:
+		case models.ProtocolHTTPS:
 			publishHttpMessageFunc(sub, topic.Arn, message)
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -19,7 +18,7 @@ func Test_CreateTopicV1_json_success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	// Target test
@@ -59,7 +58,7 @@ func Test_CreateTopicV1_json_existant_topic(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	// Prepare existant topic
@@ -106,7 +105,7 @@ func Test_CreateTopicV1_json_add_multiple_topics(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	// Prepare existant topic
@@ -153,7 +152,7 @@ func Test_CreateTopicV1_xml_success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	// Target test
@@ -200,7 +199,7 @@ func Test_CreateTopicV1_xml_existant_topic(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	topicName := "new-topic-1"

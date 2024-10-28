@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"github.com/Admiral-Piett/goaws/app/router"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"strings"
 )
 
@@ -41,11 +42,11 @@ func New(addr string) (*Server, error) {
 		addr = "localhost:0"
 	}
 	localURL := strings.Split(addr, ":")
-	app.CurrentEnvironment.Host = localURL[0]
-	app.CurrentEnvironment.Port = localURL[1]
+	models.CurrentEnvironment.Host = localURL[0]
+	models.CurrentEnvironment.Port = localURL[1]
 	log.WithFields(log.Fields{
-		"host": app.CurrentEnvironment.Host,
-		"port": app.CurrentEnvironment.Port,
+		"host": models.CurrentEnvironment.Host,
+		"port": models.CurrentEnvironment.Port,
 	}).Info("URL Sarting to listen")
 
 	l, err := net.Listen("tcp", addr)

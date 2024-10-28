@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,11 +15,11 @@ import (
 func TestSetSubscriptionAttributesV1_success_SetRawMessageDelivery_true(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 	assert.False(t, sub.Raw)
 
@@ -46,11 +45,11 @@ func TestSetSubscriptionAttributesV1_success_SetRawMessageDelivery_true(t *testi
 func TestSetSubscriptionAttributesV1_success_SetRawMessageDelivery_false(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[1]
 	assert.True(t, sub.Raw)
 
@@ -76,11 +75,11 @@ func TestSetSubscriptionAttributesV1_success_SetRawMessageDelivery_false(t *test
 func TestSetSubscriptionAttributesV1_success_SetFilterPolicy(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 	assert.Empty(t, sub.FilterPolicy)
 
@@ -100,7 +99,7 @@ func TestSetSubscriptionAttributesV1_success_SetFilterPolicy(t *testing.T) {
 	assert.Equal(t, http.StatusOK, code)
 
 	// Assert SubscriptionAttribute has been updated
-	expectedFilterPolicy := make(app.FilterPolicy)
+	expectedFilterPolicy := make(models.FilterPolicy)
 	expectedFilterPolicy["foo"] = []string{"bar"}
 	assert.Equal(t, &expectedFilterPolicy, sub.FilterPolicy)
 }
@@ -108,11 +107,11 @@ func TestSetSubscriptionAttributesV1_success_SetFilterPolicy(t *testing.T) {
 func TestSetSubscriptionAttributesV1_error_SetFilterPolicy_invalid(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 	assert.Empty(t, sub.FilterPolicy)
 
@@ -135,11 +134,11 @@ func TestSetSubscriptionAttributesV1_error_SetFilterPolicy_invalid(t *testing.T)
 func TestSetSubscriptionAttributesV1_success_SetDeliveryPolicy(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
@@ -161,11 +160,11 @@ func TestSetSubscriptionAttributesV1_success_SetDeliveryPolicy(t *testing.T) {
 func TestSetSubscriptionAttributesV1_success_SetFilterPolicyScope(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
@@ -187,11 +186,11 @@ func TestSetSubscriptionAttributesV1_success_SetFilterPolicyScope(t *testing.T) 
 func TestSetSubscriptionAttributesV1_success_SetRedrivePolicy(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
@@ -213,11 +212,11 @@ func TestSetSubscriptionAttributesV1_success_SetRedrivePolicy(t *testing.T) {
 func TestSetSubscriptionAttributesV1_success_SetSubscriptionRoleArn(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	sub := localTopic1.Subscriptions[0]
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
@@ -239,11 +238,11 @@ func TestSetSubscriptionAttributesV1_success_SetSubscriptionRoleArn(t *testing.T
 func TestSetSubscriptionAttributesV1_error_InvalidAttribute(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	subscriptions := localTopic1.Subscriptions
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.SetSubscriptionAttributesRequest)
@@ -272,7 +271,7 @@ func TestSetSubscriptionAttributesV1_error_InvalidAttribute(t *testing.T) {
 func TestSetSubscriptionAttributesV1_error_NonExistentSubscription(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -302,7 +301,7 @@ func TestSetSubscriptionAttributesV1_error_NonExistentSubscription(t *testing.T)
 func TestSetSubscriptionAttributesV1_error_invalid_request(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

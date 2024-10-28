@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 
@@ -12,8 +14,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/Admiral-Piett/goaws/app"
-	"github.com/Admiral-Piett/goaws/app/common"
 	"github.com/gorilla/mux"
 )
 
@@ -41,61 +41,61 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 		queueName = uriSegments[len(uriSegments)-1]
 	}
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		// Queue does not exist
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
-	if app.SyncQueues.Queues[queueName].MaximumMessageSize > 0 &&
-		len(messageBody) > app.SyncQueues.Queues[queueName].MaximumMessageSize {
+	if models.SyncQueues.Queues[queueName].MaximumMessageSize > 0 &&
+		len(messageBody) > models.SyncQueues.Queues[queueName].MaximumMessageSize {
 		// Message size is too big
 		return utils.CreateErrorResponseV1("MessageTooBig", true)
 	}
 
-	delaySecs := app.SyncQueues.Queues[queueName].DelaySeconds
+	delaySecs := models.SyncQueues.Queues[queueName].DelaySeconds
 	if requestBody.DelaySeconds != 0 {
 		delaySecs = requestBody.DelaySeconds
 	}
 
 	log.Debugf("Putting Message in Queue: [%s]", queueName)
-	msg := app.Message{MessageBody: []byte(messageBody)}
+	msg := models.SqsMessage{MessageBody: []byte(messageBody)}
 	if len(messageAttributes) > 0 {
 		oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(messageAttributes)
 		msg.MessageAttributes = oldStyleMessageAttributes
-		msg.MD5OfMessageAttributes = common.HashAttributes(oldStyleMessageAttributes)
+		msg.MD5OfMessageAttributes = utils.HashAttributes(oldStyleMessageAttributes)
 	}
-	msg.MD5OfMessageBody = common.GetMD5Hash(messageBody)
-	msg.Uuid, _ = common.NewUUID()
+	msg.MD5OfMessageBody = utils.GetMD5Hash(messageBody)
+	msg.Uuid = uuid.NewString()
 	msg.GroupID = messageGroupID
 	msg.DeduplicationID = messageDeduplicationID
 	msg.SentTime = time.Now()
 	msg.DelaySecs = delaySecs
 
-	app.SyncQueues.Lock()
+	models.SyncQueues.Lock()
 	fifoSeqNumber := ""
-	if app.SyncQueues.Queues[queueName].IsFIFO {
-		fifoSeqNumber = app.SyncQueues.Queues[queueName].NextSequenceNumber(messageGroupID)
+	if models.SyncQueues.Queues[queueName].IsFIFO {
+		fifoSeqNumber = models.SyncQueues.Queues[queueName].NextSequenceNumber(messageGroupID)
 	}
 
-	if !app.SyncQueues.Queues[queueName].IsDuplicate(messageDeduplicationID) {
-		app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages, msg)
+	if !models.SyncQueues.Queues[queueName].IsDuplicate(messageDeduplicationID) {
+		models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages, msg)
 	} else {
 		log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", messageDeduplicationID, queueName)
 	}
 
-	app.SyncQueues.Queues[queueName].InitDuplicatation(messageDeduplicationID)
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Queues[queueName].InitDuplicatation(messageDeduplicationID)
+	models.SyncQueues.Unlock()
 	log.Infof("%s: Queue: %s, Message: %s\n", time.Now().Format("2006-01-02 15:04:05"), queueName, msg.MessageBody)
 
 	respStruct := models.SendMessageResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.SendMessageResult{
 			MD5OfMessageAttributes: msg.MD5OfMessageAttributes,
 			MD5OfMessageBody:       msg.MD5OfMessageBody,
 			MessageId:              msg.Uuid,
 			SequenceNumber:         fifoSeqNumber,
 		},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	return http.StatusOK, respStruct

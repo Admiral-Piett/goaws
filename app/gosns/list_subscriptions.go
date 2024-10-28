@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
@@ -24,14 +23,14 @@ func ListSubscriptionsV1(req *http.Request) (int, interfaces.AbstractResponseBod
 	log.Debug("Listing Subscriptions")
 	requestId := uuid.NewString()
 	respStruct := models.ListSubscriptionsResponse{}
-	respStruct.Xmlns = models.BASE_XMLNS
+	respStruct.Xmlns = models.BaseXmlns
 	respStruct.Metadata.RequestId = requestId
 	respStruct.Result.Subscriptions.Member = make([]models.TopicMemberResult, 0)
 
-	for _, topic := range app.SyncTopics.Topics {
+	for _, topic := range models.SyncTopics.Topics {
 		for _, sub := range topic.Subscriptions {
 			tar := models.TopicMemberResult{TopicArn: topic.Arn, Protocol: sub.Protocol,
-				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: app.CurrentEnvironment.AccountID}
+				SubscriptionArn: sub.SubscriptionArn, Endpoint: sub.EndPoint, Owner: models.CurrentEnvironment.AccountID}
 			respStruct.Result.Subscriptions.Member = append(respStruct.Result.Subscriptions.Member, tar)
 		}
 	}

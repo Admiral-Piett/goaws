@@ -1,4 +1,4 @@
-package app
+package models
 
 /*** config ***/
 type EnvSubsciption struct {
@@ -45,21 +45,6 @@ type Environment struct {
 	Queues                 []EnvQueue
 	QueueAttributeDefaults EnvQueueAttributes
 	RandomLatency          RandomLatency
-}
-
-// CurrentEnvironment should get overwritten when the app starts up and loads the config.  For the
-// sake of generating "partial" apps piece-meal during test automation we'll slap these placeholder
-// values in here so the resource URLs aren't wonky like `http://://new-queue`.
-var CurrentEnvironment = Environment{
-	Host:      "host",
-	Port:      "port",
-	Region:    "region",
-	AccountID: "accountID",
-}
-
-/*** Common ***/
-type ResponseMetadata struct {
-	RequestId string `xml:"RequestId"`
 }
 
 type RandomLatency struct {

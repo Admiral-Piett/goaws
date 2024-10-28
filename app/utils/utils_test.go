@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"github.com/Admiral-Piett/goaws/app/test"
 
 	"github.com/Admiral-Piett/goaws/app/fixtures"
@@ -109,4 +111,29 @@ func TestExtractQueueAttributes_success(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, attr)
+}
+
+func TestGetMD5Hash(t *testing.T) {
+	hash1 := GetMD5Hash("This is a test")
+	hash2 := GetMD5Hash("This is a test")
+	if hash1 != hash2 {
+		t.Errorf("hashs and hash2 should be the same, but were not")
+	}
+
+	hash1 = GetMD5Hash("This is a test")
+	hash2 = GetMD5Hash("This is a tfst")
+	if hash1 == hash2 {
+		t.Errorf("hashs and hash2 are the same, but should not be")
+	}
+}
+
+func TestSortedKeys(t *testing.T) {
+	attributes := map[string]models.SqsMessageAttributeValue{
+		"b": {},
+		"a": {},
+	}
+
+	keys := sortedKeys(attributes)
+	assert.Equal(t, "a", keys[0])
+	assert.Equal(t, "b", keys[1])
 }

@@ -7,10 +7,7 @@ import (
 
 	"encoding/xml"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -25,7 +22,7 @@ func Test_Delete_Topic_json_success(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -48,11 +45,11 @@ func Test_Delete_Topic_json_success(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	app.SyncQueues.Lock()
+	models.SyncQueues.Lock()
 
-	defer app.SyncQueues.Unlock()
+	defer models.SyncQueues.Unlock()
 
-	topics := app.SyncTopics.Topics
+	topics := models.SyncTopics.Topics
 	assert.Len(t, topics, 1)
 
 	_, ok := topics[topicName1]
@@ -67,7 +64,7 @@ func Test_Delete_Topic_json_NotFound(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -82,10 +79,10 @@ func Test_Delete_Topic_json_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "400")
 	assert.Contains(t, err.Error(), "SimpleNotificationService.NonExistentTopic")
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
 
-	topics := app.SyncTopics.Topics
+	topics := models.SyncTopics.Topics
 	assert.Len(t, topics, 0)
 }
 
@@ -94,7 +91,7 @@ func Test_Delete_Topic_xml_success(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -130,11 +127,11 @@ func Test_Delete_Topic_xml_success(t *testing.T) {
 	xml.Unmarshal([]byte(r), &deleteTopicResponseObject)
 
 	assert.Equal(t, "http://queue.amazonaws.com/doc/2012-11-05/", deleteTopicResponseObject.Xmlns)
-	app.SyncQueues.Lock()
+	models.SyncQueues.Lock()
 
-	defer app.SyncQueues.Unlock()
+	defer models.SyncQueues.Unlock()
 
-	topics := app.SyncTopics.Topics
+	topics := models.SyncTopics.Topics
 	assert.Len(t, topics, 1)
 
 	_, ok := topics[topicName1]
@@ -150,7 +147,7 @@ func Test_Delete_Topic_xml_NotFound(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	requestBody := struct {

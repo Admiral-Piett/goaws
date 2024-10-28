@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 )
 
@@ -13,7 +11,7 @@ var QueueName = "new-queue-1"
 var QueueUrl = fmt.Sprintf("%s/%s", BASE_URL, QueueName)
 var DeadLetterQueueName = "dead-letter-queue-1"
 
-var FullyPopulatedQueue = &app.Queue{
+var FullyPopulatedQueue = &models.Queue{
 	Name: QueueName,
 	URL: fmt.Sprintf("http://%s.%s:%s/%s/%s",
 		LOCAL_ENVIRONMENT.Region,
@@ -60,9 +58,9 @@ var CreateQueueResult = models.CreateQueueResult{
 }
 
 var CreateQueueResponse = models.CreateQueueResponse{
-	Xmlns:    models.BASE_XMLNS,
+	Xmlns:    models.BaseXmlns,
 	Result:   CreateQueueResult,
-	Metadata: models.BASE_RESPONSE_METADATA,
+	Metadata: models.BaseResponseMetadata,
 }
 
 var GetQueueAttributesRequest = models.GetQueueAttributesRequest{
@@ -71,7 +69,7 @@ var GetQueueAttributesRequest = models.GetQueueAttributesRequest{
 }
 
 var GetQueueAttributesResponse = models.GetQueueAttributesResponse{
-	Xmlns: models.BASE_XMLNS,
+	Xmlns: models.BaseXmlns,
 	Result: models.GetQueueAttributesResult{Attrs: []models.Attribute{
 		models.Attribute{
 			Name:  "DelaySeconds",
@@ -114,7 +112,7 @@ var GetQueueAttributesResponse = models.GetQueueAttributesResponse{
 			Value: "arn:aws:sqs:region:accountID:unit-queue1",
 		},
 	}},
-	Metadata: models.BASE_RESPONSE_METADATA,
+	Metadata: models.BaseResponseMetadata,
 }
 
 var SetQueueAttributesRequest = models.SetQueueAttributesRequest{

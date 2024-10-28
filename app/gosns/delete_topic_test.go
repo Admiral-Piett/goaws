@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,11 +15,11 @@ import (
 func TestDeleteTopicV1_Success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	initial_num_topics := len(app.SyncTopics.Topics)
+	initial_num_topics := len(models.SyncTopics.Topics)
 
 	topicName1 := "unit-topic1"
 
@@ -38,10 +37,10 @@ func TestDeleteTopicV1_Success(t *testing.T) {
 	response, _ := res.(models.DeleteTopicResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata)
 
-	topics := app.SyncTopics.Topics
+	topics := models.SyncTopics.Topics
 	assert.Equal(t, initial_num_topics-1, len(topics))
 	_, ok := topics[topicName1]
 	assert.False(t, ok)
@@ -50,7 +49,7 @@ func TestDeleteTopicV1_Success(t *testing.T) {
 func TestDeleteTopicV1_NotFound(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -73,7 +72,7 @@ func TestDeleteTopicV1_NotFound(t *testing.T) {
 func TestDeleteTopicV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

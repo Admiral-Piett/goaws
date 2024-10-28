@@ -6,8 +6,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
-
-	"github.com/Admiral-Piett/goaws/app"
 )
 
 var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = models.GetQueueAttributesResponse{
@@ -54,5 +52,5 @@ var BASE_GET_QUEUE_ATTRIBUTES_RESPONSE = models.GetQueueAttributesResponse{
 			Value: fmt.Sprintf("%s:new-queue-1", af.BASE_SQS_ARN),
 		},
 	}},
-	Metadata: app.ResponseMetadata{RequestId: REQUEST_ID},
+	Metadata: models.ResponseMetadata{RequestId: REQUEST_ID},
 }

@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -25,7 +23,7 @@ func Test_GetSubscriptionAttributes_json_error_subscription_not_found(t *testing
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -49,7 +47,7 @@ func Test_GetSubscriptionAttributes_json_success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -88,7 +86,7 @@ func Test_GetSubscriptionAttributes_xml_error_no_subscriptions(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -142,7 +140,7 @@ func Test_GetSubscriptionAttributes_xml_success(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -190,7 +188,7 @@ func Test_GetSubscriptionAttributes_xml_success(t *testing.T) {
 	expectedAttributes := []models.SubscriptionAttributeEntry{
 		{
 			Key:   "Owner",
-			Value: app.CurrentEnvironment.AccountID,
+			Value: models.CurrentEnvironment.AccountID,
 		},
 		{
 			Key:   "RawMessageDelivery",

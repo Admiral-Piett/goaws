@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -14,9 +13,9 @@ import (
 )
 
 func TestCreateTopicV1_success(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -31,7 +30,7 @@ func TestCreateTopicV1_success(t *testing.T) {
 	}
 
 	// No topic yet
-	assert.Equal(t, 0, len(app.SyncTopics.Topics))
+	assert.Equal(t, 0, len(models.SyncTopics.Topics))
 
 	// Request
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -44,13 +43,13 @@ func TestCreateTopicV1_success(t *testing.T) {
 	assert.Contains(t, createTopicResponse.Result.TopicArn, "arn:aws:sns:")
 	assert.Contains(t, createTopicResponse.Result.TopicArn, targetTopicName)
 	// 1 topic there
-	assert.Equal(t, 1, len(app.SyncTopics.Topics))
+	assert.Equal(t, 1, len(models.SyncTopics.Topics))
 }
 
 func TestCreateTopicV1_existant_topic(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -68,12 +67,12 @@ func TestCreateTopicV1_existant_topic(t *testing.T) {
 
 	// Prepare existant topic
 	targetTopicArn := "arn:aws:sns:us-east-1:123456789012:" + targetTopicName
-	topic := &app.Topic{
+	topic := &models.Topic{
 		Name: targetTopicName,
 		Arn:  targetTopicArn,
 	}
-	app.SyncTopics.Topics[targetTopicName] = topic
-	assert.Equal(t, 1, len(app.SyncTopics.Topics))
+	models.SyncTopics.Topics[targetTopicName] = topic
+	assert.Equal(t, 1, len(models.SyncTopics.Topics))
 
 	// Reques
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
@@ -85,13 +84,13 @@ func TestCreateTopicV1_existant_topic(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, targetTopicArn, createTopicResponse.Result.TopicArn) // Same with existant topic
 	// No additional topic
-	assert.Equal(t, 1, len(app.SyncTopics.Topics))
+	assert.Equal(t, 1, len(models.SyncTopics.Topics))
 }
 
 func TestCreateTopicV1_request_transformer_error(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

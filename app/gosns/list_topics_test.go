@@ -16,7 +16,7 @@ import (
 func TestListTopicsV1_NoTopics(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -34,7 +34,7 @@ func TestListTopicsV1_NoTopics(t *testing.T) {
 	response, _ := res.(models.ListTopicsResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata)
 
 	assert.Len(t, response.Result.Topics.Member, 0)
@@ -43,7 +43,7 @@ func TestListTopicsV1_NoTopics(t *testing.T) {
 func TestListTopicsV1_BaseTopics(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -61,7 +61,7 @@ func TestListTopicsV1_BaseTopics(t *testing.T) {
 	response, _ := res.(models.ListTopicsResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata)
 
 	assert.Len(t, response.Result.Topics.Member, 4)
@@ -78,7 +78,7 @@ func TestListTopicsV1_BaseTopics(t *testing.T) {
 func TestListTopicsV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

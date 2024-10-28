@@ -9,7 +9,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
-	"github.com/Admiral-Piett/goaws/app"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,20 +23,20 @@ func PurgeQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	uriSegments := strings.Split(requestBody.QueueUrl, "/")
 	queueName := uriSegments[len(uriSegments)-1]
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		log.Errorf("Purge Queue: %s, queue does not exist!!!", queueName)
 		return utils.CreateErrorResponseV1("QueueNotFound", true)
 	}
 
 	log.Infof("Purging Queue: %s", queueName)
-	app.SyncQueues.Queues[queueName].Messages = nil
-	app.SyncQueues.Queues[queueName].Duplicates = make(map[string]time.Time)
+	models.SyncQueues.Queues[queueName].Messages = nil
+	models.SyncQueues.Queues[queueName].Duplicates = make(map[string]time.Time)
 
 	respStruct := models.PurgeQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	return http.StatusOK, respStruct
 }

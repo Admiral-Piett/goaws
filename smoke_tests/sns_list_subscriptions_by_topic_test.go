@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -23,7 +21,7 @@ func Test_ListSubscriptionsByTopic_Success_Multiple_Subscriptions(t *testing.T) 
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -86,7 +84,7 @@ func Test_ListSubscriptionsByTopic_Success_Multiple_Subscriptions(t *testing.T) 
 	assert.Equal(t, createTopicResponse.TopicArn, subscription1.TopicArn)
 	assert.Equal(t, *subscribeResponse1.SubscriptionArn, *subscription1.SubscriptionArn)
 	assert.Equal(t, *protocol, *(subscription1.Protocol))
-	assert.Equal(t, app.CurrentEnvironment.AccountID, *(subscription1.Owner))
+	assert.Equal(t, models.CurrentEnvironment.AccountID, *(subscription1.Owner))
 	assert.Equal(t, getQueueAttributesOutput1.Attributes["QueueArn"], *(subscription1.Endpoint))
 
 	subscription2, exists := subscriptionMap[*subscribeResponse2.SubscriptionArn]
@@ -94,7 +92,7 @@ func Test_ListSubscriptionsByTopic_Success_Multiple_Subscriptions(t *testing.T) 
 	assert.Equal(t, createTopicResponse.TopicArn, subscription2.TopicArn)
 	assert.Equal(t, subscribeResponse2.SubscriptionArn, subscription2.SubscriptionArn)
 	assert.Equal(t, *protocol, *(subscription2.Protocol))
-	assert.Equal(t, app.CurrentEnvironment.AccountID, *(subscription2.Owner))
+	assert.Equal(t, models.CurrentEnvironment.AccountID, *(subscription2.Owner))
 	assert.Equal(t, getQueueAttributesOutput2.Attributes["QueueArn"], *(subscription2.Endpoint))
 }
 
@@ -102,7 +100,7 @@ func Test_ListSubscriptionsByTopic_Json_Not_Found(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -122,7 +120,7 @@ func Test_ListSubscriptionsByTopic_Xml_Success_Multiple_Subscriptions(t *testing
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -196,14 +194,14 @@ func Test_ListSubscriptionsByTopic_Xml_Success_Multiple_Subscriptions(t *testing
 			TopicArn:        *createTopicResponse.TopicArn,
 			SubscriptionArn: *subscribeResponse1.SubscriptionArn,
 			Protocol:        *protocol,
-			Owner:           app.CurrentEnvironment.AccountID,
+			Owner:           models.CurrentEnvironment.AccountID,
 			Endpoint:        getQueueAttributesOutput1.Attributes["QueueArn"],
 		},
 		{
 			TopicArn:        *createTopicResponse.TopicArn,
 			SubscriptionArn: *subscribeResponse2.SubscriptionArn,
 			Protocol:        *protocol,
-			Owner:           app.CurrentEnvironment.AccountID,
+			Owner:           models.CurrentEnvironment.AccountID,
 			Endpoint:        getQueueAttributesOutput2.Attributes["QueueArn"],
 		},
 	}
@@ -216,7 +214,7 @@ func Test_ListSubscriptionsByTopic_Xml_Not_Found(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

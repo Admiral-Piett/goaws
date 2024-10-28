@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/mitchellh/copystructure"
@@ -42,7 +41,7 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 		return attrs
 	}()
 
-	dupe, _ := copystructure.Copy(models.AVAILABLE_QUEUE_ATTRIBUTES)
+	dupe, _ := copystructure.Copy(models.AvailableQueueAttributes)
 	includedAttributes, _ := dupe.(map[string]bool)
 	_, ok = requestedAttributes["All"]
 	if !ok {
@@ -60,9 +59,9 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	log.Infof("Get Queue QueueAttributes: %s", queueName)
 	queueAttributes := make([]models.Attribute, 0, 0)
 
-	app.SyncQueues.RLock()
-	defer app.SyncQueues.RUnlock()
-	queue, ok := app.SyncQueues.Queues[queueName]
+	models.SyncQueues.RLock()
+	defer models.SyncQueues.RUnlock()
+	queue, ok := models.SyncQueues.Queues[queueName]
 	if !ok {
 		log.Errorf("Get Queue URL: %s queue does not exist!!!", queueName)
 		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
@@ -128,9 +127,9 @@ func GetQueueAttributesV1(req *http.Request) (int, interfaces.AbstractResponseBo
 	}
 
 	respStruct := models.GetQueueAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   models.GetQueueAttributesResult{Attrs: queueAttributes},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 	return http.StatusOK, respStruct
 }

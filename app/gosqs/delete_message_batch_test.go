@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -16,16 +15,16 @@ import (
 )
 
 func TestDeleteMessageBatchV1_success_all_message(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name: "testing",
-		Messages: []app.Message{
+		Messages: []models.SqsMessage{
 			{
 				MessageBody:   []byte("test%20message%20body%201"),
 				ReceiptHandle: "test1",
@@ -40,7 +39,7 @@ func TestDeleteMessageBatchV1_success_all_message(t *testing.T) {
 			},
 		},
 	}
-	app.SyncQueues.Queues["testing"] = q
+	models.SyncQueues.Queues["testing"] = q
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.DeleteMessageBatchRequest)
@@ -76,19 +75,19 @@ func TestDeleteMessageBatchV1_success_all_message(t *testing.T) {
 	assert.Equal(t, "delete-test-2", deleteMessageBatchResponse.Result.Successful[1].Id)
 	assert.Equal(t, "delete-test-3", deleteMessageBatchResponse.Result.Successful[2].Id)
 	assert.Empty(t, deleteMessageBatchResponse.Result.Failed)
-	assert.Empty(t, app.SyncQueues.Queues["testing"].Messages)
+	assert.Empty(t, models.SyncQueues.Queues["testing"].Messages)
 }
 func TestDeleteMessageBatchV1_success_not_found_message(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name: "testing",
-		Messages: []app.Message{
+		Messages: []models.SqsMessage{
 			{
 				MessageBody:   []byte("test%20message%20body%201"),
 				ReceiptHandle: "test1",
@@ -99,7 +98,7 @@ func TestDeleteMessageBatchV1_success_not_found_message(t *testing.T) {
 			},
 		},
 	}
-	app.SyncQueues.Queues["testing"] = q
+	models.SyncQueues.Queues["testing"] = q
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.DeleteMessageBatchRequest)
@@ -137,14 +136,14 @@ func TestDeleteMessageBatchV1_success_not_found_message(t *testing.T) {
 	assert.Equal(t, "delete-test-2", deleteMessageBatchResponse.Result.Failed[0].Id)
 	assert.Equal(t, "Message not found", deleteMessageBatchResponse.Result.Failed[0].Message)
 	assert.True(t, deleteMessageBatchResponse.Result.Failed[0].SenderFault)
-	assert.Empty(t, app.SyncQueues.Queues["testing"].Messages)
+	assert.Empty(t, models.SyncQueues.Queues["testing"].Messages)
 }
 
 func TestDeleteMessageBatchV1_error_not_found_queue(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
@@ -183,7 +182,7 @@ func TestDeleteMessageBatchV1_error_no_entry(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -209,7 +208,7 @@ func TestDeleteMessageBatchV1_error_too_many_entries(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -280,7 +279,7 @@ func TestDeleteMessageBatchV1_Error_IdNotDistinct(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -314,7 +313,7 @@ func TestDeleteMessageBatchV1_Error_IdNotDistinct(t *testing.T) {
 func TestDeleteMessageBatchV1_Error_transformer(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

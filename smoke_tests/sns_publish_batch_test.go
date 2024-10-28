@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/models"
+
 	"github.com/gavv/httpexpect/v2"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
@@ -25,12 +25,12 @@ import (
 
 func Test_Publish_batch_sqs_json_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -38,7 +38,7 @@ func Test_Publish_batch_sqs_json_raw(t *testing.T) {
 	snsClient := sns.NewFromConfig(sdkConfig)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -63,7 +63,7 @@ func Test_Publish_batch_sqs_json_raw(t *testing.T) {
 	assert.Len(t, response.Successful, 2)
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue1"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue1"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -87,12 +87,12 @@ func Test_Publish_batch_sqs_json_raw(t *testing.T) {
 
 func Test_Publish_batch_sqs_failure_json_duplicate_ids(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -100,7 +100,7 @@ func Test_Publish_batch_sqs_failure_json_duplicate_ids(t *testing.T) {
 	snsClient := sns.NewFromConfig(sdkConfig)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 	subject := "I am a subject"
 	dupeId := uuid.NewString()
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -133,7 +133,7 @@ func Test_Publish_batch_sqs_failure_json_duplicate_ids(t *testing.T) {
 	assert.Nil(t, response)
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue1"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue1"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -142,12 +142,12 @@ func Test_Publish_batch_sqs_failure_json_duplicate_ids(t *testing.T) {
 
 func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -155,7 +155,7 @@ func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 	snsClient := sns.NewFromConfig(sdkConfig)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
-	topicArn := app.SyncTopics.Topics["unit-topic3"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic3"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -180,7 +180,7 @@ func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 	assert.Len(t, response.Successful, 2)
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue3"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue3"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -222,12 +222,12 @@ func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 
 func Test_Publish_batch_sqs_json_raw_with_optional_fields(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -235,7 +235,7 @@ func Test_Publish_batch_sqs_json_raw_with_optional_fields(t *testing.T) {
 	snsClient := sns.NewFromConfig(sdkConfig)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -269,7 +269,7 @@ func Test_Publish_batch_sqs_json_raw_with_optional_fields(t *testing.T) {
 	assert.Len(t, response.Successful, 2)
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue1"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue1"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -292,12 +292,12 @@ func Test_Publish_batch_sqs_json_raw_with_optional_fields(t *testing.T) {
 
 func Test_Publish_batch_sqs_json_not_raw_with_optional_fields(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -305,7 +305,7 @@ func Test_Publish_batch_sqs_json_not_raw_with_optional_fields(t *testing.T) {
 	snsClient := sns.NewFromConfig(sdkConfig)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
-	topicArn := app.SyncTopics.Topics["unit-topic3"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic3"].Arn
 	message := "{\"default\": \"json-structured-message\", \"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -339,7 +339,7 @@ func Test_Publish_batch_sqs_json_not_raw_with_optional_fields(t *testing.T) {
 	assert.Len(t, response.Successful, 2)
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue3"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue3"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -380,7 +380,7 @@ func Test_Publish_batch_sqs_json_not_raw_with_optional_fields(t *testing.T) {
 
 func Test_Publish_batch_http_json(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -397,19 +397,19 @@ func Test_Publish_batch_http_json(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
 		TopicArn: &topicArn,
@@ -437,7 +437,7 @@ func Test_Publish_batch_http_json(t *testing.T) {
 
 func Test_Publish_batch_https_json_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -454,20 +454,20 @@ func Test_Publish_batch_https_json_raw(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
 		TopicArn: &topicArn,
@@ -495,7 +495,7 @@ func Test_Publish_batch_https_json_raw(t *testing.T) {
 
 func Test_Publish_batch_https_json_not_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -512,21 +512,21 @@ func Test_Publish_batch_https_json_not_raw(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	snsClient := sns.NewFromConfig(sdkConfig)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Raw = false
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Raw = false
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 	response, err := snsClient.PublishBatch(context.TODO(), &sns.PublishBatchInput{
@@ -563,12 +563,12 @@ func Test_Publish_batch_https_json_not_raw(t *testing.T) {
 
 func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -577,7 +577,7 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 
 	e := httpexpect.Default(t, server.URL)
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 
@@ -626,7 +626,7 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 		Body().Raw()
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue1"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue1"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -650,12 +650,12 @@ func Test_Publish_batch_sqs_xml_raw(t *testing.T) {
 
 func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -664,7 +664,7 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 
 	e := httpexpect.Default(t, server.URL)
 
-	topicArn := app.SyncTopics.Topics["unit-topic3"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic3"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 
@@ -714,7 +714,7 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 		Body().Raw()
 
 	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
-		QueueUrl:            &app.SyncQueues.Queues["subscribed-queue3"].URL,
+		QueueUrl:            &models.SyncQueues.Queues["subscribed-queue3"].URL,
 		MaxNumberOfMessages: 3,
 	})
 
@@ -756,7 +756,7 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 
 func Test_Publish_batch_http_xml(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -773,17 +773,17 @@ func Test_Publish_batch_http_xml(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	e := httpexpect.Default(t, server.URL)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 
@@ -838,7 +838,7 @@ func Test_Publish_batch_http_xml(t *testing.T) {
 
 func Test_Publish_batch_https_xml_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -855,18 +855,18 @@ func Test_Publish_batch_https_xml_raw(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	e := httpexpect.Default(t, server.URL)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 
@@ -921,7 +921,7 @@ func Test_Publish_batch_https_xml_raw(t *testing.T) {
 
 func Test_Publish_batch_https_xml_not_raw(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
 
 	called := false
@@ -938,19 +938,19 @@ func Test_Publish_batch_https_xml_not_raw(t *testing.T) {
 	defer func() {
 		server.Close()
 		subscribedServer.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	e := httpexpect.Default(t, server.URL)
 
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Raw = false
-	app.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Protocol = "https"
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].Raw = false
+	models.SyncTopics.Topics["unit-topic-http"].Subscriptions[0].EndPoint = subscribedServer.URL
+	models.SyncTopics.Unlock()
 
-	topicArn := app.SyncTopics.Topics["unit-topic-http"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic-http"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 	subject := "I am a subject"
 

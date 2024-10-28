@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
+	"github.com/Admiral-Piett/goaws/app/models"
 
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
 	"github.com/gavv/httpexpect/v2"
@@ -27,7 +27,7 @@ func Test_SetQueueAttributes_json_multiple(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -82,7 +82,7 @@ func Test_SetQueueAttributes_json_single(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -129,7 +129,7 @@ func Test_SetQueueAttributes_xml_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -196,7 +196,7 @@ func Test_SetQueueAttributes_xml_single(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

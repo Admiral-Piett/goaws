@@ -7,7 +7,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,9 +15,9 @@ import (
 )
 
 func TestSendMessageV1_Success(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -32,11 +31,11 @@ func TestSendMessageV1_Success(t *testing.T) {
 		return true
 	}
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:               "new-queue-1",
 		MaximumMessageSize: 1024,
 	}
-	app.SyncQueues.Queues["new-queue-1"] = q
+	models.SyncQueues.Queues["new-queue-1"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
@@ -56,9 +55,9 @@ func TestSendMessageV1_Success(t *testing.T) {
 }
 
 func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -72,12 +71,12 @@ func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 		return true
 	}
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:               "new-queue-1",
 		MaximumMessageSize: 1024,
 		IsFIFO:             true,
 	}
-	app.SyncQueues.Queues["new-queue-1"] = q
+	models.SyncQueues.Queues["new-queue-1"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
@@ -97,9 +96,9 @@ func TestSendMessageV1_Success_FIFOQueue(t *testing.T) {
 }
 
 func TestSendMessageV1_Success_Deduplication(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -114,14 +113,14 @@ func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 		return true
 	}
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:               "new-queue-1",
 		MaximumMessageSize: 1024,
 		IsFIFO:             true,
 		EnableDuplicates:   true,
 		Duplicates:         make(map[string]time.Time),
 	}
-	app.SyncQueues.Queues["new-queue-1"] = q
+	models.SyncQueues.Queues["new-queue-1"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, _ := SendMessageV1(r)
@@ -140,9 +139,9 @@ func TestSendMessageV1_Success_Deduplication(t *testing.T) {
 }
 
 func TestSendMessageV1_request_transformer_error(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -157,9 +156,9 @@ func TestSendMessageV1_request_transformer_error(t *testing.T) {
 }
 
 func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -173,11 +172,11 @@ func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 		return true
 	}
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name:               "new-queue-1",
 		MaximumMessageSize: 1,
 	}
-	app.SyncQueues.Queues["new-queue-1"] = q
+	models.SyncQueues.Queues["new-queue-1"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
 	status, response := SendMessageV1(r)
@@ -190,9 +189,9 @@ func TestSendMessageV1_MaximumMessageSize_MessageTooBig(t *testing.T) {
 }
 
 func TestSendMessageV1_POST_QueueNonExistant(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

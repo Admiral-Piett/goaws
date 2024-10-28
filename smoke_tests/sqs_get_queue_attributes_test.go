@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/Admiral-Piett/goaws/app/models"
 	sf "github.com/Admiral-Piett/goaws/smoke_tests/fixtures"
 	"github.com/gavv/httpexpect/v2"
@@ -29,7 +27,7 @@ func Test_GetQueueAttributes_json_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -76,7 +74,7 @@ func Test_GetQueueAttributes_json_specific_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -109,7 +107,7 @@ func Test_GetQueueAttributes_json_missing_attribute_name_returns_all(t *testing.
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -155,7 +153,7 @@ func Test_GetQueueAttributes_xml_all(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -209,7 +207,7 @@ func Test_GetQueueAttributes_xml_select_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -250,7 +248,7 @@ func Test_GetQueueAttributes_xml_select_attributes(t *testing.T) {
 		Body().Raw()
 
 	expectedResponse := models.GetQueueAttributesResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.GetQueueAttributesResult{
 			Attrs: []models.Attribute{
 				{
@@ -259,7 +257,7 @@ func Test_GetQueueAttributes_xml_select_attributes(t *testing.T) {
 				},
 			},
 		},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 
 	r1 := models.GetQueueAttributesResponse{}
@@ -271,7 +269,7 @@ func Test_GetQueueAttributes_xml_missing_attribute_name_returns_all(t *testing.T
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)

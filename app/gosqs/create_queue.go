@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -20,36 +19,36 @@ func CreateQueueV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 	queueName := requestBody.QueueName
 
-	queueUrl := "http://" + app.CurrentEnvironment.Host + ":" + app.CurrentEnvironment.Port +
-		"/" + app.CurrentEnvironment.AccountID + "/" + queueName
-	if app.CurrentEnvironment.Region != "" {
-		queueUrl = "http://" + app.CurrentEnvironment.Region + "." + app.CurrentEnvironment.Host + ":" +
-			app.CurrentEnvironment.Port + "/" + app.CurrentEnvironment.AccountID + "/" + queueName
+	queueUrl := "http://" + models.CurrentEnvironment.Host + ":" + models.CurrentEnvironment.Port +
+		"/" + models.CurrentEnvironment.AccountID + "/" + queueName
+	if models.CurrentEnvironment.Region != "" {
+		queueUrl = "http://" + models.CurrentEnvironment.Region + "." + models.CurrentEnvironment.Host + ":" +
+			models.CurrentEnvironment.Port + "/" + models.CurrentEnvironment.AccountID + "/" + queueName
 	}
-	queueArn := "arn:aws:sqs:" + app.CurrentEnvironment.Region + ":" + app.CurrentEnvironment.AccountID + ":" + queueName
+	queueArn := "arn:aws:sqs:" + models.CurrentEnvironment.Region + ":" + models.CurrentEnvironment.AccountID + ":" + queueName
 
-	if _, ok := app.SyncQueues.Queues[queueName]; !ok {
+	if _, ok := models.SyncQueues.Queues[queueName]; !ok {
 		log.Infof("Creating Queue: %s", queueName)
-		queue := &app.Queue{
+		queue := &models.Queue{
 			Name:             queueName,
 			URL:              queueUrl,
 			Arn:              queueArn,
-			IsFIFO:           app.HasFIFOQueueName(queueName),
-			EnableDuplicates: app.CurrentEnvironment.EnableDuplicates,
+			IsFIFO:           utils.HasFIFOQueueName(queueName),
+			EnableDuplicates: models.CurrentEnvironment.EnableDuplicates,
 			Duplicates:       make(map[string]time.Time),
 		}
 		if err := setQueueAttributesV1(queue, requestBody.Attributes); err != nil {
 			return utils.CreateErrorResponseV1(err.Error(), true)
 		}
-		app.SyncQueues.Lock()
-		app.SyncQueues.Queues[queueName] = queue
-		app.SyncQueues.Unlock()
+		models.SyncQueues.Lock()
+		models.SyncQueues.Queues[queueName] = queue
+		models.SyncQueues.Unlock()
 	}
 
 	respStruct := models.CreateQueueResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   models.CreateQueueResult{QueueUrl: queueUrl},
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Metadata: models.BaseResponseMetadata,
 	}
 	return http.StatusOK, respStruct
 }

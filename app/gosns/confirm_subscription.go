@@ -3,7 +3,6 @@ package gosns
 import (
 	"net/http"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -32,9 +31,9 @@ func ConfirmSubscriptionV1(req *http.Request) (int, interfaces.AbstractResponseB
 		return utils.CreateErrorResponseV1("SubscriptionNotFound", false)
 	}
 	respStruct := models.ConfirmSubscriptionResponse{
-		Xmlns:    models.BASE_XMLNS,
+		Xmlns:    models.BaseXmlns,
 		Result:   models.ConfirmSubscriptionResult{SubscriptionArn: pendingConfirm.subArn},
-		Metadata: app.ResponseMetadata{RequestId: uuid.NewString()},
+		Metadata: models.ResponseMetadata{RequestId: uuid.NewString()},
 	}
 	return http.StatusOK, respStruct
 }

@@ -1,13 +1,18 @@
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
-
-	"github.com/Admiral-Piett/goaws/app"
+	"sort"
+	"strings"
 
 	"github.com/Admiral-Piett/goaws/app/models"
 
@@ -94,9 +99,9 @@ func CreateErrorResponseV1(errKey string, isSqs bool) (int, interfaces.AbstractR
 
 // TODO:
 // Refactor internal model for MessageAttribute between SendMessage and ReceiveMessage
-// from app.MessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
-func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.MessageAttributeValue) map[string]app.MessageAttributeValue {
-	attributes := make(map[string]app.MessageAttributeValue)
+// from app.SqsMessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
+func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.MessageAttributeValue) map[string]models.SqsMessageAttributeValue {
+	attributes := make(map[string]models.SqsMessageAttributeValue)
 
 	for name, entry := range newValues {
 		// StringListValue and BinaryListValue is currently not implemented
@@ -110,7 +115,7 @@ func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.Mess
 			value = entry.BinaryValue
 			valueKey = "BinaryValue"
 		}
-		attributes[name] = app.MessageAttributeValue{
+		attributes[name] = models.SqsMessageAttributeValue{
 			Name:     name,
 			DataType: entry.DataType,
 			Value:    value,
@@ -119,4 +124,57 @@ func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.Mess
 	}
 
 	return attributes
+}
+
+func GetMD5Hash(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func HashAttributes(attributes map[string]models.SqsMessageAttributeValue) string {
+	hasher := md5.New()
+
+	keys := sortedKeys(attributes)
+	for _, key := range keys {
+		attributeValue := attributes[key]
+
+		addStringToHash(hasher, key)
+		addStringToHash(hasher, attributeValue.DataType)
+		if attributeValue.ValueKey == "StringValue" {
+			hasher.Write([]byte{1})
+			addStringToHash(hasher, attributeValue.Value)
+		} else if attributeValue.ValueKey == "BinaryValue" {
+			hasher.Write([]byte{2})
+			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.Value)
+			addBytesToHash(hasher, bytes)
+		}
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func sortedKeys(attributes map[string]models.SqsMessageAttributeValue) []string {
+	var keys []string
+	for key := range attributes {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func addStringToHash(hasher hash.Hash, str string) {
+	bytes := []byte(str)
+	addBytesToHash(hasher, bytes)
+}
+
+func addBytesToHash(hasher hash.Hash, arr []byte) {
+	bs := make([]byte, 4)
+	binary.BigEndian.PutUint32(bs, uint32(len(arr)))
+	hasher.Write(bs)
+	hasher.Write(arr)
+}
+
+func HasFIFOQueueName(queueName string) bool {
+	return strings.HasSuffix(queueName, ".fifo")
 }

@@ -15,7 +15,7 @@ import (
 func TestListSubcriptionsV1_NoSubscriptions(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -33,7 +33,7 @@ func TestListSubcriptionsV1_NoSubscriptions(t *testing.T) {
 	response, _ := res.(models.ListSubscriptionsResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata)
 
 	assert.Len(t, response.Result.Subscriptions.Member, 0)
@@ -42,7 +42,7 @@ func TestListSubcriptionsV1_NoSubscriptions(t *testing.T) {
 func TestListSubcriptionsV1_MultipleSubscriptions(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -60,7 +60,7 @@ func TestListSubcriptionsV1_MultipleSubscriptions(t *testing.T) {
 	response, _ := res.(models.ListSubscriptionsResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, models.BASE_XMLNS, response.Xmlns)
+	assert.Equal(t, models.BaseXmlns, response.Xmlns)
 	assert.NotEqual(t, "", response.Metadata)
 
 	assert.Len(t, response.Result.Subscriptions.Member, 2)
@@ -70,7 +70,7 @@ func TestListSubcriptionsV1_MultipleSubscriptions(t *testing.T) {
 func TestListSubscriptionsV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

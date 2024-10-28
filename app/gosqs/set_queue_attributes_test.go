@@ -7,7 +7,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
@@ -19,7 +18,7 @@ import (
 func TestSetQueueAttributesV1_success_multiple_attributes(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -33,13 +32,13 @@ func TestSetQueueAttributesV1_success_multiple_attributes(t *testing.T) {
 	code, response := SetQueueAttributesV1(r)
 
 	expectedResponse := models.SetQueueAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, expectedResponse, response)
 
-	actualQueue := app.SyncQueues.Queues["unit-queue1"]
+	actualQueue := models.SyncQueues.Queues["unit-queue1"]
 	assert.Equal(t, 5, actualQueue.VisibilityTimeout)
 	assert.Equal(t, 4, actualQueue.ReceiveMessageWaitTimeSeconds)
 	assert.Equal(t, 1, actualQueue.DelaySeconds)
@@ -50,7 +49,7 @@ func TestSetQueueAttributesV1_success_multiple_attributes(t *testing.T) {
 func TestSetQueueAttributesV1_success_single_attribute(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -69,13 +68,13 @@ func TestSetQueueAttributesV1_success_single_attribute(t *testing.T) {
 	code, response := SetQueueAttributesV1(r)
 
 	expectedResponse := models.SetQueueAttributesResponse{
-		Xmlns:    models.BASE_XMLNS,
-		Metadata: models.BASE_RESPONSE_METADATA,
+		Xmlns:    models.BaseXmlns,
+		Metadata: models.BaseResponseMetadata,
 	}
 	assert.Equal(t, http.StatusOK, code)
 	assert.Equal(t, expectedResponse, response)
 
-	actualQueue := app.SyncQueues.Queues["unit-queue1"]
+	actualQueue := models.SyncQueues.Queues["unit-queue1"]
 	assert.Equal(t, 5, actualQueue.VisibilityTimeout)
 	assert.Equal(t, 0, actualQueue.ReceiveMessageWaitTimeSeconds)
 	assert.Equal(t, 0, actualQueue.DelaySeconds)
@@ -86,7 +85,7 @@ func TestSetQueueAttributesV1_success_single_attribute(t *testing.T) {
 func TestSetQueueAttributesV1_invalid_request_body(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -103,7 +102,7 @@ func TestSetQueueAttributesV1_invalid_request_body(t *testing.T) {
 func TestSetQueueAttributesV1_missing_queue_url(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -124,7 +123,7 @@ func TestSetQueueAttributesV1_missing_queue_url(t *testing.T) {
 func TestSetQueueAttributesV1_missing_expected_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -145,7 +144,7 @@ func TestSetQueueAttributesV1_missing_expected_queue(t *testing.T) {
 func TestSetQueueAttributesV1_invalid_redrive_queue(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

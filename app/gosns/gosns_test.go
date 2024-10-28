@@ -9,10 +9,8 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,11 +21,11 @@ const (
 func Test_publishSQS_success_raw_true(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
 	message := "{\"IAm\": \"aMessage\"}"
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
 	topicArn := topic.Arn
 	request := models.PublishRequest{
@@ -38,7 +36,7 @@ func Test_publishSQS_success_raw_true(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
+	messages := models.SyncQueues.Queues["subscribed-queue1"].Messages
 	assert.Len(t, messages, 1)
 	assert.Equal(t, message, string(messages[0].MessageBody))
 }
@@ -46,17 +44,17 @@ func Test_publishSQS_success_raw_true(t *testing.T) {
 func Test_publishSQS_success_json_raw_false(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
 	message := "{\"IAm\": \"aMessage\"}"
 
-	app.SyncTopics.Lock()
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
 	topicArn := topic.Arn
 	sub.Raw = false
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Unlock()
 	request := models.PublishRequest{
 		TopicArn: topicArn,
 		Message:  message,
@@ -65,7 +63,7 @@ func Test_publishSQS_success_json_raw_false(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	messages := app.SyncQueues.Queues["subscribed-queue1"].Messages
+	messages := models.SyncQueues.Queues["subscribed-queue1"].Messages
 	assert.Len(t, messages, 1)
 
 	body := string(messages[0].MessageBody)
@@ -81,17 +79,17 @@ func Test_publishSQS_success_json_raw_false(t *testing.T) {
 func Test_publishSQS_filter_policy_not_satisfied_by_attributes(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 	message := "{\"IAm\": \"aMessage\"}"
 
-	app.SyncTopics.Lock()
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
-	sub.FilterPolicy = &app.FilterPolicy{"foo": []string{"bar"}}
-	app.SyncTopics.Unlock()
+	sub.FilterPolicy = &models.FilterPolicy{"foo": []string{"bar"}}
+	models.SyncTopics.Unlock()
 
 	request := models.PublishRequest{
 		TopicArn: topicArn,
@@ -111,17 +109,17 @@ func Test_publishSQS_filter_policy_not_satisfied_by_attributes(t *testing.T) {
 func Test_publishSQS_missing_queue_returns_nil(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
 	message := "{\"IAm\": \"aMessage\"}"
 
-	app.SyncTopics.Lock()
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
 	topicArn := topic.Arn
 	sub.EndPoint = "garbage"
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Unlock()
 
 	request := models.PublishRequest{
 		TopicArn: topicArn,
@@ -141,18 +139,18 @@ func Test_publishHTTP_success(t *testing.T) {
 
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		subscribedServer.Close()
 	}()
 
 	message := "{\"IAm\": \"aMessage\"}"
 
-	app.SyncTopics.Lock()
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
 	topicArn := topic.Arn
 	sub.EndPoint = subscribedServer.URL
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Unlock()
 
 	request := models.PublishRequest{
 		TopicArn: topicArn,
@@ -167,16 +165,16 @@ func Test_publishHTTP_success(t *testing.T) {
 func Test_publishHTTP_callEndpoint_failure(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
 	message := "{\"IAm\": \"aMessage\"}"
 
-	app.SyncTopics.Lock()
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	sub := topic.Subscriptions[0]
 	topicArn := topic.Arn
-	app.SyncTopics.Unlock()
+	models.SyncTopics.Unlock()
 
 	request := models.PublishRequest{
 		TopicArn: topicArn,
@@ -190,7 +188,7 @@ func Test_publishHTTP_callEndpoint_failure(t *testing.T) {
 func TestCreateMessageBody_success_NoMessageAttributes(t *testing.T) {
 	message := "message text"
 	subject := "subject"
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sqs",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
@@ -201,7 +199,7 @@ func TestCreateMessageBody_success_NoMessageAttributes(t *testing.T) {
 		Subject: subject,
 	}
 
-	result, err := createMessageBody(subs, msg, map[string]app.MessageAttributeValue{})
+	result, err := createMessageBody(subs, msg, map[string]models.SqsMessageAttributeValue{})
 	assert.Nil(t, err)
 
 	unmarshalledMessage := &models.SNSMessage{}
@@ -221,13 +219,13 @@ func TestCreateMessageBody_success_NoMessageAttributes(t *testing.T) {
 func TestCreateMessageBody_success_WithMessageAttributes(t *testing.T) {
 	message := "message text"
 	subject := "subject"
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sqs",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
 		Raw:             false,
 	}
-	attributes := map[string]app.MessageAttributeValue{
+	attributes := map[string]models.SqsMessageAttributeValue{
 		"test": {
 			DataType: "String",
 			ValueKey: "StringValue",
@@ -246,7 +244,7 @@ func TestCreateMessageBody_success_WithMessageAttributes(t *testing.T) {
 }
 
 func TestCreateMessageBody_JSONMessageStructure_UsesDefaultMessageIfNoMatchingProtocolKeyProvided(t *testing.T) {
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sqs",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
@@ -266,7 +264,7 @@ func TestCreateMessageBody_JSONMessageStructure_UsesDefaultMessageIfNoMatchingPr
 }
 
 func TestCreateMessageBody_JSONMessageStructure_MissingDefaultKey(t *testing.T) {
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sqs",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
@@ -287,7 +285,7 @@ func TestCreateMessageBody_JSONMessageStructure_MissingDefaultKey(t *testing.T) 
 }
 
 func TestCreateMessageBody_JSONMessageStructure_SelectsProtocolSpecificMessageIfAvailable(t *testing.T) {
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sqs",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
@@ -308,7 +306,7 @@ func TestCreateMessageBody_JSONMessageStructure_SelectsProtocolSpecificMessageIf
 }
 
 func TestCreateMessageBody_NonJsonMessageStructure_MessageContainingJson(t *testing.T) {
-	subs := &app.Subscription{
+	subs := &models.Subscription{
 		Protocol:        "sns",
 		TopicArn:        "topic-arn",
 		SubscriptionArn: "subs-arn",
@@ -327,13 +325,13 @@ func TestCreateMessageBody_NonJsonMessageStructure_MessageContainingJson(t *test
 }
 
 func Test_formatAttributes_success(t *testing.T) {
-	attrs := map[string]app.MessageAttributeValue{
-		"test1": app.MessageAttributeValue{
+	attrs := map[string]models.SqsMessageAttributeValue{
+		"test1": models.SqsMessageAttributeValue{
 			Name:     "MyAttr",
 			DataType: "String",
 			Value:    "value1",
 		},
-		"test2": app.MessageAttributeValue{
+		"test2": models.SqsMessageAttributeValue{
 			Name:     "MyAttr",
 			DataType: "String",
 			Value:    "value2",
@@ -355,13 +353,13 @@ func Test_publishMessageByTopic_sqs_success(t *testing.T) {
 	}()
 
 	calledWith := [][]interface{}{}
-	publishSqsMessageFunc = func(subscription *app.Subscription, topic *app.Topic, entry interfaces.AbstractPublishEntry) error {
+	publishSqsMessageFunc = func(subscription *models.Subscription, topic *models.Topic, entry interfaces.AbstractPublishEntry) error {
 		calledWith = append(calledWith, []interface{}{subscription, topic, entry})
 		return nil
 	}
-	subscription := &app.Subscription{Protocol: "sqs"}
-	topic := &app.Topic{
-		Subscriptions: []*app.Subscription{subscription},
+	subscription := &models.Subscription{Protocol: "sqs"}
+	topic := &models.Topic{
+		Subscriptions: []*models.Subscription{subscription},
 	}
 	entry := &models.PublishBatchRequestEntry{}
 
@@ -382,13 +380,13 @@ func Test_publishMessageByTopic_http_success(t *testing.T) {
 	topicArn := "my-topic-arn"
 
 	calledWith := [][]interface{}{}
-	publishHttpMessageFunc = func(subscription *app.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
+	publishHttpMessageFunc = func(subscription *models.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
 		calledWith = append(calledWith, []interface{}{subscription, topicArn, entry})
 	}
-	subscription := &app.Subscription{Protocol: "http"}
-	topic := &app.Topic{
+	subscription := &models.Subscription{Protocol: "http"}
+	topic := &models.Topic{
 		Arn:           topicArn,
-		Subscriptions: []*app.Subscription{subscription},
+		Subscriptions: []*models.Subscription{subscription},
 	}
 	entry := &models.PublishBatchRequestEntry{}
 
@@ -409,13 +407,13 @@ func Test_publishMessageByTopic_https_success(t *testing.T) {
 	topicArn := "my-topic-arn"
 
 	calledWith := [][]interface{}{}
-	publishHttpMessageFunc = func(subscription *app.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
+	publishHttpMessageFunc = func(subscription *models.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
 		calledWith = append(calledWith, []interface{}{subscription, topicArn, entry})
 	}
-	subscription := &app.Subscription{Protocol: "https"}
-	topic := &app.Topic{
+	subscription := &models.Subscription{Protocol: "https"}
+	topic := &models.Topic{
 		Arn:           topicArn,
-		Subscriptions: []*app.Subscription{subscription},
+		Subscriptions: []*models.Subscription{subscription},
 	}
 	entry := &models.PublishBatchRequestEntry{}
 
@@ -434,11 +432,11 @@ func Test_publishMessageByTopic_success_no_subscriptions(t *testing.T) {
 	}()
 
 	called := false
-	publishSqsMessageFunc = func(subscription *app.Subscription, topic *app.Topic, entry interfaces.AbstractPublishEntry) error {
+	publishSqsMessageFunc = func(subscription *models.Subscription, topic *models.Topic, entry interfaces.AbstractPublishEntry) error {
 		called = true
 		return nil
 	}
-	topic := &app.Topic{}
+	topic := &models.Topic{}
 	entry := &models.PublishBatchRequestEntry{}
 
 	msgId, err := publishMessageByTopic(topic, entry)
@@ -455,13 +453,13 @@ func Test_publishMessageByTopic_failure_sqs_publish_failure(t *testing.T) {
 	}()
 
 	called := false
-	publishSqsMessageFunc = func(subscription *app.Subscription, topic *app.Topic, entry interfaces.AbstractPublishEntry) error {
+	publishSqsMessageFunc = func(subscription *models.Subscription, topic *models.Topic, entry interfaces.AbstractPublishEntry) error {
 		called = true
 		return fmt.Errorf("boom")
 	}
-	subscription := &app.Subscription{Protocol: "sqs"}
-	topic := &app.Topic{
-		Subscriptions: []*app.Subscription{subscription},
+	subscription := &models.Subscription{Protocol: "sqs"}
+	topic := &models.Topic{
+		Subscriptions: []*models.Subscription{subscription},
 	}
 	entry := &models.PublishBatchRequestEntry{}
 

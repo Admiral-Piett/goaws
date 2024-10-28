@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
@@ -37,22 +36,22 @@ func DeleteMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	log.Info("Deleting Message, Queue:", queueName, ", ReceiptHandle:", receiptHandle)
 
 	// Find queue/message with the receipt handle and delete
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
-	if _, ok := app.SyncQueues.Queues[queueName]; ok {
-		for i, msg := range app.SyncQueues.Queues[queueName].Messages {
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
+	if _, ok := models.SyncQueues.Queues[queueName]; ok {
+		for i, msg := range models.SyncQueues.Queues[queueName].Messages {
 			if msg.ReceiptHandle == receiptHandle {
 				// Unlock messages for the group
 				log.Debugf("FIFO Queue %s unlocking group %s:", queueName, msg.GroupID)
-				app.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
+				models.SyncQueues.Queues[queueName].UnlockGroup(msg.GroupID)
 				//Delete message from Q
-				app.SyncQueues.Queues[queueName].Messages = append(app.SyncQueues.Queues[queueName].Messages[:i], app.SyncQueues.Queues[queueName].Messages[i+1:]...)
-				delete(app.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
+				models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages[:i], models.SyncQueues.Queues[queueName].Messages[i+1:]...)
+				delete(models.SyncQueues.Queues[queueName].Duplicates, msg.DeduplicationID)
 
 				// Create, encode/xml and send response
 				respStruct := models.DeleteMessageResponse{
-					Xmlns:    models.BASE_XMLNS,
-					Metadata: models.BASE_RESPONSE_METADATA,
+					Xmlns:    models.BaseXmlns,
+					Metadata: models.BaseResponseMetadata,
 				}
 				return 200, &respStruct
 			}

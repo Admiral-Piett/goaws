@@ -6,7 +6,6 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/stretchr/testify/assert"
@@ -14,19 +13,19 @@ import (
 
 func TestChangeMessageVisibility_POST_SUCCESS(t *testing.T) {
 	// create a queue
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name: "testing",
-		Messages: []app.Message{{
+		Messages: []models.SqsMessage{{
 			MessageBody:   []byte("test1"),
 			ReceiptHandle: "123",
 		}},
 	}
-	app.SyncQueues.Queues["testing"] = q
+	models.SyncQueues.Queues["testing"] = q
 
 	// The default value for the VisibilityTimeout is the zero value of time.Time
 	assert.Zero(t, q.Messages[0].VisibilityTimeout)

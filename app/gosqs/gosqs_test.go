@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/stretchr/testify/assert"
@@ -230,13 +229,13 @@ func TestDeadLetterQueue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadLetterQueue := &app.Queue{
+	deadLetterQueue := &models.Queue{
 		Name:     "failed-messages",
-		Messages: []app.Message{},
+		Messages: []models.SqsMessage{},
 	}
-	app.SyncQueues.Lock()
-	app.SyncQueues.Queues["failed-messages"] = deadLetterQueue
-	app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	models.SyncQueues.Queues["failed-messages"] = deadLetterQueue
+	models.SyncQueues.Unlock()
 	form := url.Values{}
 	form.Add("Action", "CreateQueue")
 	form.Add("QueueName", "testing-deadletter")
@@ -410,11 +409,11 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	status, _ = ReceiveMessageV1(req)
 	assert.Equal(t, status, http.StatusOK)
 
-	if len(app.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages) != 1 {
+	if len(models.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages) != 1 {
 		t.Fatal("there should be only 1 group locked")
 	}
 
-	if app.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages["GROUP-X"] != 0 {
+	if models.SyncQueues.Queues["requeue-reset.fifo"].FIFOMessages["GROUP-X"] != 0 {
 		t.Fatal("there should be GROUP-X locked")
 	}
 
@@ -434,7 +433,7 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 	status, _ = DeleteMessageV1(req)
 	assert.Equal(t, status, http.StatusOK)
 
-	if len(app.SyncQueues.Queues["requeue-reset.fifo"].Messages) != 1 {
+	if len(models.SyncQueues.Queues["requeue-reset.fifo"].Messages) != 1 {
 		t.Fatal("there should be only 1 message in queue")
 	}
 
@@ -508,7 +507,7 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["stantdard-testing"].Messages) == 0 {
+	if len(models.SyncQueues.Queues["stantdard-testing"].Messages) == 0 {
 		t.Fatal("there should be 1 message in queue")
 	}
 
@@ -527,7 +526,7 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["stantdard-testing"].Messages) == 1 {
+	if len(models.SyncQueues.Queues["stantdard-testing"].Messages) == 1 {
 		t.Fatal("there should be 2 messages in queue")
 	}
 }
@@ -572,7 +571,7 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["no-dup-testing.fifo"].Messages) == 0 {
+	if len(models.SyncQueues.Queues["no-dup-testing.fifo"].Messages) == 0 {
 		t.Fatal("there should be 1 message in queue")
 	}
 
@@ -591,7 +590,7 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["no-dup-testing.fifo"].Messages) != 2 {
+	if len(models.SyncQueues.Queues["no-dup-testing.fifo"].Messages) != 2 {
 		t.Fatal("there should be 2 message in queue")
 	}
 }
@@ -621,7 +620,7 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app.SyncQueues.Queues["dup-testing.fifo"].EnableDuplicates = true
+	models.SyncQueues.Queues["dup-testing.fifo"].EnableDuplicates = true
 
 	form = url.Values{}
 	form.Add("Action", "SendMessage")
@@ -638,7 +637,7 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["dup-testing.fifo"].Messages) == 0 {
+	if len(models.SyncQueues.Queues["dup-testing.fifo"].Messages) == 0 {
 		t.Fatal("there should be 1 message in queue")
 	}
 
@@ -657,10 +656,10 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got \n%v want %v",
 			status, http.StatusOK)
 	}
-	if len(app.SyncQueues.Queues["dup-testing.fifo"].Messages) != 1 {
+	if len(models.SyncQueues.Queues["dup-testing.fifo"].Messages) != 1 {
 		t.Fatal("there should be 1 message in queue")
 	}
-	if body := app.SyncQueues.Queues["dup-testing.fifo"].Messages[0].MessageBody; string(body) == "Test2" {
+	if body := models.SyncQueues.Queues["dup-testing.fifo"].Messages[0].MessageBody; string(body) == "Test2" {
 		t.Fatal("duplicate message should not be added to queue")
 	}
 }

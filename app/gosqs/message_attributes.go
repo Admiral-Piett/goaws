@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	log "github.com/sirupsen/logrus"
 )
 
-func extractMessageAttributes(req *http.Request, prefix string) map[string]app.MessageAttributeValue {
-	attributes := make(map[string]app.MessageAttributeValue)
+func extractMessageAttributes(req *http.Request, prefix string) map[string]models.SqsMessageAttributeValue {
+	attributes := make(map[string]models.SqsMessageAttributeValue)
 	if prefix != "" {
 		prefix += "."
 	}
@@ -31,7 +30,7 @@ func extractMessageAttributes(req *http.Request, prefix string) map[string]app.M
 		for _, valueKey := range [...]string{"StringValue", "BinaryValue"} {
 			value := req.FormValue(fmt.Sprintf("%sMessageAttribute.%d.Value.%s", prefix, i, valueKey))
 			if value != "" {
-				attributes[name] = app.MessageAttributeValue{name, dataType, value, valueKey}
+				attributes[name] = models.SqsMessageAttributeValue{name, dataType, value, valueKey}
 			}
 		}
 
@@ -43,7 +42,7 @@ func extractMessageAttributes(req *http.Request, prefix string) map[string]app.M
 	return attributes
 }
 
-func getMessageAttributeResult(a *app.MessageAttributeValue) *models.ResultMessageAttribute {
+func getMessageAttributeResult(a *models.SqsMessageAttributeValue) *models.ResultMessageAttribute {
 	v := &models.ResultMessageAttributeValue{
 		DataType: a.DataType,
 	}

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app/test"
+	"github.com/Admiral-Piett/goaws/app/models"
 
 	"github.com/gavv/httpexpect/v2"
 
@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/stretchr/testify/assert"
 
 	af "github.com/Admiral-Piett/goaws/app/fixtures"
@@ -25,7 +24,7 @@ func Test_DeleteQueueV1_json(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -44,10 +43,10 @@ func Test_DeleteQueueV1_json(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
 
-	targetQueue, ok := app.SyncQueues.Queues["unit-queue1"]
+	targetQueue, ok := models.SyncQueues.Queues["unit-queue1"]
 	assert.False(t, ok)
 	assert.Nil(t, targetQueue)
 }
@@ -56,7 +55,7 @@ func Test_DeleteQueueV1_xml(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -84,10 +83,10 @@ func Test_DeleteQueueV1_xml(t *testing.T) {
 		Status(http.StatusOK).
 		Body().Raw()
 
-	app.SyncQueues.Lock()
-	defer app.SyncQueues.Unlock()
+	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
 
-	targetQueue, ok := app.SyncQueues.Queues["unit-queue1"]
+	targetQueue, ok := models.SyncQueues.Queues["unit-queue1"]
 	assert.False(t, ok)
 	assert.Nil(t, targetQueue)
 }

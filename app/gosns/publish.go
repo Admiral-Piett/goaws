@@ -10,7 +10,6 @@ import (
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
-	"github.com/Admiral-Piett/goaws/app"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +32,7 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	arnSegments := strings.Split(requestBody.TopicArn, ":")
 	topicName := arnSegments[len(arnSegments)-1]
 
-	topic, ok := app.SyncTopics.Topics[topicName]
+	topic, ok := models.SyncTopics.Topics[topicName]
 	if !ok {
 		return utils.CreateErrorResponseV1("TopicNotFound", false)
 	}
@@ -50,11 +49,11 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 
 	//Create the response
 	respStruct := models.PublishResponse{
-		Xmlns: models.BASE_XMLNS,
+		Xmlns: models.BaseXmlns,
 		Result: models.PublishResult{
 			MessageId: messageId,
 		},
-		Metadata: app.ResponseMetadata{
+		Metadata: models.ResponseMetadata{
 			RequestId: uuid.NewString(),
 		},
 	}

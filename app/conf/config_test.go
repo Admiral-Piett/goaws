@@ -3,9 +3,9 @@ package conf
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Admiral-Piett/goaws/app/models"
 
-	"github.com/Admiral-Piett/goaws/app"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfig_NoQueuesOrTopics(t *testing.T) {
@@ -19,7 +19,7 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	if numQueues != 0 {
 		t.Errorf("Expected zero queues to be in the environment but got %d\n", numQueues)
 	}
-	numQueues = len(app.SyncQueues.Queues)
+	numQueues = len(models.SyncQueues.Queues)
 	if numQueues != 0 {
 		t.Errorf("Expected zero queues to be in the sqs topics but got %d\n", numQueues)
 	}
@@ -28,7 +28,7 @@ func TestConfig_NoQueuesOrTopics(t *testing.T) {
 	if numTopics != 0 {
 		t.Errorf("Expected zero topics to be in the environment but got %d\n", numTopics)
 	}
-	numTopics = len(app.SyncTopics.Topics)
+	numTopics = len(models.SyncTopics.Topics)
 	if numTopics != 0 {
 		t.Errorf("Expected zero topics to be in the sns topics but got %d\n", numTopics)
 	}
@@ -45,7 +45,7 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	if numQueues != 4 {
 		t.Errorf("Expected three queues to be in the environment but got %d\n", numQueues)
 	}
-	numQueues = len(app.SyncQueues.Queues)
+	numQueues = len(models.SyncQueues.Queues)
 	if numQueues != 6 {
 		t.Errorf("Expected five queues to be in the sqs topics but got %d\n", numQueues)
 	}
@@ -54,53 +54,53 @@ func TestConfig_CreateQueuesTopicsAndSubscriptions(t *testing.T) {
 	if numTopics != 2 {
 		t.Errorf("Expected two topics to be in the environment but got %d\n", numTopics)
 	}
-	numTopics = len(app.SyncTopics.Topics)
+	numTopics = len(models.SyncTopics.Topics)
 	if numTopics != 2 {
 		t.Errorf("Expected two topics to be in the sns topics but got %d\n", numTopics)
 	}
 }
 
 func TestConfig_QueueAttributes(t *testing.T) {
-	var emptyQueue *app.Queue
+	var emptyQueue *models.Queue
 	env := "Local"
 	port := LoadYamlConfig("./mock-data/mock-config.yaml", env)
 	if port[0] != "4100" {
 		t.Errorf("Expected port number 4100 but got %s\n", port)
 	}
 
-	assert.Equal(t, 10, app.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds)
-	assert.Equal(t, 10, app.SyncQueues.Queues["local-queue1"].VisibilityTimeout)
-	assert.Equal(t, 1024, app.SyncQueues.Queues["local-queue1"].MaximumMessageSize)
-	assert.Equal(t, emptyQueue, app.SyncQueues.Queues["local-queue1"].DeadLetterQueue)
-	assert.Equal(t, 0, app.SyncQueues.Queues["local-queue1"].MaxReceiveCount)
-	assert.Equal(t, 345600, app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod)
-	assert.Equal(t, 100, app.SyncQueues.Queues["local-queue3"].MaxReceiveCount)
+	assert.Equal(t, 10, models.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds)
+	assert.Equal(t, 10, models.SyncQueues.Queues["local-queue1"].VisibilityTimeout)
+	assert.Equal(t, 1024, models.SyncQueues.Queues["local-queue1"].MaximumMessageSize)
+	assert.Equal(t, emptyQueue, models.SyncQueues.Queues["local-queue1"].DeadLetterQueue)
+	assert.Equal(t, 0, models.SyncQueues.Queues["local-queue1"].MaxReceiveCount)
+	assert.Equal(t, 345600, models.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod)
+	assert.Equal(t, 100, models.SyncQueues.Queues["local-queue3"].MaxReceiveCount)
 
-	assert.Equal(t, "local-queue3-dlq", app.SyncQueues.Queues["local-queue3"].DeadLetterQueue.Name)
-	assert.Equal(t, 128, app.SyncQueues.Queues["local-queue2"].MaximumMessageSize)
-	assert.Equal(t, 150, app.SyncQueues.Queues["local-queue2"].VisibilityTimeout)
-	assert.Equal(t, 245600, app.SyncQueues.Queues["local-queue2"].MessageRetentionPeriod)
+	assert.Equal(t, "local-queue3-dlq", models.SyncQueues.Queues["local-queue3"].DeadLetterQueue.Name)
+	assert.Equal(t, 128, models.SyncQueues.Queues["local-queue2"].MaximumMessageSize)
+	assert.Equal(t, 150, models.SyncQueues.Queues["local-queue2"].VisibilityTimeout)
+	assert.Equal(t, 245600, models.SyncQueues.Queues["local-queue2"].MessageRetentionPeriod)
 }
 
 func TestConfig_NoQueueAttributeDefaults(t *testing.T) {
 	env := "NoQueueAttributeDefaults"
 	LoadYamlConfig("./mock-data/mock-config.yaml", env)
 
-	receiveWaitTime := app.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds
+	receiveWaitTime := models.SyncQueues.Queues["local-queue1"].ReceiveMessageWaitTimeSeconds
 	if receiveWaitTime != 0 {
 		t.Errorf("Expected local-queue1 Queue to be configured with ReceiveMessageWaitTimeSeconds: 0 but got %d\n", receiveWaitTime)
 	}
-	timeoutSecs := app.SyncQueues.Queues["local-queue1"].VisibilityTimeout
+	timeoutSecs := models.SyncQueues.Queues["local-queue1"].VisibilityTimeout
 	if timeoutSecs != 30 {
 		t.Errorf("Expected local-queue1 Queue to be configured with VisibilityTimeout: 30 but got %d\n", timeoutSecs)
 	}
 
-	receiveWaitTime = app.SyncQueues.Queues["local-queue2"].ReceiveMessageWaitTimeSeconds
+	receiveWaitTime = models.SyncQueues.Queues["local-queue2"].ReceiveMessageWaitTimeSeconds
 	if receiveWaitTime != 20 {
 		t.Errorf("Expected local-queue2 Queue to be configured with ReceiveMessageWaitTimeSeconds: 20 but got %d\n", receiveWaitTime)
 	}
 
-	messageRetentionPeriod := app.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod
+	messageRetentionPeriod := models.SyncQueues.Queues["local-queue1"].MessageRetentionPeriod
 	if messageRetentionPeriod != 345600 {
 		t.Errorf("Expected local-queue2 Queue to be configured with VisibilityTimeout: 150 but got %d\n", timeoutSecs)
 	}
@@ -113,10 +113,10 @@ func TestConfig_invalid_config_resorts_to_default_queue_attributes(t *testing.T)
 		t.Errorf("Expected port number 4100 but got %s\n", port)
 	}
 
-	assert.Equal(t, 262144, app.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize)
-	assert.Equal(t, 345600, app.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod)
-	assert.Equal(t, 0, app.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds)
-	assert.Equal(t, 30, app.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout)
+	assert.Equal(t, 262144, models.CurrentEnvironment.QueueAttributeDefaults.MaximumMessageSize)
+	assert.Equal(t, 345600, models.CurrentEnvironment.QueueAttributeDefaults.MessageRetentionPeriod)
+	assert.Equal(t, 0, models.CurrentEnvironment.QueueAttributeDefaults.ReceiveMessageWaitTimeSeconds)
+	assert.Equal(t, 30, models.CurrentEnvironment.QueueAttributeDefaults.VisibilityTimeout)
 }
 
 func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
@@ -137,8 +137,8 @@ func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
 	env := "Local"
 	LoadYamlConfig("", env)
 
-	queues := app.SyncQueues.Queues
-	topics := app.SyncTopics.Topics
+	queues := models.SyncQueues.Queues
+	topics := models.SyncTopics.Topics
 	for _, expectedName := range expectedQueues {
 		_, ok := queues[expectedName]
 		assert.True(t, ok)
@@ -150,17 +150,17 @@ func TestConfig_LoadYamlConfig_finds_default_config(t *testing.T) {
 }
 
 func TestConfig_LoadYamlConfig_missing_config_loads_nothing(t *testing.T) {
-	app.CurrentEnvironment = app.Environment{}
+	models.CurrentEnvironment = models.Environment{}
 	ports := LoadYamlConfig("/garbage", "Local")
 
 	assert.Equal(t, []string{"4100"}, ports)
-	assert.Equal(t, app.CurrentEnvironment, app.Environment{})
+	assert.Equal(t, models.CurrentEnvironment, models.Environment{})
 }
 
 func TestConfig_LoadYamlConfig_invalid_config_loads_nothing(t *testing.T) {
-	app.CurrentEnvironment = app.Environment{}
+	models.CurrentEnvironment = models.Environment{}
 	ports := LoadYamlConfig("../common/common.go", "Local")
 
 	assert.Equal(t, []string{"4100"}, ports)
-	assert.Equal(t, app.CurrentEnvironment, app.Environment{})
+	assert.Equal(t, models.CurrentEnvironment, models.Environment{})
 }

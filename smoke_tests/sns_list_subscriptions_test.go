@@ -8,11 +8,8 @@ import (
 
 	"encoding/xml"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/models"
-	"github.com/Admiral-Piett/goaws/app/test"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -29,7 +26,7 @@ func Test_List_Subscriptions_json_no_subscriptions(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -44,12 +41,12 @@ func Test_List_Subscriptions_json_no_subscriptions(t *testing.T) {
 
 func Test_List_Subscriptions_json_multiple_subscriptions(t *testing.T) {
 	server := generateServer()
-	defaultEnv := app.CurrentEnvironment
+	defaultEnv := models.CurrentEnvironment
 	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "NoQueueAttributeDefaults")
 	defer func() {
 		server.Close()
-		test.ResetResources()
-		app.CurrentEnvironment = defaultEnv
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
@@ -89,8 +86,8 @@ func Test_List_Subscriptions_json_multiple_subscriptions(t *testing.T) {
 	assert.NotNil(t, subscribeResponse)
 	assert.NotNil(t, subscribeResponse2)
 
-	app.SyncTopics.Lock()
-	defer app.SyncTopics.Unlock()
+	models.SyncTopics.Lock()
+	defer models.SyncTopics.Unlock()
 
 	// check listed subscriptions
 	sdkResponse, err := snsClient.ListSubscriptions(context.TODO(), &sns.ListSubscriptionsInput{})
@@ -106,7 +103,7 @@ func Test_List_Subscriptions_xml_no_subscriptions(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	e := httpexpect.Default(t, server.URL)
@@ -135,7 +132,7 @@ func Test_List_Subscriptions_xml_multiple_subscriptions(t *testing.T) {
 
 	defer func() {
 		server.Close()
-		test.ResetResources()
+		models.ResetResources()
 	}()
 
 	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())

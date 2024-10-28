@@ -6,23 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	urlLib "net/url"
-
-	"github.com/Admiral-Piett/goaws/app"
 )
-
-func ResetApp() {
-	app.CurrentEnvironment = app.Environment{}
-	ResetResources()
-}
-
-func ResetResources() {
-	app.SyncQueues.Lock()
-	app.SyncQueues.Queues = make(map[string]*app.Queue)
-	app.SyncQueues.Unlock()
-	app.SyncTopics.Lock()
-	app.SyncTopics.Topics = make(map[string]*app.Topic)
-	app.SyncTopics.Unlock()
-}
 
 func GenerateRequestInfo(method, url string, body interface{}, isJson bool) (*httptest.ResponseRecorder, *http.Request) {
 	if url == "" {

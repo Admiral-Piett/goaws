@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,12 +15,12 @@ import (
 func TestPublishV1_success_sqs(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 		publishMessageByTopicFunc = publishMessageByTopic
 	}()
 
-	topic := app.SyncTopics.Topics["unit-topic1"]
+	topic := models.SyncTopics.Topics["unit-topic1"]
 	topicArn := topic.Arn
 
 	message := "{\"IAm\": \"aMessage\"}"
@@ -36,7 +35,7 @@ func TestPublishV1_success_sqs(t *testing.T) {
 	}
 
 	publishCalledWith := [][]interface{}{}
-	publishMessageByTopicFunc = func(topic *app.Topic, message interfaces.AbstractPublishEntry) (string, error) {
+	publishMessageByTopicFunc = func(topic *models.Topic, message interfaces.AbstractPublishEntry) (string, error) {
 		publishCalledWith = append(publishCalledWith, []interface{}{topic, message})
 		return "", nil
 	}
@@ -54,7 +53,7 @@ func TestPublishV1_success_sqs(t *testing.T) {
 func TestPublishV1_request_transformer_error(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -71,7 +70,7 @@ func TestPublishV1_request_transformer_error(t *testing.T) {
 func TestPublishV1_request_missing_topic_arn(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -93,11 +92,11 @@ func TestPublishV1_request_missing_topic_arn(t *testing.T) {
 func TestPublishV1_request_missing_message(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	topicArn := app.SyncTopics.Topics["unit-topic1"].Arn
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.PublishRequest)
@@ -116,7 +115,7 @@ func TestPublishV1_request_missing_message(t *testing.T) {
 func TestPublishV1_request_invalid_topic(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 

@@ -6,27 +6,26 @@ import (
 
 	"github.com/Admiral-Piett/goaws/app/test"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteMessage(t *testing.T) {
-	app.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 	}()
 
-	q := &app.Queue{
+	q := &models.Queue{
 		Name: "testing",
-		Messages: []app.Message{{
+		Messages: []models.SqsMessage{{
 			MessageBody:   []byte("test1"),
 			ReceiptHandle: "123",
 		}},
 	}
 
-	app.SyncQueues.Queues["testing"] = q
+	models.SyncQueues.Queues["testing"] = q
 
 	_, r := test.GenerateRequestInfo("POST", "/", models.DeleteMessageRequest{
 		QueueUrl:      "http://localhost:4100/queue/testing",

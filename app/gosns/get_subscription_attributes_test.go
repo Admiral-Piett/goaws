@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/conf"
 	"github.com/Admiral-Piett/goaws/app/interfaces"
 	"github.com/Admiral-Piett/goaws/app/models"
@@ -16,7 +15,7 @@ import (
 func TestGetSubscriptionAttributesV1_NonExistentSubscription(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "NoQueuesOrTopics")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -44,7 +43,7 @@ func TestGetSubscriptionAttributesV1_NonExistentSubscription(t *testing.T) {
 func TestGetSubscriptionAttributesV1_TransformError(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
@@ -61,11 +60,11 @@ func TestGetSubscriptionAttributesV1_TransformError(t *testing.T) {
 func TestGetSubscriptionAttributesV1_success(t *testing.T) {
 	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "Local")
 	defer func() {
-		test.ResetApp()
+		models.ResetApp()
 		utils.REQUEST_TRANSFORMER = utils.TransformRequest
 	}()
 
-	localTopic1 := app.SyncTopics.Topics["local-topic1"]
+	localTopic1 := models.SyncTopics.Topics["local-topic1"]
 	subscriptions := localTopic1.Subscriptions
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.GetSubscriptionAttributesRequest)
@@ -83,7 +82,7 @@ func TestGetSubscriptionAttributesV1_success(t *testing.T) {
 	expectedAttributes := []models.SubscriptionAttributeEntry{
 		{
 			Key:   "Owner",
-			Value: app.CurrentEnvironment.AccountID,
+			Value: models.CurrentEnvironment.AccountID,
 		},
 		{
 			Key:   "RawMessageDelivery",

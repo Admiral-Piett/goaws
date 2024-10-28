@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Admiral-Piett/goaws/app"
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 
@@ -37,30 +36,30 @@ func SubscribeV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 	log.WithFields(extraLogFields).Info("Creating Subscription")
 
-	subscription := &app.Subscription{EndPoint: requestBody.Endpoint, Protocol: requestBody.Protocol, TopicArn: requestBody.TopicArn, Raw: requestBody.Attributes.RawMessageDelivery, FilterPolicy: &requestBody.Attributes.FilterPolicy}
+	subscription := &models.Subscription{EndPoint: requestBody.Endpoint, Protocol: requestBody.Protocol, TopicArn: requestBody.TopicArn, Raw: requestBody.Attributes.RawMessageDelivery, FilterPolicy: &requestBody.Attributes.FilterPolicy}
 
 	subscription.SubscriptionArn = fmt.Sprintf("%s:%s", requestBody.TopicArn, uuid.NewString())
 
 	//Create the response
 	requestId := uuid.NewString()
-	respStruct := models.SubscribeResponse{Xmlns: models.BASE_XMLNS, Result: models.SubscribeResult{SubscriptionArn: subscription.SubscriptionArn}, Metadata: app.ResponseMetadata{RequestId: requestId}}
-	if app.SyncTopics.Topics[topicName] != nil {
-		app.SyncTopics.Lock()
+	respStruct := models.SubscribeResponse{Xmlns: models.BaseXmlns, Result: models.SubscribeResult{SubscriptionArn: subscription.SubscriptionArn}, Metadata: models.ResponseMetadata{RequestId: requestId}}
+	if models.SyncTopics.Topics[topicName] != nil {
+		models.SyncTopics.Lock()
 		isDuplicate := false
 		// Duplicate check
-		for _, sub := range app.SyncTopics.Topics[topicName].Subscriptions {
+		for _, sub := range models.SyncTopics.Topics[topicName].Subscriptions {
 			if sub.EndPoint == requestBody.Endpoint && sub.TopicArn == requestBody.TopicArn {
 				isDuplicate = true
 				sub.SubscriptionArn = subscription.SubscriptionArn
 			}
 		}
 		if !isDuplicate {
-			app.SyncTopics.Topics[topicName].Subscriptions = append(app.SyncTopics.Topics[topicName].Subscriptions, subscription)
+			models.SyncTopics.Topics[topicName].Subscriptions = append(models.SyncTopics.Topics[topicName].Subscriptions, subscription)
 			log.WithFields(extraLogFields).Debug("Created subscription")
 		}
-		app.SyncTopics.Unlock()
+		models.SyncTopics.Unlock()
 
-		if app.Protocol(subscription.Protocol) == app.ProtocolHTTP || app.Protocol(subscription.Protocol) == app.ProtocolHTTPS {
+		if models.Protocol(subscription.Protocol) == models.ProtocolHTTP || models.Protocol(subscription.Protocol) == models.ProtocolHTTPS {
 			id := uuid.NewString()
 			token := uuid.NewString()
 
@@ -78,9 +77,9 @@ func SubscribeV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 				Token:            token,
 				TopicArn:         requestBody.TopicArn,
 				Message:          fmt.Sprintf("You have chosen to subscribe to the topic %s.\nTo confirm the subscription, visit the SubscribeURL included in this message.", requestBody.TopicArn),
-				SigningCertURL:   fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, requestId),
+				SigningCertURL:   fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, requestId),
 				SignatureVersion: "1",
-				SubscribeURL:     fmt.Sprintf("http://%s:%s/?Action=ConfirmSubscription&TopicArn=%s&Token=%s", app.CurrentEnvironment.Host, app.CurrentEnvironment.Port, requestBody.TopicArn, token),
+				SubscribeURL:     fmt.Sprintf("http://%s:%s/?Action=ConfirmSubscription&TopicArn=%s&Token=%s", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, requestBody.TopicArn, token),
 				Timestamp:        time.Now().UTC().Format(time.RFC3339),
 			}
 			signature, err := signMessage(PrivateKEY, snsMSG)
