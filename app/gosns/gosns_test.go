@@ -94,8 +94,8 @@ func Test_publishSQS_filter_policy_not_satisfied_by_attributes(t *testing.T) {
 	request := models.PublishRequest{
 		TopicArn: topicArn,
 		Message:  message,
-		MessageAttributes: map[string]models.MessageAttributeValue{
-			"invalid": models.MessageAttributeValue{
+		MessageAttributes: map[string]models.MessageAttribute{
+			"invalid": models.MessageAttribute{
 				DataType:    "String",
 				StringValue: "garbage",
 			},
@@ -199,11 +199,11 @@ func TestCreateMessageBody_success_NoMessageAttributes(t *testing.T) {
 		Subject: subject,
 	}
 
-	result, err := createMessageBody(subs, msg, map[string]models.SqsMessageAttributeValue{})
+	result, err := createMessageBody(subs, msg, map[string]models.MessageAttribute{})
 	assert.Nil(t, err)
 
 	unmarshalledMessage := &models.SNSMessage{}
-	json.Unmarshal(result, unmarshalledMessage)
+	json.Unmarshal([]byte(result), unmarshalledMessage)
 
 	assert.Equal(t, "Notification", unmarshalledMessage.Type)
 	assert.Equal(t, "", unmarshalledMessage.Token)
@@ -225,11 +225,10 @@ func TestCreateMessageBody_success_WithMessageAttributes(t *testing.T) {
 		SubscriptionArn: "subs-arn",
 		Raw:             false,
 	}
-	attributes := map[string]models.SqsMessageAttributeValue{
+	attributes := map[string]models.MessageAttribute{
 		"test": {
-			DataType: "String",
-			ValueKey: "StringValue",
-			Value:    "test",
+			DataType:    "String",
+			StringValue: "test",
 		},
 	}
 
@@ -280,8 +279,8 @@ func TestCreateMessageBody_JSONMessageStructure_MissingDefaultKey(t *testing.T) 
 
 	snsMessage, err := createMessageBody(subs, msg, nil)
 
+	assert.Equal(t, "", snsMessage)
 	assert.Error(t, err)
-	assert.Nil(t, snsMessage)
 }
 
 func TestCreateMessageBody_JSONMessageStructure_SelectsProtocolSpecificMessageIfAvailable(t *testing.T) {
@@ -322,29 +321,6 @@ func TestCreateMessageBody_NonJsonMessageStructure_MessageContainingJson(t *test
 	snsMessage, err := createMessageBody(subs, msg, nil)
 	assert.Nil(t, err)
 	assert.Contains(t, string(snsMessage), "\"Message\":\"{\\\"default\\\": \\\"default message text\\\", \\\"sqs\\\": \\\"sqs message text\\\"}\"")
-}
-
-func Test_formatAttributes_success(t *testing.T) {
-	attrs := map[string]models.SqsMessageAttributeValue{
-		"test1": models.SqsMessageAttributeValue{
-			Name:     "MyAttr",
-			DataType: "String",
-			Value:    "value1",
-		},
-		"test2": models.SqsMessageAttributeValue{
-			Name:     "MyAttr",
-			DataType: "String",
-			Value:    "value2",
-		},
-	}
-	expected := map[string]models.MessageAttributeValue{
-		"test1": {DataType: "String", StringValue: "value1"},
-		"test2": {DataType: "String", StringValue: "value2"},
-	}
-
-	result := formatAttributes(attrs)
-
-	assert.Equal(t, expected, result)
 }
 
 func Test_publishMessageByTopic_sqs_success(t *testing.T) {

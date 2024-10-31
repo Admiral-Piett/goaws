@@ -154,7 +154,6 @@ type GetQueueAttributesRequest struct {
 
 func (r *GetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
 	r.QueueUrl = values.Get("QueueUrl")
-	// TODO - test me
 	for i := 1; true; i++ {
 		attrKey := fmt.Sprintf("AttributeName.%d", i)
 		attrValue := values.Get(attrKey)
@@ -168,8 +167,8 @@ func (r *GetQueueAttributesRequest) SetAttributesFromForm(values url.Values) {
 /*** Send Message Request */
 func NewSendMessageRequest() *SendMessageRequest {
 	return &SendMessageRequest{
-		MessageAttributes:       make(map[string]MessageAttributeValue),
-		MessageSystemAttributes: make(map[string]MessageAttributeValue),
+		MessageAttributes:       make(map[string]MessageAttribute),
+		MessageSystemAttributes: make(map[string]MessageAttribute),
 	}
 }
 
@@ -177,17 +176,17 @@ type SendMessageRequest struct {
 	DelaySeconds int `json:"DelaySeconds" schema:"DelaySeconds"`
 	// MessageAttributes is custom attributes that users can add on the message as they like.
 	// Please see: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html#SQS-SendMessage-request-MessageAttributes
-	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
-	MessageBody            string                           `json:"MessageBody" schema:"MessageBody"`
-	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
-	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`
+	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageBody            string                      `json:"MessageBody" schema:"MessageBody"`
+	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`
 	// MessageSystemAttributes is custom attributes for AWS services.
 	// Please see: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html#SQS-SendMessage-request-MessageSystemAttributes
 	// On AWS, the only supported attribute is "AWSTraceHeader" that is for AWS X-Ray.
 	// Goaws does not contains X-Ray emulation, so currently MessageSystemAttributes is unsupported.
 	// TODO: Replace with a struct with known attributes "AWSTraceHeader".
-	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"`
-	QueueUrl                string                           `json:"QueueUrl" schema:"QueueUrl"`
+	MessageSystemAttributes map[string]MessageAttribute `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"`
+	QueueUrl                string                      `json:"QueueUrl" schema:"QueueUrl"`
 }
 
 func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
@@ -208,10 +207,10 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 		stringValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.StringValue", i))
 		binaryValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.BinaryValue", i))
 
-		r.MessageAttributes[name] = MessageAttributeValue{
+		r.MessageAttributes[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
-			BinaryValue: binaryValue,
+			BinaryValue: []byte(binaryValue),
 		}
 	}
 }
@@ -261,13 +260,13 @@ func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
 		binaryValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.BinaryValue", entryIndex, attributeIndex))
 
 		if r.Entries[entryIndex].MessageAttributes == nil {
-			r.Entries[entryIndex].MessageAttributes = make(map[string]MessageAttributeValue)
+			r.Entries[entryIndex].MessageAttributes = make(map[string]MessageAttribute)
 		}
 
-		r.Entries[entryIndex].MessageAttributes[name] = MessageAttributeValue{
+		r.Entries[entryIndex].MessageAttributes[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
-			BinaryValue: binaryValue,
+			BinaryValue: []byte(binaryValue),
 		}
 
 		if _, ok := r.Entries[entryIndex].MessageAttributes[name]; !ok {
@@ -277,13 +276,13 @@ func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
 }
 
 type SendMessageBatchRequestEntry struct {
-	Id                      string                           `json:"Id" schema:"Id"`
-	MessageBody             string                           `json:"MessageBody" schema:"MessageBody"`
-	DelaySeconds            int                              `json:"DelaySeconds" schema:"DelaySeconds"` // NOTE: not implemented
-	MessageAttributes       map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
-	MessageDeduplicationId  string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
-	MessageGroupId          string                           `json:"MessageGroupId" schema:"MessageGroupId"`
-	MessageSystemAttributes map[string]MessageAttributeValue `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"` // NOTE: not implemented
+	Id                      string                      `json:"Id" schema:"Id"`
+	MessageBody             string                      `json:"MessageBody" schema:"MessageBody"`
+	DelaySeconds            int                         `json:"DelaySeconds" schema:"DelaySeconds"` // NOTE: not implemented
+	MessageAttributes       map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageDeduplicationId  string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId          string                      `json:"MessageGroupId" schema:"MessageGroupId"`
+	MessageSystemAttributes map[string]MessageAttribute `json:"MessageSystemAttributes" schema:"MessageSystemAttributes"` // NOTE: not implemented
 }
 
 // Get Queue Url Request
@@ -714,19 +713,19 @@ func NewPublishRequest() *PublishRequest {
 }
 
 type PublishRequest struct {
-	Message                string                           `json:"Message" schema:"Message"`
-	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`
-	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
-	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
-	MessageStructure       string                           `json:"MessageStructure" schema:"MessageStructure"`
-	PhoneNumber            string                           `json:"PhoneNumber" schema:"PhoneNumber"` // Not implemented
-	Subject                string                           `json:"Subject" schema:"Subject"`
-	TargetArn              string                           `json:"TargetArn" schema:"TargetArn"` // Not implemented
-	TopicArn               string                           `json:"TopicArn" schema:"TopicArn"`
+	Message                string                      `json:"Message" schema:"Message"`
+	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`
+	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
+	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageStructure       string                      `json:"MessageStructure" schema:"MessageStructure"`
+	PhoneNumber            string                      `json:"PhoneNumber" schema:"PhoneNumber"` // Not implemented
+	Subject                string                      `json:"Subject" schema:"Subject"`
+	TargetArn              string                      `json:"TargetArn" schema:"TargetArn"` // Not implemented
+	TopicArn               string                      `json:"TopicArn" schema:"TopicArn"`
 }
 
 func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
-	attributes := map[string]MessageAttributeValue{}
+	attributes := map[string]MessageAttribute{}
 	for i := 1; true; i++ {
 		nameKey := fmt.Sprintf("MessageAttributes.entry.%d.Name", i)
 		name := values.Get(nameKey)
@@ -745,12 +744,12 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 		binaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
 
 		if r.MessageAttributes == nil {
-			r.MessageAttributes = make(map[string]MessageAttributeValue)
+			r.MessageAttributes = make(map[string]MessageAttribute)
 		}
-		attributes[name] = MessageAttributeValue{
+		attributes[name] = MessageAttribute{
 			DataType:    caser.String(dataType), // capitalize
 			StringValue: stringValue,
-			BinaryValue: binaryValue,
+			BinaryValue: []byte(binaryValue),
 		}
 	}
 	r.MessageAttributes = attributes
@@ -761,7 +760,7 @@ func (r *PublishRequest) GetMessage() string {
 	return r.Message
 }
 
-func (r *PublishRequest) GetMessageAttributes() map[string]MessageAttributeValue {
+func (r *PublishRequest) GetMessageAttributes() map[string]MessageAttribute {
 	return r.MessageAttributes
 }
 
@@ -872,7 +871,7 @@ type PublishBatchRequest struct {
 }
 
 func (r *PublishBatchRequest) SetAttributesFromForm(values url.Values) {
-	// TODO - Implement me
+	// TAG - Implement me
 }
 
 type PublishBatchRequestEntries struct {
@@ -880,13 +879,13 @@ type PublishBatchRequestEntries struct {
 }
 
 type PublishBatchRequestEntry struct {
-	ID                     string                           `json:"Id" schema:"Id"`
-	Message                string                           `json:"Message" schema:"Message"`
-	MessageAttributes      map[string]MessageAttributeValue `json:"MessageAttributes" schema:"MessageAttributes"`           // Not implemented
-	MessageDeduplicationId string                           `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
-	MessageGroupId         string                           `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
-	MessageStructure       string                           `json:"MessageStructure" schema:"MessageStructure"`
-	Subject                string                           `json:"Subject" schema:"Subject"`
+	ID                     string                      `json:"Id" schema:"Id"`
+	Message                string                      `json:"Message" schema:"Message"`
+	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`           // Not implemented
+	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
+	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageStructure       string                      `json:"MessageStructure" schema:"MessageStructure"`
+	Subject                string                      `json:"Subject" schema:"Subject"`
 }
 
 // Satisfy the AbstractPublishEntry interface
@@ -894,7 +893,7 @@ func (r *PublishBatchRequestEntry) GetMessage() string {
 	return r.Message
 }
 
-func (r *PublishBatchRequestEntry) GetMessageAttributes() map[string]MessageAttributeValue {
+func (r *PublishBatchRequestEntry) GetMessageAttributes() map[string]MessageAttribute {
 	return r.MessageAttributes
 }
 

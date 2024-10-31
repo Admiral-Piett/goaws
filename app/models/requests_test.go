@@ -297,8 +297,8 @@ func TestSendMessageRequest_SetAttributesFromForm_success(t *testing.T) {
 	form.Add("MessageAttribute.4.Value.StringValue", "Value4")
 
 	r := &SendMessageRequest{
-		MessageAttributes:       make(map[string]MessageAttributeValue),
-		MessageSystemAttributes: make(map[string]MessageAttributeValue),
+		MessageAttributes:       make(map[string]MessageAttribute),
+		MessageSystemAttributes: make(map[string]MessageAttribute),
 	}
 	r.SetAttributesFromForm(form)
 
@@ -308,13 +308,13 @@ func TestSendMessageRequest_SetAttributesFromForm_success(t *testing.T) {
 	attr1 := r.MessageAttributes["Attr1"]
 	assert.Equal(t, "String", attr1.DataType)
 	assert.Equal(t, "Value1", attr1.StringValue)
-	assert.Equal(t, "", attr1.BinaryValue)
+	assert.Empty(t, attr1.BinaryValue)
 
 	assert.NotNil(t, r.MessageAttributes["Attr2"])
 	attr2 := r.MessageAttributes["Attr2"]
 	assert.Equal(t, "Binary", attr2.DataType)
-	assert.Equal(t, "", attr2.StringValue)
-	assert.Equal(t, "VmFsdWUy", attr2.BinaryValue)
+	assert.Empty(t, attr2.StringValue)
+	assert.Equal(t, []uint8("VmFsdWUy"), attr2.BinaryValue)
 }
 
 func TestSetQueueAttributesRequest_SetAttributesFromForm_success(t *testing.T) {

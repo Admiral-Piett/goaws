@@ -10,43 +10,43 @@ import (
 func TestFilterPolicy_IsSatisfiedBy(t *testing.T) {
 	var tests = []struct {
 		filterPolicy      *FilterPolicy
-		messageAttributes map[string]SqsMessageAttributeValue
+		messageAttributes map[string]MessageAttribute
 		expected          bool
 	}{
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "String", Value: "bar"}},
+			map[string]MessageAttribute{"foo": {DataType: "String", StringValue: "bar"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "String", Value: "xyz"}},
+			map[string]MessageAttribute{"foo": {DataType: "String", StringValue: "xyz"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar", "xyz"}, "abc": {"def"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "String", Value: "xyz"},
-				"abc": {DataType: "String", Value: "def"}},
+			map[string]MessageAttribute{"foo": {DataType: "String", StringValue: "xyz"},
+				"abc": {DataType: "String", StringValue: "def"}},
 			true,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "String", Value: "baz"}},
+			map[string]MessageAttribute{"foo": {DataType: "String", StringValue: "baz"}},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]SqsMessageAttributeValue{},
+			map[string]MessageAttribute{},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}, "abc": {"def"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "String", Value: "bar"}},
+			map[string]MessageAttribute{"foo": {DataType: "String", StringValue: "bar"}},
 			false,
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]SqsMessageAttributeValue{"foo": {DataType: "Binary", Value: "bar"}},
+			map[string]MessageAttribute{"foo": {DataType: "Binary", BinaryValue: []byte("bar")}},
 			false,
 		},
 	}

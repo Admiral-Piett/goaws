@@ -22,7 +22,7 @@ type AbstractErrorResponse interface {
 
 type AbstractPublishEntry interface {
 	GetMessage() string
-	GetMessageAttributes() map[string]models.MessageAttributeValue
+	GetMessageAttributes() map[string]models.MessageAttribute
 	GetMessageStructure() string
 	GetSubject() string
 }

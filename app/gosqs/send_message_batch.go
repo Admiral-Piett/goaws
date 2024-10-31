@@ -15,10 +15,8 @@ import (
 )
 
 func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
-
 	requestBody := models.NewSendMessageBatchRequest()
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
-
 	if !ok {
 		log.Error("Invalid Request - SendMessageBatchV1")
 		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
@@ -60,11 +58,10 @@ func SendMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody
 	sentEntries := make([]models.SendMessageBatchResultEntry, 0)
 	log.Debug("Putting Message in Queue:", queueName)
 	for _, sendEntry := range sendEntries {
-		msg := models.SqsMessage{MessageBody: []byte(sendEntry.MessageBody)}
+		msg := models.SqsMessage{MessageBody: sendEntry.MessageBody}
 		if len(sendEntry.MessageAttributes) > 0 {
-			oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(sendEntry.MessageAttributes)
-			msg.MessageAttributes = oldStyleMessageAttributes
-			msg.MD5OfMessageAttributes = utils.HashAttributes(oldStyleMessageAttributes)
+			msg.MessageAttributes = sendEntry.MessageAttributes
+			msg.MD5OfMessageAttributes = utils.HashAttributes(sendEntry.MessageAttributes)
 		}
 		msg.MD5OfMessageBody = utils.GetMD5Hash(sendEntry.MessageBody)
 		msg.GroupID = sendEntry.MessageGroupId

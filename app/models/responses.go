@@ -1,10 +1,7 @@
 package models
 
 import (
-	"encoding/json"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"encoding/xml"
 )
 
 type ResponseMetadata struct {
@@ -54,59 +51,55 @@ func (r ReceiveMessageResponse) GetRequestId() string {
 }
 
 type ResultMessage struct {
-	MessageId              string                    `xml:"MessageId,omitempty"`
-	ReceiptHandle          string                    `xml:"ReceiptHandle,omitempty"`
-	MD5OfBody              string                    `xml:"MD5OfBody,omitempty"`
-	Body                   []byte                    `xml:"Body,omitempty"`
-	MD5OfMessageAttributes string                    `xml:"MD5OfMessageAttributes,omitempty"`
-	MessageAttributes      []*ResultMessageAttribute `xml:"MessageAttribute,omitempty"`
-	Attributes             []*ResultAttribute        `xml:"Attribute,omitempty"`
+	MessageId              string                      `xml:"MessageId,omitempty"`
+	ReceiptHandle          string                      `xml:"ReceiptHandle,omitempty"`
+	MD5OfBody              string                      `xml:"MD5OfBody,omitempty"`
+	Body                   string                      `xml:"Body,omitempty"`
+	MD5OfMessageAttributes string                      `xml:"MD5OfMessageAttributes,omitempty"`
+	MessageAttributes      map[string]MessageAttribute `xml:"MessageAttribute,omitempty,attr"`
+	Attributes             map[string]string           `xml:"Attribute,omitempty,attr"`
 }
 
-// MarshalJSON first converts the ResultMessage to the shape which the SDKs
-// expect. When receiving a response from the JSON API, it apparently expects
-// QueueAttributes and MessageAttributes to be maps, rather than the former slice
-// shape.
-func (r *ResultMessage) MarshalJSON() ([]byte, error) {
-	m := &sqstypes.Message{
-		MessageId:              &r.MessageId,
-		ReceiptHandle:          &r.ReceiptHandle,
-		MD5OfBody:              &r.MD5OfBody,
-		Body:                   aws.String(string(r.Body)),
-		MD5OfMessageAttributes: &r.MD5OfMessageAttributes,
-		Attributes:             map[string]string{},
-		MessageAttributes:      map[string]sqstypes.MessageAttributeValue{},
+// MarshalXML is a custom marshaler for the ResultMessage struct.  We need it because we need to convert the
+// maps into something that can be shown as XML.  If we ever get rid of the XML response parsing this can go,
+// and that would be glorious.
+func (r *ResultMessage) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	type Attributes struct {
+		Name  string `xml:"Name,omitempty"`
+		Value string `xml:"Value,omitempty"`
 	}
-
-	for _, attr := range r.Attributes {
-		m.Attributes[attr.Name] = attr.Value
-	}
-
-	for _, attr := range r.MessageAttributes {
-		m.MessageAttributes[attr.Name] = sqstypes.MessageAttributeValue{
-			DataType:    &attr.Value.DataType,
-			StringValue: &attr.Value.StringValue,
-			BinaryValue: []byte(attr.Value.BinaryValue),
+	var attrs []Attributes
+	for key, value := range r.Attributes {
+		attribute := Attributes{
+			Name:  key,
+			Value: value,
 		}
+		attrs = append(attrs, attribute)
 	}
 
-	return json.Marshal(m)
-}
+	type MessageAttributes struct {
+		Name  string           `xml:"Name,omitempty"`
+		Value MessageAttribute `xml:"Value,omitempty"`
+	}
+	var messageAttrs []MessageAttributes
+	for key, value := range r.MessageAttributes {
+		attribute := MessageAttributes{
+			Name:  key,
+			Value: value,
+		}
+		messageAttrs = append(messageAttrs, attribute)
+	}
+	e.EncodeToken(start)
 
-type ResultMessageAttributeValue struct {
-	DataType    string `xml:"DataType,omitempty"`
-	StringValue string `xml:"StringValue,omitempty"`
-	BinaryValue string `xml:"BinaryValue,omitempty"`
-}
-
-type ResultMessageAttribute struct {
-	Name  string                       `xml:"Name,omitempty"`
-	Value *ResultMessageAttributeValue `xml:"Value,omitempty"`
-}
-
-type ResultAttribute struct {
-	Name  string `xml:"Name,omitempty"`
-	Value string `xml:"Value,omitempty"`
+	// Encode the fields
+	e.EncodeElement(r.MessageId, xml.StartElement{Name: xml.Name{Local: "MessageId"}})
+	e.EncodeElement(r.ReceiptHandle, xml.StartElement{Name: xml.Name{Local: "ReceiptHandle"}})
+	e.EncodeElement(r.MD5OfBody, xml.StartElement{Name: xml.Name{Local: "MD5OfBody"}})
+	e.EncodeElement(r.Body, xml.StartElement{Name: xml.Name{Local: "Body"}})
+	e.EncodeElement(attrs, xml.StartElement{Name: xml.Name{Local: "Attribute"}})
+	e.EncodeElement(messageAttrs, xml.StartElement{Name: xml.Name{Local: "MessageAttribute"}})
+	e.EncodeToken(xml.EndElement{Name: start.Name})
+	return nil
 }
 
 type ChangeMessageVisibilityResult struct {

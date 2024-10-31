@@ -27,7 +27,6 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	messageBody := requestBody.MessageBody
 	messageGroupID := requestBody.MessageGroupId
 	messageDeduplicationID := requestBody.MessageDeduplicationId
-	messageAttributes := requestBody.MessageAttributes
 
 	queueUrl := getQueueFromPath(requestBody.QueueUrl, req.URL.String())
 
@@ -58,11 +57,10 @@ func SendMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	}
 
 	log.Debugf("Putting Message in Queue: [%s]", queueName)
-	msg := models.SqsMessage{MessageBody: []byte(messageBody)}
-	if len(messageAttributes) > 0 {
-		oldStyleMessageAttributes := utils.ConvertToOldMessageAttributeValueStructure(messageAttributes)
-		msg.MessageAttributes = oldStyleMessageAttributes
-		msg.MD5OfMessageAttributes = utils.HashAttributes(oldStyleMessageAttributes)
+	msg := models.SqsMessage{MessageBody: messageBody}
+	if len(requestBody.MessageAttributes) > 0 {
+		msg.MessageAttributes = requestBody.MessageAttributes
+		msg.MD5OfMessageAttributes = utils.HashAttributes(requestBody.MessageAttributes)
 	}
 	msg.MD5OfMessageBody = utils.GetMD5Hash(messageBody)
 	msg.Uuid = uuid.NewString()
