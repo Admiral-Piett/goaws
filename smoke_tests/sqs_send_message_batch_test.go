@@ -18,7 +18,6 @@ import (
 )
 
 func Test_SendMessageBatchV1_Json_Error_Queue_Not_Found(t *testing.T) {
-
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -79,7 +78,6 @@ func Test_SendMessageBatchV1_Json_Error_No_Entry(t *testing.T) {
 }
 
 func TestSendMessageBatchV1_Json_Error_IdNotDistinct(t *testing.T) {
-
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -125,7 +123,6 @@ func TestSendMessageBatchV1_Json_Error_IdNotDistinct(t *testing.T) {
 }
 
 func TestSendMessageBatchV1_Json_Error_TooManyEntries(t *testing.T) {
-
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -221,8 +218,7 @@ func TestSendMessageBatchV1_Json_Error_TooManyEntries(t *testing.T) {
 	assert.Nil(t, SendMessageBatchOutput)
 }
 
-func TestSendMessageBatchV1_Json_Success(t *testing.T) {
-
+func TestSendMessageBatchV1_Json_Success_including_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -244,16 +240,16 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 	messageBody1 := "test%20message%20body%201"
 	messageBody2 := "test%20message%20body%202"
 
-	binaryAttribute := "binary"
-	stringAttribute := "String"
-	numberAttribute := "number"
+	binaryAttributeKey := "binary-key"
+	stringAttributeKey := "string-key"
+	numberAttributeKey := "number-key"
 
 	binaryType := "Binary"
 	stringType := "String"
 	numberType := "Number"
 
-	binaryValue := "base64-encoded-value"
-	stringValue := "hogeValue"
+	binaryValue := "binary-value"
+	stringValue := "string-value"
 	numberValue := "100"
 
 	sendMessageBatchOutput, error := sqsClient.SendMessageBatch(context.TODO(), &sqs.SendMessageBatchInput{
@@ -266,15 +262,15 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 				Id:          &messageId2,
 				MessageBody: &messageBody2,
 				MessageAttributes: map[string]types.MessageAttributeValue{
-					binaryAttribute: {
+					binaryAttributeKey: {
 						BinaryValue: []byte(binaryValue),
 						DataType:    &binaryType,
 					},
-					stringAttribute: {
+					stringAttributeKey: {
 						DataType:    &stringType,
 						StringValue: &stringValue,
 					},
-					numberAttribute: {
+					numberAttributeKey: {
 						DataType:    &numberType,
 						StringValue: &numberValue,
 					},
@@ -292,55 +288,37 @@ func TestSendMessageBatchV1_Json_Success(t *testing.T) {
 	})
 	assert.Equal(t, "2", getQueueAttributeOutput.Attributes["ApproximateNumberOfMessages"])
 
-	receiveMessageOutput, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+	receiveMessageOutput, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 		QueueUrl:            &queueUrl,
 		MaxNumberOfMessages: 10,
 	})
 
+	assert.Len(t, receiveMessageOutput.Messages, 2)
+	assert.Nil(t, err)
+
 	receivedMessage1 := receiveMessageOutput.Messages[0]
 	receivedMessage2 := receiveMessageOutput.Messages[1]
 
-	assert.Equal(t, messageBody1, string(*receivedMessage1.Body))
-	assert.Equal(t, messageBody2, string(*receivedMessage2.Body))
-	assert.Equal(t, 3, len(receivedMessage2.MessageAttributes))
+	assert.Equal(t, messageBody1, *receivedMessage1.Body)
+	assert.Len(t, receivedMessage1.MessageAttributes, 0)
+	assert.Equal(t, "1c538b76fce1a234bce865025c02b042", *receivedMessage1.MD5OfBody)
+	assert.Equal(t, "", *receivedMessage1.MD5OfMessageAttributes)
 
-	var attr1, attr2, attr3 models.ResultMessageAttribute
-	for k, attr := range receivedMessage2.MessageAttributes {
-		if k == binaryAttribute {
-			attr1.Name = k
-			attr1.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				BinaryValue: string(attr.BinaryValue),
-			}
+	assert.Equal(t, messageBody2, *receivedMessage2.Body)
+	assert.Len(t, receivedMessage2.MessageAttributes, 3)
+	assert.Equal(t, "58bdcfd42148396616e4260421a9b4e5", *receivedMessage2.MD5OfBody)
+	assert.Equal(t, "ddfbe54b92058bf5b5f00055fa2032a5", *receivedMessage2.MD5OfMessageAttributes)
 
-		} else if k == stringAttribute {
-			attr2.Name = k
-			attr2.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-			}
-		} else if k == numberAttribute {
-			attr3.Name = k
-			attr3.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-			}
-		}
-	}
-	assert.Equal(t, binaryAttribute, attr1.Name)
-	assert.Equal(t, binaryType, attr1.Value.DataType)
-	assert.Equal(t, "YmFzZTY0LWVuY29kZWQtdmFsdWU=", attr1.Value.BinaryValue) // base64 encoded value
-
-	assert.Equal(t, stringAttribute, attr2.Name)
-	assert.Equal(t, stringType, attr2.Value.DataType)
-	assert.Equal(t, stringValue, attr2.Value.StringValue)
-
-	assert.Equal(t, numberAttribute, attr3.Name)
-	assert.Equal(t, numberType, attr3.Value.DataType)
-	assert.Equal(t, numberValue, attr3.Value.StringValue)
+	assert.Len(t, receivedMessage2.MessageAttributes, 3)
+	assert.Equal(t, stringType, *receivedMessage2.MessageAttributes[stringAttributeKey].DataType)
+	assert.Equal(t, stringValue, *receivedMessage2.MessageAttributes[stringAttributeKey].StringValue)
+	assert.Equal(t, numberType, *receivedMessage2.MessageAttributes[numberAttributeKey].DataType)
+	assert.Equal(t, numberValue, *receivedMessage2.MessageAttributes[numberAttributeKey].StringValue)
+	assert.Equal(t, binaryType, *receivedMessage2.MessageAttributes[binaryAttributeKey].DataType)
+	assert.Equal(t, []uint8(binaryValue), receivedMessage2.MessageAttributes[binaryAttributeKey].BinaryValue)
 }
 
-func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
+func TestSendMessageBatchV1_Xml_Success_including_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -362,16 +340,16 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 	messageBody1 := "test%20message%20body%201"
 	messageBody2 := "test%20message%20body%202"
 
-	binaryAttribute := "binary"
-	stringAttribute := "String"
-	numberAttribute := "number"
+	binaryAttributeKey := "binary-key"
+	stringAttributeKey := "string-key"
+	numberAttributeKey := "number-key"
 
 	binaryType := "Binary"
 	stringType := "String"
 	numberType := "Number"
 
-	binaryValue := "YmFzZTY0LWVuY29kZWQtdmFsdWU="
-	stringValue := "hogeValue"
+	binaryValue := "binary-value"
+	stringValue := "string-value"
 	numberValue := "100"
 
 	// Target test: send a message
@@ -390,13 +368,13 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 		WithFormField("Entries.0.MessageBody", messageBody1).
 		WithFormField("Entries.1.Id", messageId2).
 		WithFormField("Entries.1.MessageBody", messageBody2).
-		WithFormField("Entries.1.MessageAttributes.1.Name", binaryAttribute).
+		WithFormField("Entries.1.MessageAttributes.1.Name", binaryAttributeKey).
 		WithFormField("Entries.1.MessageAttributes.1.Value.DataType", binaryType).
 		WithFormField("Entries.1.MessageAttributes.1.Value.BinaryValue", binaryValue).
-		WithFormField("Entries.1.MessageAttributes.2.Name", stringAttribute).
+		WithFormField("Entries.1.MessageAttributes.2.Name", stringAttributeKey).
 		WithFormField("Entries.1.MessageAttributes.2.Value.DataType", stringType).
 		WithFormField("Entries.1.MessageAttributes.2.Value.StringValue", stringValue).
-		WithFormField("Entries.1.MessageAttributes.3.Name", numberAttribute).
+		WithFormField("Entries.1.MessageAttributes.3.Name", numberAttributeKey).
 		WithFormField("Entries.1.MessageAttributes.3.Value.DataType", numberType).
 		WithFormField("Entries.1.MessageAttributes.3.Value.StringValue", numberValue).
 		Expect().
@@ -415,51 +393,32 @@ func TestSendMessageBatchV1_Xml_Success(t *testing.T) {
 	})
 	assert.Equal(t, "2", getQueueAttributeOutput.Attributes["ApproximateNumberOfMessages"])
 
-	receiveMessageOutput, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+	receiveMessageOutput, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 		QueueUrl:            &af.QueueUrl,
 		MaxNumberOfMessages: 10,
 	})
 
+	assert.Len(t, receiveMessageOutput.Messages, 2)
+	assert.Nil(t, err)
+
 	receivedMessage1 := receiveMessageOutput.Messages[0]
 	receivedMessage2 := receiveMessageOutput.Messages[1]
 
-	assert.Equal(t, messageBody1, string(*receivedMessage1.Body))
-	assert.Equal(t, messageBody2, string(*receivedMessage2.Body))
-	assert.Equal(t, 3, len(receivedMessage2.MessageAttributes))
+	assert.Equal(t, messageBody1, *receivedMessage1.Body)
+	assert.Len(t, receivedMessage1.MessageAttributes, 0)
+	assert.Equal(t, "1c538b76fce1a234bce865025c02b042", *receivedMessage1.MD5OfBody)
+	assert.Equal(t, "", *receivedMessage1.MD5OfMessageAttributes)
 
-	var attr1, attr2, attr3 models.ResultMessageAttribute
-	for k, attr := range receivedMessage2.MessageAttributes {
-		if k == binaryAttribute {
-			attr1.Name = k
-			attr1.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				BinaryValue: string(attr.BinaryValue),
-			}
+	assert.Equal(t, messageBody2, *receivedMessage2.Body)
+	assert.Len(t, receivedMessage2.MessageAttributes, 3)
+	assert.Equal(t, "58bdcfd42148396616e4260421a9b4e5", *receivedMessage2.MD5OfBody)
+	assert.Equal(t, "ddfbe54b92058bf5b5f00055fa2032a5", *receivedMessage2.MD5OfMessageAttributes)
 
-		} else if k == stringAttribute {
-			attr2.Name = k
-			attr2.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-			}
-		} else if k == numberAttribute {
-			attr3.Name = k
-			attr3.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-			}
-		}
-	}
-	assert.Equal(t, binaryAttribute, attr1.Name)
-	assert.Equal(t, binaryType, attr1.Value.DataType)
-	assert.Equal(t, "YmFzZTY0LWVuY29kZWQtdmFsdWU=", attr1.Value.BinaryValue) // base64 encoded value
-
-	assert.Equal(t, stringAttribute, attr2.Name)
-	assert.Equal(t, stringType, attr2.Value.DataType)
-	assert.Equal(t, stringValue, attr2.Value.StringValue)
-
-	assert.Equal(t, numberAttribute, attr3.Name)
-	assert.Equal(t, numberType, attr3.Value.DataType)
-	assert.Equal(t, numberValue, attr3.Value.StringValue)
-
+	assert.Len(t, receivedMessage2.MessageAttributes, 3)
+	assert.Equal(t, stringType, *receivedMessage2.MessageAttributes[stringAttributeKey].DataType)
+	assert.Equal(t, stringValue, *receivedMessage2.MessageAttributes[stringAttributeKey].StringValue)
+	assert.Equal(t, numberType, *receivedMessage2.MessageAttributes[numberAttributeKey].DataType)
+	assert.Equal(t, numberValue, *receivedMessage2.MessageAttributes[numberAttributeKey].StringValue)
+	assert.Equal(t, binaryType, *receivedMessage2.MessageAttributes[binaryAttributeKey].DataType)
+	assert.Equal(t, []uint8(binaryValue), receivedMessage2.MessageAttributes[binaryAttributeKey].BinaryValue)
 }

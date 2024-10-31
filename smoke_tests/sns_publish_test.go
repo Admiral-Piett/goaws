@@ -219,21 +219,21 @@ func Test_Publish_sqs_json_raw_optional_fields(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 
-	receivedMessage, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+	receivedMessages, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 		QueueUrl: &models.SyncQueues.Queues["subscribed-queue1"].URL,
 	})
 
-	assert.Len(t, receivedMessage.Messages, 1)
-	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
-	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 1)
-	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "9c35d992dee4528f7d20c274d61e16f5", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Len(t, receivedMessages.Messages, 1)
+	assert.Equal(t, message, *receivedMessages.Messages[0].Body)
+	assert.Len(t, receivedMessages.Messages[0].MessageAttributes, 1)
+	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessages.Messages[0].MD5OfBody)
+	assert.Equal(t, "9c35d992dee4528f7d20c274d61e16f5", *receivedMessages.Messages[0].MD5OfMessageAttributes)
 
-	assert.Equal(t, "String", *receivedMessage.Messages[0].MessageAttributes["test"].DataType)
-	assert.Equal(t, "value", *receivedMessage.Messages[0].MessageAttributes["test"].StringValue)
-	assert.Equal(t, []byte{}, receivedMessage.Messages[0].MessageAttributes["test"].BinaryValue)
-	assert.Nil(t, receivedMessage.Messages[0].MessageAttributes["test"].BinaryListValues)
-	assert.Nil(t, receivedMessage.Messages[0].MessageAttributes["test"].StringListValues)
+	assert.Equal(t, "String", *receivedMessages.Messages[0].MessageAttributes["test"].DataType)
+	assert.Equal(t, "value", *receivedMessages.Messages[0].MessageAttributes["test"].StringValue)
+	assert.Nil(t, receivedMessages.Messages[0].MessageAttributes["test"].BinaryValue)
+	assert.Nil(t, receivedMessages.Messages[0].MessageAttributes["test"].BinaryListValues)
+	assert.Nil(t, receivedMessages.Messages[0].MessageAttributes["test"].StringListValues)
 }
 
 func Test_Publish_sqs_json_not_raw_optional_fields(t *testing.T) {

@@ -30,10 +30,9 @@ func TestSendMessageBatchV1_Success(t *testing.T) {
 			{
 				Id:          "test-msg-with-single-attirbute",
 				MessageBody: "test%20message%20body%202",
-				MessageAttributes: map[string]models.MessageAttributeValue{
+				MessageAttributes: map[string]models.MessageAttribute{
 					"my-attribute-name": {
-						BinaryValue: "base64-encoded-value",
-						DataType:    "hogehoge",
+						DataType:    "String",
 						StringValue: "my-attribute-string-value",
 					},
 				},
@@ -41,15 +40,13 @@ func TestSendMessageBatchV1_Success(t *testing.T) {
 			{
 				Id:          "test-msg-with-multi-attirbute",
 				MessageBody: "test%20message%20body%203",
-				MessageAttributes: map[string]models.MessageAttributeValue{
+				MessageAttributes: map[string]models.MessageAttribute{
 					"my-attribute-name-1": {
-						BinaryValue: "base64-encoded-value-1",
-						DataType:    "hogehoge",
-						StringValue: "my-attribute-string-value-1",
+						BinaryValue: []byte("binary-value-1"),
+						DataType:    "Binary",
 					},
 					"my-attribute-name-2": {
-						BinaryValue: "base64-encoded-value-2",
-						DataType:    "hogehoge",
+						DataType:    "String",
 						StringValue: "my-attribute-string-value-2",
 					},
 				},

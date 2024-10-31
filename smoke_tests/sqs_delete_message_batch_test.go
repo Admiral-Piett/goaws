@@ -404,6 +404,8 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
+	e := httpexpect.Default(t, server.URL)
+
 	// create queue
 	createQueueResponse, _ := sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
 		QueueName: &af.QueueName,
@@ -423,90 +425,35 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	messageBody2 := "test%20message%20body%202"
 	messageBody3 := "test%20message%20body%203"
 
-	type SendMessageRequestBodyXML struct {
-		Action      string `xml:"Action"`
-		Version     string `xml:"Version"`
-		QueueUrl    string `xml:"QueueUrl"`
-		MessageBody string `xml:"MessageBody"`
-	}
+	_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse.QueueUrl,
+		MessageBody: &messageBody1,
+	})
+	assert.Nil(t, err)
 
-	sendMessageRequest1 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody1,
-	}
-	sendMessageRequest2 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse2.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody2,
-	}
-	sendMessageRequest3 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody3,
-	}
+	_, err = sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse2.QueueUrl,
+		MessageBody: &messageBody2,
+	})
+	assert.Nil(t, err)
 
-	// send messages
-	e := httpexpect.Default(t, server.URL)
-	e.POST("/").
-		WithForm(sendMessageRequest1).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
+	_, err = sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse.QueueUrl,
+		MessageBody: &messageBody3,
+	})
+	assert.Nil(t, err)
 
-	e.POST("/").
-		WithForm(sendMessageRequest2).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
+	receivedMessageResponse1, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            createQueueResponse.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+	assert.Nil(t, err)
 
-	e.POST("/").
-		WithForm(sendMessageRequest3).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-
-	type ReceiveMessageRequestBodyXML struct {
-		Action              string `xml:"Action"`
-		QueueUrl            string `xml:"QueueUrl"`
-		Version             string `xml:"Version"`
-		MaxNumberOfMessages string `xml:"MaxNumberOfMessages"`
-	}
-
-	receiveMessageRequestBodyXML1 := ReceiveMessageRequestBodyXML{
-		Action:              "ReceiveMessage",
-		QueueUrl:            *createQueueResponse.QueueUrl,
-		Version:             "2012-11-05",
-		MaxNumberOfMessages: "10",
-	}
-
-	receiveMessageRequestBodyXML2 := ReceiveMessageRequestBodyXML{
-		Action:              "ReceiveMessage",
-		QueueUrl:            *createQueueResponse2.QueueUrl,
-		Version:             "2012-11-05",
-		MaxNumberOfMessages: "10",
-	}
-
-	// received messages
-	receivedMessages1 := e.POST("/").
-		WithForm(receiveMessageRequestBodyXML1).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	receivedMessageResponse1 := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(receivedMessages1), &receivedMessageResponse1)
-
-	// received messages
-	receivedMessages2 := e.POST("/").
-		WithForm(receiveMessageRequestBodyXML2).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	receivedMessageResponse2 := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(receivedMessages2), &receivedMessageResponse2)
+	receivedMessageResponse2, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            createQueueResponse2.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+	assert.Nil(t, err)
 
 	deleteMessageBatchRequestBodyXML := struct {
 		Action   string `xml:"Action"`
@@ -522,11 +469,11 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	deletedMessages := e.POST("/").
 		WithForm(deleteMessageBatchRequestBodyXML).
 		WithFormField("Entries.0.Id", testId1).
-		WithFormField("Entries.0.ReceiptHandle", receivedMessageResponse1.Result.Messages[0].ReceiptHandle).
+		WithFormField("Entries.0.ReceiptHandle", *receivedMessageResponse1.Messages[0].ReceiptHandle).
 		WithFormField("Entries.1.Id", testId2).
-		WithFormField("Entries.1.ReceiptHandle", receivedMessageResponse2.Result.Messages[0].ReceiptHandle).
+		WithFormField("Entries.1.ReceiptHandle", *receivedMessageResponse2.Messages[0].ReceiptHandle).
 		WithFormField("Entries.2.Id", testId3).
-		WithFormField("Entries.2.ReceiptHandle", receivedMessageResponse1.Result.Messages[1].ReceiptHandle).
+		WithFormField("Entries.2.ReceiptHandle", *receivedMessageResponse1.Messages[1].ReceiptHandle).
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
@@ -534,14 +481,11 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	deleteMessageBatchResponse := models.DeleteMessageBatchResponse{}
 	xml.Unmarshal([]byte(deletedMessages), &deleteMessageBatchResponse)
 
-	// confirm no message
-	receivedMessages3 := e.POST("/").
-		WithForm(receiveMessageRequestBodyXML1).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	receivedMessageResponse3 := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(receivedMessages3), &receivedMessageResponse3)
+	receivedMessageResponse3, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            createQueueResponse.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+	assert.Nil(t, err)
 
 	// success: delete messages
 	assert.Contains(t, deleteMessageBatchResponse.Result.Successful[0].Id, testId1)
@@ -554,7 +498,7 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	assert.Contains(t, deleteMessageBatchResponse.Result.Failed[0].Message, failedMessage)
 
 	// confirm no message
-	assert.Empty(t, receivedMessageResponse3.Result.Messages)
+	assert.Empty(t, receivedMessageResponse3.Messages)
 }
 
 func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
@@ -568,6 +512,8 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	sdkConfig.BaseEndpoint = aws.String(server.URL)
 	sqsClient := sqs.NewFromConfig(sdkConfig)
 
+	e := httpexpect.Default(t, server.URL)
+
 	// create queue
 	createQueueResponse, _ := sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
 		QueueName: &af.QueueName,
@@ -580,72 +526,29 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	messageBody2 := "test%20message%20body%202"
 	messageBody3 := "test%20message%20body%203"
 
-	type SendMessageRequestBodyXML struct {
-		Action      string `xml:"Action"`
-		Version     string `xml:"Version"`
-		QueueUrl    string `xml:"QueueUrl"`
-		MessageBody string `xml:"MessageBody"`
-	}
+	_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse.QueueUrl,
+		MessageBody: &messageBody1,
+	})
+	assert.Nil(t, err)
 
-	sendMessageRequest1 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody1,
-	}
-	sendMessageRequest2 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody2,
-	}
-	sendMessageRequest3 := SendMessageRequestBodyXML{
-		Action:      "SendMessage",
-		QueueUrl:    *createQueueResponse.QueueUrl,
-		Version:     "2012-11-05",
-		MessageBody: messageBody3,
-	}
+	_, err = sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse.QueueUrl,
+		MessageBody: &messageBody2,
+	})
+	assert.Nil(t, err)
 
-	// send messages
-	e := httpexpect.Default(t, server.URL)
-	e.POST("/").
-		WithForm(sendMessageRequest1).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
+	_, err = sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    createQueueResponse.QueueUrl,
+		MessageBody: &messageBody3,
+	})
+	assert.Nil(t, err)
 
-	e.POST("/").
-		WithForm(sendMessageRequest2).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-
-	e.POST("/").
-		WithForm(sendMessageRequest3).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-
-	var ReceiveMessageRequestBodyXML = struct {
-		Action              string `xml:"Action"`
-		QueueUrl            string `xml:"QueueUrl"`
-		Version             string `xml:"Version"`
-		MaxNumberOfMessages string `xml:"MaxNumberOfMessages"`
-	}{
-		Action:              "ReceiveMessage",
-		QueueUrl:            *createQueueResponse.QueueUrl,
-		Version:             "2012-11-05",
-		MaxNumberOfMessages: "10",
-	}
-
-	// received messages
-	receivedMessages := e.POST("/").
-		WithForm(ReceiveMessageRequestBodyXML).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	receivedMessageResponse := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(receivedMessages), &receivedMessageResponse)
+	receivedMessageResponse, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            createQueueResponse.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+	assert.Nil(t, err)
 
 	deleteMessageBatchRequestBodyXML := struct {
 		Action   string `xml:"Action"`
@@ -661,11 +564,11 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	deletedMessages := e.POST("/").
 		WithForm(deleteMessageBatchRequestBodyXML).
 		WithFormField("Entries.0.Id", testId1).
-		WithFormField("Entries.0.ReceiptHandle", receivedMessageResponse.Result.Messages[0].ReceiptHandle).
+		WithFormField("Entries.0.ReceiptHandle", *receivedMessageResponse.Messages[0].ReceiptHandle).
 		WithFormField("Entries.1.Id", testId2).
-		WithFormField("Entries.1.ReceiptHandle", receivedMessageResponse.Result.Messages[1].ReceiptHandle).
+		WithFormField("Entries.1.ReceiptHandle", *receivedMessageResponse.Messages[1].ReceiptHandle).
 		WithFormField("Entries.2.Id", testId3).
-		WithFormField("Entries.2.ReceiptHandle", receivedMessageResponse.Result.Messages[2].ReceiptHandle).
+		WithFormField("Entries.2.ReceiptHandle", *receivedMessageResponse.Messages[2].ReceiptHandle).
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
@@ -673,14 +576,11 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	deleteMessageBatchResponse := models.DeleteMessageBatchResponse{}
 	xml.Unmarshal([]byte(deletedMessages), &deleteMessageBatchResponse)
 
-	// confirm no message
-	receivedMessages2 := e.POST("/").
-		WithForm(ReceiveMessageRequestBodyXML).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	receivedMessageResponse2 := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(receivedMessages2), &receivedMessageResponse)
+	receivedMessageResponse2, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            createQueueResponse.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+	assert.Nil(t, err)
 
 	// check no error
 	assert.Empty(t, deleteMessageBatchResponse.Result.Failed)
@@ -691,5 +591,5 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	assert.Contains(t, deleteMessageBatchResponse.Result.Successful[2].Id, testId3)
 
 	// confirm no message
-	assert.Empty(t, receivedMessageResponse2)
+	assert.Empty(t, receivedMessageResponse2.Messages)
 }

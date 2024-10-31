@@ -26,15 +26,15 @@ func TestDeleteMessageBatchV1_success_all_message(t *testing.T) {
 		Name: "testing",
 		Messages: []models.SqsMessage{
 			{
-				MessageBody:   []byte("test%20message%20body%201"),
+				MessageBody:   "test%20message%20body%201",
 				ReceiptHandle: "test1",
 			},
 			{
-				MessageBody:   []byte("test%20message%20body%202"),
+				MessageBody:   "test%20message%20body%202",
 				ReceiptHandle: "test2",
 			},
 			{
-				MessageBody:   []byte("test%20message%20body%203"),
+				MessageBody:   "test%20message%20body%203",
 				ReceiptHandle: "test3",
 			},
 		},
@@ -89,11 +89,11 @@ func TestDeleteMessageBatchV1_success_not_found_message(t *testing.T) {
 		Name: "testing",
 		Messages: []models.SqsMessage{
 			{
-				MessageBody:   []byte("test%20message%20body%201"),
+				MessageBody:   "test%20message%20body%201",
 				ReceiptHandle: "test1",
 			},
 			{
-				MessageBody:   []byte("test%20message%20body%203"),
+				MessageBody:   "test%20message%20body%203",
 				ReceiptHandle: "test3",
 			},
 		},

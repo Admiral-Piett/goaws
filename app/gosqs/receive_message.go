@@ -119,7 +119,7 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 				models.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
 			}
 
-			messages = append(messages, getMessageResult(msg))
+			messages = append(messages, buildResultMessage(msg))
 
 			numMsg++
 		}
@@ -141,34 +141,19 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 	return http.StatusOK, respStruct
 }
 
-func getMessageResult(m *models.SqsMessage) *models.ResultMessage {
-	msgMttrs := []*models.ResultMessageAttribute{}
-	for _, attr := range m.MessageAttributes {
-		msgMttrs = append(msgMttrs, getMessageAttributeResult(&attr))
-	}
-
-	attrsMap := map[string]string{
-		"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.UnixNano()/int64(time.Millisecond)),
-		"SenderId":                         models.CurrentEnvironment.AccountID,
-		"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
-		"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().UnixNano()/int64(time.Millisecond)),
-	}
-
-	var attrs []*models.ResultAttribute
-	for k, v := range attrsMap {
-		attrs = append(attrs, &models.ResultAttribute{
-			Name:  k,
-			Value: v,
-		})
-	}
-
+func buildResultMessage(m *models.SqsMessage) *models.ResultMessage {
 	return &models.ResultMessage{
 		MessageId:              m.Uuid,
 		Body:                   m.MessageBody,
 		ReceiptHandle:          m.ReceiptHandle,
-		MD5OfBody:              utils.GetMD5Hash(string(m.MessageBody)),
+		MD5OfBody:              utils.GetMD5Hash(m.MessageBody),
 		MD5OfMessageAttributes: m.MD5OfMessageAttributes,
-		MessageAttributes:      msgMttrs,
-		Attributes:             attrs,
+		MessageAttributes:      m.MessageAttributes,
+		Attributes: map[string]string{
+			"ApproximateFirstReceiveTimestamp": fmt.Sprintf("%d", m.ReceiptTime.UnixNano()/int64(time.Millisecond)),
+			"SenderId":                         models.CurrentEnvironment.AccountID,
+			"ApproximateReceiveCount":          fmt.Sprintf("%d", m.NumberOfReceives+1),
+			"SentTimestamp":                    fmt.Sprintf("%d", time.Now().UTC().UnixNano()/int64(time.Millisecond)),
+		},
 	}
 }

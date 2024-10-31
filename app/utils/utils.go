@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/md5"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -31,9 +30,6 @@ func init() {
 	XmlDecoder.IgnoreUnknownKeys(true)
 }
 
-// QUESTION - alternately we could have the router.actionHandler method call this, but then our router maps
-// need to track the request type AND the function call.  I think there'd be a lot of interface switching
-// back and forth.
 func TransformRequest(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 	switch req.Header.Get("Content-Type") {
 	case "application/x-amz-json-1.0":
@@ -92,38 +88,9 @@ func CreateErrorResponseV1(errKey string, isSqs bool) (int, interfaces.AbstractR
 
 	respStruct := models.ErrorResponse{
 		Result:    err.Response(),
-		RequestId: "00000000-0000-0000-0000-000000000000", // TODO - fix
+		RequestId: "00000000-0000-0000-0000-000000000000",
 	}
 	return err.StatusCode(), respStruct
-}
-
-// TODO:
-// Refactor internal model for MessageAttribute between SendMessage and ReceiveMessage
-// from app.SqsMessageAttributeValue(old) to models.MessageAttributeValue(new) and remove this temporary function.
-func ConvertToOldMessageAttributeValueStructure(newValues map[string]models.MessageAttributeValue) map[string]models.SqsMessageAttributeValue {
-	attributes := make(map[string]models.SqsMessageAttributeValue)
-
-	for name, entry := range newValues {
-		// StringListValue and BinaryListValue is currently not implemented
-		// Please refer app/gosqs/message_attributes.go
-		value := ""
-		valueKey := ""
-		if entry.StringValue != "" {
-			value = entry.StringValue
-			valueKey = "StringValue"
-		} else if entry.BinaryValue != "" {
-			value = entry.BinaryValue
-			valueKey = "BinaryValue"
-		}
-		attributes[name] = models.SqsMessageAttributeValue{
-			Name:     name,
-			DataType: entry.DataType,
-			Value:    value,
-			ValueKey: valueKey,
-		}
-	}
-
-	return attributes
 }
 
 func GetMD5Hash(text string) string {
@@ -132,7 +99,7 @@ func GetMD5Hash(text string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func HashAttributes(attributes map[string]models.SqsMessageAttributeValue) string {
+func HashAttributes(attributes map[string]models.MessageAttribute) string {
 	hasher := md5.New()
 
 	keys := sortedKeys(attributes)
@@ -141,20 +108,19 @@ func HashAttributes(attributes map[string]models.SqsMessageAttributeValue) strin
 
 		addStringToHash(hasher, key)
 		addStringToHash(hasher, attributeValue.DataType)
-		if attributeValue.ValueKey == "StringValue" {
+		if attributeValue.DataType == "String" {
 			hasher.Write([]byte{1})
-			addStringToHash(hasher, attributeValue.Value)
-		} else if attributeValue.ValueKey == "BinaryValue" {
+			addStringToHash(hasher, attributeValue.StringValue)
+		} else if attributeValue.DataType == "Binary" {
 			hasher.Write([]byte{2})
-			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.Value)
-			addBytesToHash(hasher, bytes)
+			addBytesToHash(hasher, attributeValue.BinaryValue)
 		}
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func sortedKeys(attributes map[string]models.SqsMessageAttributeValue) []string {
+func sortedKeys(attributes map[string]models.MessageAttribute) []string {
 	var keys []string
 	for key := range attributes {
 		keys = append(keys, key)
