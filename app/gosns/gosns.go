@@ -228,7 +228,7 @@ func getSubscription(subsArn string) *models.Subscription {
 }
 
 func createMessageBody(subs *models.Subscription, entry interfaces.AbstractPublishEntry,
-	messageAttributes map[string]models.SqsMessageAttributeValue) ([]byte, error) {
+	messageAttributes map[string]models.MessageAttribute) (string, error) {
 
 	msgId := uuid.NewString()
 	message := models.SNSMessage{
@@ -240,13 +240,13 @@ func createMessageBody(subs *models.Subscription, entry interfaces.AbstractPubli
 		SignatureVersion:  "1",
 		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, msgId),
 		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, subs.SubscriptionArn),
-		MessageAttributes: formatAttributes(messageAttributes),
+		MessageAttributes: messageAttributes,
 	}
 
 	if models.MessageStructure(entry.GetMessageStructure()) == models.MessageStructureJSON {
 		m, err := extractMessageFromJSON(entry.GetMessage(), subs.Protocol)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		message.Message = m
 	} else {
@@ -261,29 +261,10 @@ func createMessageBody(subs *models.Subscription, entry interfaces.AbstractPubli
 	}
 
 	byteMsg, _ := json.Marshal(message)
-	return byteMsg, nil
-}
-
-func formatAttributes(values map[string]models.SqsMessageAttributeValue) map[string]models.MessageAttributeValue {
-	attr := make(map[string]models.MessageAttributeValue)
-	for k, v := range values {
-		if v.DataType == "String" {
-			attr[k] = models.MessageAttributeValue{
-				DataType:    v.DataType,
-				StringValue: v.Value,
-			}
-		} else {
-			attr[k] = models.MessageAttributeValue{
-				DataType:    v.DataType,
-				BinaryValue: v.Value, // TODO - this may need to be a []byte?
-			}
-		}
-	}
-	return attr
+	return string(byteMsg), nil
 }
 
 func publishHTTP(subs *models.Subscription, topicArn string, entry interfaces.AbstractPublishEntry) {
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
 	id := uuid.NewString()
 	msg := models.SNSMessage{
 		Type:              "Notification",
@@ -295,7 +276,7 @@ func publishHTTP(subs *models.Subscription, topicArn string, entry interfaces.Ab
 		SignatureVersion:  "1",
 		SigningCertURL:    fmt.Sprintf("http://%s:%s/SimpleNotificationService/%s.pem", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, id),
 		UnsubscribeURL:    fmt.Sprintf("http://%s:%s/?Action=Unsubscribe&SubscriptionArn=%s", models.CurrentEnvironment.Host, models.CurrentEnvironment.Port, subs.SubscriptionArn),
-		MessageAttributes: formatAttributes(messageAttributes),
+		MessageAttributes: entry.GetMessageAttributes(),
 	}
 
 	signature, err := signMessage(PrivateKEY, &msg)
@@ -318,8 +299,7 @@ func publishHTTP(subs *models.Subscription, topicArn string, entry interfaces.Ab
 // put it in the resulting `body`, so that's all that's in that field when the message is received.  If it's not
 // raw, then we put all this other junk in there too, similar to how AWS stores its metadata in there.
 func publishSQS(subscription *models.Subscription, topic *models.Topic, entry interfaces.AbstractPublishEntry) error {
-	messageAttributes := utils.ConvertToOldMessageAttributeValueStructure(entry.GetMessageAttributes())
-	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(messageAttributes) {
+	if subscription.FilterPolicy != nil && !subscription.FilterPolicy.IsSatisfiedBy(entry.GetMessageAttributes()) {
 		return nil
 	}
 
@@ -333,8 +313,8 @@ func publishSQS(subscription *models.Subscription, topic *models.Topic, entry in
 		msg := models.SqsMessage{}
 
 		if subscription.Raw {
-			msg.MessageAttributes = messageAttributes
-			msg.MD5OfMessageAttributes = utils.HashAttributes(messageAttributes)
+			msg.MessageAttributes = entry.GetMessageAttributes()
+			msg.MD5OfMessageAttributes = utils.HashAttributes(entry.GetMessageAttributes())
 
 			// NOTE: Admiral-Piett - commenting this out.  I don't understand what this is supposed to achieve
 			// for raw message delivery.  I suspect this doesn't work at all, otherwise you'd have to match the
@@ -346,9 +326,9 @@ func publishSQS(subscription *models.Subscription, topic *models.Topic, entry in
 			//} else {
 			//	msg.MessageBody = []byte(entry.GetMessage())
 			//}
-			msg.MessageBody = []byte(entry.GetMessage())
+			msg.MessageBody = entry.GetMessage()
 		} else {
-			m, err := createMessageBody(subscription, entry, messageAttributes)
+			m, err := createMessageBody(subscription, entry, entry.GetMessageAttributes())
 			if err != nil {
 				return err
 			}

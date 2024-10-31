@@ -20,7 +20,7 @@ func TestDeleteMessage(t *testing.T) {
 	q := &models.Queue{
 		Name: "testing",
 		Messages: []models.SqsMessage{{
-			MessageBody:   []byte("test1"),
+			MessageBody:   "test1",
 			ReceiptHandle: "123",
 		}},
 	}

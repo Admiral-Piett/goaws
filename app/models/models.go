@@ -10,29 +10,28 @@ import (
 type MessageStructure string
 type Protocol string
 
-// TODO - reconcile this with app.SqsMessageAttributeValue - deal with ConvertToOldMessageAttributeValueStructure
-type MessageAttributeValue struct {
-	BinaryListValues []string `json:"BinaryListValues,omitempty"` // currently unsupported by AWS
-	BinaryValue      string   `json:"BinaryValue,omitempty"`
-	DataType         string   `json:"DataType,omitempty"`
-	StringListValues []string `json:"StringListValues,omitempty"` // currently unsupported by AWS
-	StringValue      string   `json:"StringValue,omitempty"`
+type MessageAttribute struct {
+	BinaryListValues []string `json:"BinaryListValues,omitempty" xml:"BinaryListValues,omitempty"` // currently unsupported by AWS
+	BinaryValue      []byte   `json:"BinaryValue,omitempty" xml:"BinaryValue,omitempty"`
+	DataType         string   `json:"DataType,omitempty" xml:"DataType,omitempty"`
+	StringListValues []string `json:"StringListValues,omitempty" xml:"StringListValues,omitempty"` // currently unsupported by AWS
+	StringValue      string   `json:"StringValue,omitempty" xml:"StringValue,omitempty"`
 }
 
 type SNSMessage struct {
-	Type              string                           `json:"Type"`
-	Token             string                           `json:"Token,omitempty"`
-	MessageId         string                           `json:"MessageId"`
-	TopicArn          string                           `json:"TopicArn"`
-	Subject           string                           `json:"Subject"`
-	Message           string                           `json:"Message"`
-	Timestamp         string                           `json:"Timestamp"`
-	SignatureVersion  string                           `json:"SignatureVersion"`
-	Signature         string                           `json:"Signature,omitempty"`
-	SigningCertURL    string                           `json:"SigningCertURL"`
-	UnsubscribeURL    string                           `json:"UnsubscribeURL"`
-	SubscribeURL      string                           `json:"SubscribeURL,omitempty"`
-	MessageAttributes map[string]MessageAttributeValue `json:"MessageAttributes,omitempty"`
+	Type              string                      `json:"Type"`
+	Token             string                      `json:"Token,omitempty"`
+	MessageId         string                      `json:"MessageId"`
+	TopicArn          string                      `json:"TopicArn"`
+	Subject           string                      `json:"Subject"`
+	Message           string                      `json:"Message"`
+	Timestamp         string                      `json:"Timestamp"`
+	SignatureVersion  string                      `json:"SignatureVersion"`
+	Signature         string                      `json:"Signature,omitempty"`
+	SigningCertURL    string                      `json:"SigningCertURL"`
+	UnsubscribeURL    string                      `json:"UnsubscribeURL"`
+	SubscribeURL      string                      `json:"SubscribeURL,omitempty"`
+	MessageAttributes map[string]MessageAttribute `json:"MessageAttributes,omitempty"`
 }
 
 type Subscription struct {
@@ -54,7 +53,7 @@ type Topic struct {
 type FilterPolicy map[string][]string
 
 // Function checks if MessageAttributes passed to Topic satisfy FilterPolicy set by subscription
-func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs map[string]SqsMessageAttributeValue) bool {
+func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs map[string]MessageAttribute) bool {
 	for policyAttrName, policyAttrValues := range *fp {
 		attrValue, ok := msgAttrs[policyAttrName]
 		if !ok {
@@ -68,7 +67,7 @@ func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs map[string]SqsMessageAttributeVal
 			return false
 		}
 
-		if !stringInSlice(attrValue.Value, policyAttrValues) {
+		if !stringInSlice(attrValue.StringValue, policyAttrValues) {
 			return false // the attribute value has to be among filtered ones
 		}
 	}
@@ -77,7 +76,7 @@ func (fp *FilterPolicy) IsSatisfiedBy(msgAttrs map[string]SqsMessageAttributeVal
 }
 
 type SqsMessage struct {
-	MessageBody            []byte
+	MessageBody            string
 	Uuid                   string
 	MD5OfMessageAttributes string
 	MD5OfMessageBody       string
@@ -86,7 +85,7 @@ type SqsMessage struct {
 	VisibilityTimeout      time.Time
 	NumberOfReceives       int
 	Retry                  int
-	MessageAttributes      map[string]SqsMessageAttributeValue
+	MessageAttributes      map[string]MessageAttribute
 	GroupID                string
 	DeduplicationID        string
 	SentTime               time.Time
@@ -101,13 +100,6 @@ func (m *SqsMessage) IsReadyForReceipt() bool {
 	}
 	showAt := m.SentTime.Add(randomLatency).Add(time.Duration(m.DelaySecs) * time.Second)
 	return showAt.Before(time.Now())
-}
-
-type SqsMessageAttributeValue struct {
-	Name     string
-	DataType string
-	Value    string
-	ValueKey string
 }
 
 type Queue struct {

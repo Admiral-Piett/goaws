@@ -115,46 +115,23 @@ func Test_SendMessageV1_json_with_attributes(t *testing.T) {
 	assert.Equal(t, "1", getQueueAttributeOutput.Attributes["ApproximateNumberOfMessages"])
 
 	// Receive message and check attribute
-	r3, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+	receivedMessages, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 		QueueUrl: targetQueueUrl,
 	})
-	message := r3.Messages[0]
-	assert.Equal(t, targetMessageBody, string(*message.Body))
-	assert.Equal(t, 3, len(message.MessageAttributes))
-	var attr1, attr2, attr3 models.ResultMessageAttribute
-	for k, attr := range message.MessageAttributes {
-		if k == "attr1" {
-			attr1.Name = k
-			attr1.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-				BinaryValue: string(attr.BinaryValue),
-			}
-		} else if k == "attr2" {
-			attr2.Name = k
-			attr2.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-				BinaryValue: string(attr.BinaryValue),
-			}
-		} else if k == "attr3" {
-			attr3.Name = k
-			attr3.Value = &models.ResultMessageAttributeValue{
-				DataType:    *attr.DataType,
-				StringValue: *attr.StringValue,
-				BinaryValue: string(attr.BinaryValue),
-			}
-		}
-	}
-	assert.Equal(t, "attr1", attr1.Name)
-	assert.Equal(t, "String", attr1.Value.DataType)
-	assert.Equal(t, "attr1_value", attr1.Value.StringValue)
-	assert.Equal(t, "attr2", attr2.Name)
-	assert.Equal(t, "Number", attr2.Value.DataType)
-	assert.Equal(t, "2", attr2.Value.StringValue)
-	assert.Equal(t, "attr3", attr3.Name)
-	assert.Equal(t, "Binary", attr3.Value.DataType)
-	assert.Equal(t, "YXR0cjNfdmFsdWU=", attr3.Value.BinaryValue) // base64 encoded "attr3_value"
+
+	assert.Len(t, receivedMessages.Messages, 1)
+	assert.Equal(t, targetMessageBody, *receivedMessages.Messages[0].Body)
+	assert.Len(t, receivedMessages.Messages[0].MessageAttributes, 3)
+	assert.Equal(t, "6703346b272d00929423e54c28b05d71", *receivedMessages.Messages[0].MD5OfBody)
+	assert.Equal(t, "f371a019316cbdb918de16040b58ccc2", *receivedMessages.Messages[0].MD5OfMessageAttributes)
+
+	assert.Len(t, receivedMessages.Messages[0].MessageAttributes, 3)
+	assert.Equal(t, attr1_dataType, *receivedMessages.Messages[0].MessageAttributes["attr1"].DataType)
+	assert.Equal(t, attr1_value, *receivedMessages.Messages[0].MessageAttributes["attr1"].StringValue)
+	assert.Equal(t, attr2_dataType, *receivedMessages.Messages[0].MessageAttributes["attr2"].DataType)
+	assert.Equal(t, attr2_value, *receivedMessages.Messages[0].MessageAttributes["attr2"].StringValue)
+	assert.Equal(t, attr3_dataType, *receivedMessages.Messages[0].MessageAttributes["attr3"].DataType)
+	assert.Equal(t, attr3_value, receivedMessages.Messages[0].MessageAttributes["attr3"].BinaryValue)
 }
 
 func Test_SendMessageV1_json_MaximumMessageSize_TooBig(t *testing.T) {
@@ -305,7 +282,7 @@ func Test_SendMessageV1_xml_with_attributes(t *testing.T) {
 		WithFormField("MessageAttribute.2.Value.StringValue", "2").
 		WithFormField("MessageAttribute.3.Name", "attr3").
 		WithFormField("MessageAttribute.3.Value.DataType", "Binary").
-		WithFormField("MessageAttribute.3.Value.BinaryValue", "YXR0cjNfdmFsdWU=").
+		WithFormField("MessageAttribute.3.Value.BinaryValue", "attr3_value").
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
@@ -316,43 +293,22 @@ func Test_SendMessageV1_xml_with_attributes(t *testing.T) {
 	// Wait for DelaySecond
 	time.Sleep(1 * time.Second)
 
-	// Receive message and check attribute
-	receiveMessageBodyXML := struct {
-		Action   string `xml:"Action"`
-		Version  string `xml:"Version"`
-		QueueUrl string `xml:"QueueUrl"`
-	}{
-		Action:   "ReceiveMessage",
-		Version:  "2012-11-05",
-		QueueUrl: *targetQueueUrl,
-	}
-	r = e.POST("/").
-		WithForm(receiveMessageBodyXML).
-		Expect().
-		Status(http.StatusOK).
-		Body().Raw()
-	r4 := models.ReceiveMessageResponse{}
-	xml.Unmarshal([]byte(r), &r4)
-	message := r4.Result.Messages[0]
-	assert.Equal(t, "Test Message", string(message.Body))
-	assert.Equal(t, 3, len(message.MessageAttributes))
-	var attr1, attr2, attr3 models.ResultMessageAttribute
-	for _, attr := range message.MessageAttributes {
-		if attr.Name == "attr1" {
-			attr1 = *attr
-		} else if attr.Name == "attr2" {
-			attr2 = *attr
-		} else if attr.Name == "attr3" {
-			attr3 = *attr
-		}
-	}
-	assert.Equal(t, "attr1", attr1.Name)
-	assert.Equal(t, "String", attr1.Value.DataType)
-	assert.Equal(t, "attr1_value", attr1.Value.StringValue)
-	assert.Equal(t, "attr2", attr2.Name)
-	assert.Equal(t, "Number", attr2.Value.DataType)
-	assert.Equal(t, "2", attr2.Value.StringValue)
-	assert.Equal(t, "attr3", attr3.Name)
-	assert.Equal(t, "Binary", attr3.Value.DataType)
-	assert.Equal(t, "YXR0cjNfdmFsdWU=", attr3.Value.BinaryValue) // base64 encoded "attr3_value"
+	receivedMessages, _ := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:            &af.QueueUrl,
+		MaxNumberOfMessages: 10,
+	})
+
+	assert.Len(t, receivedMessages.Messages, 1)
+	assert.Equal(t, "Test Message", *receivedMessages.Messages[0].Body)
+	assert.Len(t, receivedMessages.Messages[0].MessageAttributes, 3)
+	assert.Equal(t, "d1d4180b7e411c4be86b00fb2ee103eb", *receivedMessages.Messages[0].MD5OfBody)
+	assert.Equal(t, "f371a019316cbdb918de16040b58ccc2", *receivedMessages.Messages[0].MD5OfMessageAttributes)
+
+	assert.Len(t, receivedMessages.Messages[0].MessageAttributes, 3)
+	assert.Equal(t, "String", *receivedMessages.Messages[0].MessageAttributes["attr1"].DataType)
+	assert.Equal(t, "attr1_value", *receivedMessages.Messages[0].MessageAttributes["attr1"].StringValue)
+	assert.Equal(t, "Number", *receivedMessages.Messages[0].MessageAttributes["attr2"].DataType)
+	assert.Equal(t, "2", *receivedMessages.Messages[0].MessageAttributes["attr2"].StringValue)
+	assert.Equal(t, "Binary", *receivedMessages.Messages[0].MessageAttributes["attr3"].DataType)
+	assert.Equal(t, []uint8("attr3_value"), receivedMessages.Messages[0].MessageAttributes["attr3"].BinaryValue)
 }

@@ -128,7 +128,7 @@ func TestGetMD5Hash(t *testing.T) {
 }
 
 func TestSortedKeys(t *testing.T) {
-	attributes := map[string]models.SqsMessageAttributeValue{
+	attributes := map[string]models.MessageAttribute{
 		"b": {},
 		"a": {},
 	}

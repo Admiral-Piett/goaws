@@ -16,7 +16,7 @@ import (
 
 // TODO - figure out a better way to handle the wait time in these tests.  Maybe in the smoke tests alone
 // if there's nothing else?
-func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
+func TestReceiveMessageV1_with_WaitTimeEnforced(t *testing.T) {
 	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
 		models.ResetApp()
@@ -44,7 +44,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	}
 
 	// mock sending a message
-	q.Messages = append(q.Messages, models.SqsMessage{MessageBody: []byte("1")})
+	q.Messages = append(q.Messages, models.SqsMessage{MessageBody: "1"})
 
 	// receive message
 	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
@@ -62,7 +62,7 @@ func TestReceiveMessageWaitTimeEnforcedV1(t *testing.T) {
 	assert.Equal(t, "1", string(resp.GetResult().(models.ReceiveMessageResult).Messages[0].Body))
 }
 
-func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
+func TestReceiveMessageV1_CanceledByClient(t *testing.T) {
 	// create a queue
 	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
@@ -134,7 +134,7 @@ func TestReceiveMessage_CanceledByClientV1(t *testing.T) {
 	}
 }
 
-func TestReceiveMessageDelaySecondsV1(t *testing.T) {
+func TestReceiveMessageV1_with_DelaySeconds(t *testing.T) {
 	// create a queue
 	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
@@ -179,7 +179,7 @@ func TestReceiveMessageDelaySecondsV1(t *testing.T) {
 	}
 }
 
-func TestReceiveMessageAttributesV1(t *testing.T) {
+func TestReceiveMessageV1_with_MessageAttributes(t *testing.T) {
 	// create a queue
 	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
@@ -191,12 +191,11 @@ func TestReceiveMessageAttributesV1(t *testing.T) {
 
 	// send a message
 	q.Messages = append(q.Messages, models.SqsMessage{
-		MessageBody: []byte("1"),
-		MessageAttributes: map[string]models.SqsMessageAttributeValue{
+		MessageBody: "1",
+		MessageAttributes: map[string]models.MessageAttribute{
 			"TestMessageAttrName": {
-				Name:     "TestMessageAttrName",
-				DataType: "String",
-				Value:    "TestMessageAttrValue",
+				DataType:    "String",
+				StringValue: "TestMessageAttrValue",
 			},
 		},
 	})
@@ -206,10 +205,14 @@ func TestReceiveMessageAttributesV1(t *testing.T) {
 	status, resp := ReceiveMessageV1(r)
 	result := resp.GetResult().(models.ReceiveMessageResult)
 
+	assert.NotEmpty(t, result.Messages[0].Attributes["ApproximateFirstReceiveTimestamp"])
+	assert.NotEmpty(t, result.Messages[0].Attributes["SenderId"])
+	assert.NotEmpty(t, result.Messages[0].Attributes["ApproximateReceiveCount"])
+	assert.NotEmpty(t, result.Messages[0].Attributes["SentTimestamp"])
+
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "1", string(result.Messages[0].Body))
 	assert.Equal(t, 1, len(result.Messages[0].MessageAttributes))
-	assert.Equal(t, "TestMessageAttrName", result.Messages[0].MessageAttributes[0].Name)
-	assert.Equal(t, "String", result.Messages[0].MessageAttributes[0].Value.DataType)
-	assert.Equal(t, "TestMessageAttrValue", result.Messages[0].MessageAttributes[0].Value.StringValue)
+	assert.Equal(t, "String", result.Messages[0].MessageAttributes["TestMessageAttrName"].DataType)
+	assert.Equal(t, "TestMessageAttrValue", result.Messages[0].MessageAttributes["TestMessageAttrName"].StringValue)
 }
