@@ -52,7 +52,7 @@ func Test_ReceiveMessageV1_json(t *testing.T) {
 	assert.Equal(t, 1, len(receiveMessageResponse.Messages))
 	assert.Equal(t, "MyTestMessage", *receiveMessageResponse.Messages[0].Body)
 	assert.Equal(t, "ad4883a84ad41c79aa3a373698c0d4e9", *receiveMessageResponse.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receiveMessageResponse.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receiveMessageResponse.Messages[0].MD5OfMessageAttributes)
 
 	assert.NotEmpty(t, receiveMessageResponse.Messages[0].Attributes["ApproximateFirstReceiveTimestamp"])
 	assert.NotEmpty(t, receiveMessageResponse.Messages[0].Attributes["SenderId"])

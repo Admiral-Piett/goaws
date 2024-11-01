@@ -167,7 +167,7 @@ func Test_Publish_sqs_json_not_raw(t *testing.T) {
 	assert.Len(t, receivedMessage.Messages, 1)
 	assert.Equal(t, 0, len(receivedMessage.Messages[0].MessageAttributes))
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 
 	body := *receivedMessage.Messages[0].Body
 	assert.Contains(t, body, "\"Message\":\"{\\\"IAm\\\": \\\"aMessage\\\"}\"")
@@ -281,7 +281,7 @@ func Test_Publish_sqs_json_not_raw_optional_fields(t *testing.T) {
 
 	assert.Len(t, receivedMessage.Messages, 1)
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 
 	body := *receivedMessage.Messages[0].Body
 	assert.Contains(t, body, "\"Message\":\"message-value\"")
@@ -545,7 +545,7 @@ func Test_Publish_sqs_xml_not_raw(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
