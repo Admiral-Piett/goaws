@@ -12,10 +12,8 @@ import (
 )
 
 func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
-
 	requestBody := models.NewDeleteMessageBatchRequest()
 	ok := utils.REQUEST_TRANSFORMER(requestBody, req, false)
-
 	if !ok {
 		log.Error("Invalid Request - DeleteMessageBatchV1")
 		return utils.CreateErrorResponseV1("InvalidParameterValue", true)
@@ -44,12 +42,12 @@ func DeleteMessageBatchV1(req *http.Request) (int, interfaces.AbstractResponseBo
 		return utils.CreateErrorResponseV1("TooManyEntriesInBatchRequest", true)
 	}
 
-	ids := map[string]struct{}{}
+	ids := map[string]bool{}
 	for _, v := range requestBody.Entries {
-		if _, ok := ids[v.Id]; ok {
+		if _, found := ids[v.Id]; found {
 			return utils.CreateErrorResponseV1("BatchEntryIdsNotDistinct", true)
 		}
-		ids[v.Id] = struct{}{}
+		ids[v.Id] = true
 	}
 
 	models.SyncQueues.Lock()

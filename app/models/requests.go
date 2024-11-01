@@ -525,7 +525,7 @@ type DeleteMessageBatchRequestEntry struct {
 }
 
 type DeleteMessageBatchRequest struct {
-	Entries  []DeleteMessageBatchRequestEntry `json:"Entries" schema:"Entries"`
+	Entries  []DeleteMessageBatchRequestEntry `json:"Entries"`
 	QueueUrl string                           `json:"QueueUrl" schema:"QueueUrl"`
 }
 
@@ -533,7 +533,26 @@ func NewDeleteMessageBatchRequest() *DeleteMessageBatchRequest {
 	return &DeleteMessageBatchRequest{}
 }
 
-func (r *DeleteMessageBatchRequest) SetAttributesFromForm(values url.Values) {}
+func (r *DeleteMessageBatchRequest) SetAttributesFromForm(values url.Values) {
+	entries := []DeleteMessageBatchRequestEntry{}
+	for i := 1; true; i++ {
+		msgIdKey := fmt.Sprintf("DeleteMessageBatchRequestEntry.%d.Id", i)
+		receiptHandleKey := fmt.Sprintf("DeleteMessageBatchRequestEntry.%d.ReceiptHandle", i)
+
+		msgId := values.Get(msgIdKey)
+		receiptHandle := values.Get(receiptHandleKey)
+		if msgId == "" || receiptHandle == "" {
+			break
+		}
+		entries = append(entries, DeleteMessageBatchRequestEntry{
+			Id:            msgId,
+			ReceiptHandle: receiptHandle,
+		})
+	}
+	if len(entries) > 0 {
+		r.Entries = entries
+	}
+}
 
 // ---- SNS ----
 func NewCreateTopicRequest() *CreateTopicRequest {

@@ -566,3 +566,58 @@ func TestSubscribeRequest_SetAttributesFromForm_stops_if_attributes_not_numbered
 	assert.False(t, cqr.Attributes.RawMessageDelivery)
 	assert.Equal(t, FilterPolicy(nil), cqr.Attributes.FilterPolicy)
 }
+
+func Test_DeleteMessageBatchRequest_SetAttributesFromForm_success(t *testing.T) {
+	form := url.Values{}
+	form.Add("DeleteMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", "receipt-handle-1")
+	form.Add("DeleteMessageBatchRequestEntry.2.Id", "message-id-2")
+	form.Add("DeleteMessageBatchRequestEntry.2.ReceiptHandle", "receipt-handle-2")
+	form.Add("DeleteMessageBatchRequestEntry.3.Id", "message-id-3")
+	form.Add("DeleteMessageBatchRequestEntry.3.ReceiptHandle", "receipt-handle-3")
+
+	dmbr := &DeleteMessageBatchRequest{}
+	dmbr.SetAttributesFromForm(form)
+
+	assert.Len(t, dmbr.Entries, 3)
+	assert.Equal(t, "message-id-1", dmbr.Entries[0].Id)
+	assert.Equal(t, "receipt-handle-1", dmbr.Entries[0].ReceiptHandle)
+	assert.Equal(t, "message-id-2", dmbr.Entries[1].Id)
+	assert.Equal(t, "receipt-handle-2", dmbr.Entries[1].ReceiptHandle)
+	assert.Equal(t, "message-id-3", dmbr.Entries[2].Id)
+	assert.Equal(t, "receipt-handle-3", dmbr.Entries[2].ReceiptHandle)
+}
+
+func Test_DeleteMessageBatchRequest_SetAttributesFromForm_stops_at_non_sequential_keys(t *testing.T) {
+	form := url.Values{}
+	form.Add("DeleteMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", "receipt-handle-1")
+	form.Add("DeleteMessageBatchRequestEntry.4.Id", "message-id-2")
+	form.Add("DeleteMessageBatchRequestEntry.4.ReceiptHandle", "receipt-handle-2")
+	form.Add("DeleteMessageBatchRequestEntry.3.Id", "message-id-3")
+	form.Add("DeleteMessageBatchRequestEntry.3.ReceiptHandle", "receipt-handle-3")
+
+	dmbr := &DeleteMessageBatchRequest{}
+	dmbr.SetAttributesFromForm(form)
+
+	assert.Len(t, dmbr.Entries, 1)
+	assert.Equal(t, "message-id-1", dmbr.Entries[0].Id)
+	assert.Equal(t, "receipt-handle-1", dmbr.Entries[0].ReceiptHandle)
+}
+
+func Test_DeleteMessageBatchRequest_SetAttributesFromForm_stops_at_invalid_keys(t *testing.T) {
+	form := url.Values{}
+	form.Add("DeleteMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("DeleteMessageBatchRequestEntry.1.ReceiptHandle", "receipt-handle-1")
+	form.Add("INVALID_DeleteMessageBatchRequestEntry.2.Id", "message-id-2")
+	form.Add("DeleteMessageBatchRequestEntry.2.ReceiptHandle", "receipt-handle-2")
+	form.Add("DeleteMessageBatchRequestEntry.3.Id", "message-id-3")
+	form.Add("DeleteMessageBatchRequestEntry.3.ReceiptHandle", "receipt-handle-3")
+
+	dmbr := &DeleteMessageBatchRequest{}
+	dmbr.SetAttributesFromForm(form)
+
+	assert.Len(t, dmbr.Entries, 1)
+	assert.Equal(t, "message-id-1", dmbr.Entries[0].Id)
+	assert.Equal(t, "receipt-handle-1", dmbr.Entries[0].ReceiptHandle)
+}
