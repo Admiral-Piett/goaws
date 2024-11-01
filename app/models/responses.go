@@ -13,14 +13,14 @@ type ResponseMetadata struct {
 
 /*** Error Responses ***/
 type ErrorResult struct {
-	Type    string `xml:"Type,omitempty"`
-	Code    string `xml:"Code,omitempty"`
-	Message string `xml:"Message,omitempty"`
+	Type    string `json:"Type,omitempty" xml:"Type,omitempty"`
+	Code    string `json:"Code,omitempty" xml:"Code,omitempty"`
+	Message string `json:"Message,omitempty" xml:"Message,omitempty"`
 }
 
 type ErrorResponse struct {
-	Result    ErrorResult `xml:"Error"`
-	RequestId string      `xml:"RequestId"`
+	Result    ErrorResult `json:"Error" xml:"Error"`
+	RequestId string      `json:"RequestId" xml:"RequestId"`
 }
 
 func (r ErrorResponse) GetResult() interface{} {
@@ -37,9 +37,9 @@ type ReceiveMessageResult struct {
 }
 
 type ReceiveMessageResponse struct {
-	Xmlns    string               `xml:"xmlns,attr"`
-	Result   ReceiveMessageResult `xml:"ReceiveMessageResult"`
-	Metadata ResponseMetadata     `xml:"ResponseMetadata"`
+	Xmlns    string               `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ReceiveMessageResult `json:"ReceiveMessageResult" xml:"ReceiveMessageResult"`
+	Metadata ResponseMetadata     `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ReceiveMessageResponse) GetResult() interface{} {
@@ -51,13 +51,13 @@ func (r ReceiveMessageResponse) GetRequestId() string {
 }
 
 type ResultMessage struct {
-	MessageId              string                      `xml:"MessageId,omitempty"`
-	ReceiptHandle          string                      `xml:"ReceiptHandle,omitempty"`
-	MD5OfBody              string                      `xml:"MD5OfBody,omitempty"`
-	Body                   string                      `xml:"Body,omitempty"`
-	MD5OfMessageAttributes string                      `xml:"MD5OfMessageAttributes,omitempty"`
-	MessageAttributes      map[string]MessageAttribute `xml:"MessageAttribute,omitempty,attr"`
-	Attributes             map[string]string           `xml:"Attribute,omitempty,attr"`
+	MessageId              string                      `json:"MessageId,omitempty" xml:"MessageId,omitempty"`
+	ReceiptHandle          string                      `json:"ReceiptHandle,omitempty" xml:"ReceiptHandle,omitempty"`
+	MD5OfBody              string                      `json:"MD5OfBody,omitempty" xml:"MD5OfBody,omitempty"`
+	Body                   string                      `json:"Body,omitempty" xml:"Body,omitempty"`
+	MD5OfMessageAttributes string                      `json:"MD5OfMessageAttributes,omitempty" xml:"MD5OfMessageAttributes,omitempty"`
+	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes,omitempty" xml:"MessageAttribute,omitempty,attr"`
+	Attributes             map[string]string           `json:"Attributes,omitempty" xml:"Attribute,omitempty,attr"`
 }
 
 // MarshalXML is a custom marshaler for the ResultMessage struct.  We need it because we need to convert the
@@ -103,8 +103,8 @@ func (r *ResultMessage) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 }
 
 type ChangeMessageVisibilityResult struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ChangeMessageVisibilityResult) GetResult() interface{} {
@@ -121,9 +121,9 @@ type CreateQueueResult struct {
 }
 
 type CreateQueueResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   CreateQueueResult `xml:"CreateQueueResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+	Xmlns    string            `json:"Xmlns" xml:"xmlns,attr"`
+	Result   CreateQueueResult `json:"CreateQueueResult" xml:"CreateQueueResult"`
+	Metadata ResponseMetadata  `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r CreateQueueResponse) GetResult() interface{} {
@@ -141,9 +141,9 @@ type ListQueuesResult struct {
 }
 
 type ListQueuesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListQueuesResult `xml:"ListQueuesResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ListQueuesResult `json:"ListQueuesResult" xml:"ListQueuesResult"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ListQueuesResponse) GetResult() interface{} {
@@ -156,20 +156,20 @@ func (r ListQueuesResponse) GetRequestId() string {
 
 /*** Get Queue QueueAttributes ***/
 type Attribute struct {
-	Name  string `xml:"Name,omitempty"`
-	Value string `xml:"Value,omitempty"`
+	Name  string `json:"Name,omitempty" xml:"Name,omitempty"`
+	Value string `json:"Value,omitempty" xml:"Value,omitempty"`
 }
 
 type GetQueueAttributesResult struct {
 	/* VisibilityTimeout, DelaySeconds, ReceiveMessageWaitTimeSeconds, ApproximateNumberOfMessages
 	   ApproximateNumberOfMessagesNotVisible, CreatedTimestamp, LastModifiedTimestamp, QueueArn */
-	Attrs []Attribute `xml:"Attribute,omitempty"`
+	Attrs []Attribute `json:"Attributes,omitempty" xml:"Attribute,omitempty"`
 }
 
 type GetQueueAttributesResponse struct {
-	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
-	Result   GetQueueAttributesResult `xml:"GetQueueAttributesResult"`
-	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                   `json:"Xmlns" xml:"xmlns,attr"`
+	Result   GetQueueAttributesResult `json:"GetQueueAttributesResult" xml:"GetQueueAttributesResult"`
+	Metadata ResponseMetadata         `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r GetQueueAttributesResponse) GetResult() interface{} {
@@ -186,16 +186,16 @@ func (r GetQueueAttributesResponse) GetRequestId() string {
 
 /*** Send Message Response */
 type SendMessageResult struct {
-	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes"`
-	MD5OfMessageBody       string `xml:"MD5OfMessageBody"`
-	MessageId              string `xml:"MessageId"`
-	SequenceNumber         string `xml:"SequenceNumber"`
+	MD5OfMessageAttributes string `json:"MD5OfMessageAttributes,omitempty" xml:"MD5OfMessageAttributes,omitempty"`
+	MD5OfMessageBody       string `json:"MD5OfMessageBody" xml:"MD5OfMessageBody"`
+	MessageId              string `json:"MessageId" xml:"MessageId"`
+	SequenceNumber         string `json:"SequenceNumber,omitempty" xml:"SequenceNumber,omitempty"`
 }
 
 type SendMessageResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   SendMessageResult `xml:"SendMessageResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+	Xmlns    string            `json:"Xmlns" xml:"xmlns,attr"`
+	Result   SendMessageResult `json:"SendMessageResult" xml:"SendMessageResult"`
+	Metadata ResponseMetadata  `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r SendMessageResponse) GetResult() interface{} {
@@ -208,8 +208,8 @@ func (r SendMessageResponse) GetRequestId() string {
 
 /*** Delete Message Response */
 type DeleteMessageResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r DeleteMessageResponse) GetResult() interface{} {
@@ -222,13 +222,13 @@ func (r DeleteMessageResponse) GetRequestId() string {
 
 /*** Get Queue Url Response */
 type GetQueueUrlResult struct {
-	QueueUrl string `xml:"QueueUrl,omitempty"`
+	QueueUrl string `json:"QueueUrl,omitempty" xml:"QueueUrl,omitempty"`
 }
 
 type GetQueueUrlResponse struct {
-	Xmlns    string            `xml:"xmlns,attr,omitempty"`
-	Result   GetQueueUrlResult `xml:"GetQueueUrlResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string            `json:"Xmlns" xml:"xmlns,attr"`
+	Result   GetQueueUrlResult `json:"GetQueueUrlResult" xml:"GetQueueUrlResult"`
+	Metadata ResponseMetadata  `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r GetQueueUrlResponse) GetResult() interface{} {
@@ -240,23 +240,23 @@ func (r GetQueueUrlResponse) GetRequestId() string {
 }
 
 type SendMessageBatchResultEntry struct {
-	Id                     string `xml:"Id"`
-	MessageId              string `xml:"MessageId"`
-	MD5OfMessageBody       string `xml:"MD5OfMessageBody,omitempty"`
-	MD5OfMessageAttributes string `xml:"MD5OfMessageAttributes,omitempty"`
-	SequenceNumber         string `xml:"SequenceNumber"`
+	Id                     string `json:"Id" xml:"Id"`
+	MessageId              string `json:"MessageId" xml:"MessageId"`
+	MD5OfMessageBody       string `json:"MD5OfMessageBody,omitempty" xml:"MD5OfMessageBody,omitempty"`
+	MD5OfMessageAttributes string `json:"MD5OfMessageAttributes,omitempty" xml:"MD5OfMessageAttributes,omitempty"`
+	SequenceNumber         string `json:"SequenceNumber" xml:"SequenceNumber"`
 }
 
 /*** Send Message Batch Response */
 type SendMessageBatchResponse struct {
-	Xmlns    string                 `xml:"xmlns,attr,omitempty"`
-	Result   SendMessageBatchResult `xml:"SendMessageBatchResult"`
-	Metadata ResponseMetadata       `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                 `json:"Xmlns" xml:"xmlns,attr"`
+	Result   SendMessageBatchResult `json:"SendMessageBatchResult" xml:"SendMessageBatchResult"`
+	Metadata ResponseMetadata       `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 type SendMessageBatchResult struct {
-	Entry []SendMessageBatchResultEntry `xml:"SendMessageBatchResultEntry"`
-	Error []BatchResultErrorEntry       `xml:"BatchResultErrorEntry,omitempty"`
+	Entry []SendMessageBatchResultEntry `json:"SendMessageBatchResultEntry" xml:"SendMessageBatchResultEntry"`
+	Error []BatchResultErrorEntry       `json:"BatchResultErrorEntry,omitempty" xml:"BatchResultErrorEntry,omitempty"`
 }
 
 func (r SendMessageBatchResponse) GetResult() interface{} {
@@ -268,15 +268,15 @@ func (r SendMessageBatchResponse) GetRequestId() string {
 }
 
 type BatchResultErrorEntry struct {
-	Code        string `xml:"Code"`
-	Id          string `xml:"Id"`
-	Message     string `xml:"Message,omitempty"`
-	SenderFault bool   `xml:"SenderFault"`
+	Code        string `json:"Code" xml:"Code"`
+	Id          string `json:"Id" xml:"Id"`
+	Message     string `json:"Message,omitempty" xml:"Message,omitempty"`
+	SenderFault bool   `json:"SenderFault" xml:"SenderFault"`
 }
 
 type SetQueueAttributesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r SetQueueAttributesResponse) GetResult() interface{} {
@@ -289,8 +289,8 @@ func (r SetQueueAttributesResponse) GetRequestId() string {
 
 /*** Purge Queue Response */
 type PurgeQueueResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r PurgeQueueResponse) GetResult() interface{} {
@@ -303,8 +303,8 @@ func (r PurgeQueueResponse) GetRequestId() string {
 
 /*** Delete Queue Response */
 type DeleteQueueResponse struct {
-	Xmlns    string           `xml:"xmlns,attr,omitempty"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r DeleteQueueResponse) GetResult() interface{} {
@@ -317,13 +317,13 @@ func (r DeleteQueueResponse) GetRequestId() string {
 
 /*** Create Topic Response */
 type CreateTopicResult struct {
-	TopicArn string `xml:"TopicArn"`
+	TopicArn string `json:"TopicArn" xml:"TopicArn"`
 }
 
 type CreateTopicResponse struct {
-	Xmlns    string            `xml:"xmlns,attr"`
-	Result   CreateTopicResult `xml:"CreateTopicResult"`
-	Metadata ResponseMetadata  `xml:"ResponseMetadata"`
+	Xmlns    string            `json:"Xmlns" xml:"xmlns,attr"`
+	Result   CreateTopicResult `json:"CreateTopicResult" xml:"CreateTopicResult"`
+	Metadata ResponseMetadata  `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r CreateTopicResponse) GetResult() interface{} {
@@ -336,13 +336,13 @@ func (r CreateTopicResponse) GetRequestId() string {
 
 /*** Create Subscription ***/
 type SubscribeResult struct {
-	SubscriptionArn string `xml:"SubscriptionArn"`
+	SubscriptionArn string `json:"SubscriptionArn" xml:"SubscriptionArn"`
 }
 
 type SubscribeResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   SubscribeResult  `xml:"SubscribeResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Result   SubscribeResult  `json:"SubscribeResult" xml:"SubscribeResult"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r SubscribeResponse) GetResult() interface{} {
@@ -355,9 +355,9 @@ func (r SubscribeResponse) GetRequestId() string {
 
 /*** ConfirmSubscriptionResponse ***/
 type ConfirmSubscriptionResponse struct {
-	Xmlns    string                    `xml:"xmlns,attr"`
-	Result   ConfirmSubscriptionResult `xml:"ConfirmSubscriptionResult"`
-	Metadata ResponseMetadata          `xml:"ResponseMetadata"`
+	Xmlns    string                    `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ConfirmSubscriptionResult `json:"ConfirmSubscriptionResult" xml:"ConfirmSubscriptionResult"`
+	Metadata ResponseMetadata          `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 type ConfirmSubscriptionResult struct {
@@ -374,8 +374,8 @@ func (r ConfirmSubscriptionResponse) GetRequestId() string {
 
 /*** Delete Subscription ***/
 type UnsubscribeResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r UnsubscribeResponse) GetResult() interface{} {
@@ -391,15 +391,15 @@ type DeleteMessageBatchResultEntry struct {
 }
 
 type DeleteMessageBatchResult struct {
-	Successful []DeleteMessageBatchResultEntry `xml:"DeleteMessageBatchResultEntry"`
-	Failed     []BatchResultErrorEntry         `xml:"BatchResultErrorEntry,omitempty"`
+	Successful []DeleteMessageBatchResultEntry `json:"Successful" xml:"DeleteMessageBatchResultEntry"`
+	Failed     []BatchResultErrorEntry         `json:"Failed,omitempty" xml:"BatchResultErrorEntry,omitempty"`
 }
 
 /*** Delete Message Batch Response */
 type DeleteMessageBatchResponse struct {
-	Xmlns    string                   `xml:"xmlns,attr,omitempty"`
-	Result   DeleteMessageBatchResult `xml:"DeleteMessageBatchResult"`
-	Metadata ResponseMetadata         `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                   `json:"Xmlns" xml:"xmlns,attr"`
+	Result   DeleteMessageBatchResult `json:"DeleteMessageBatchResult" xml:"DeleteMessageBatchResult"`
+	Metadata ResponseMetadata         `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r DeleteMessageBatchResponse) GetResult() interface{} {
@@ -416,9 +416,9 @@ type PublishResult struct {
 }
 
 type PublishResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   PublishResult    `xml:"PublishResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Result   PublishResult    `json:"PublishResult" xml:"PublishResult"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r PublishResponse) GetResult() interface{} {
@@ -431,21 +431,21 @@ func (r PublishResponse) GetRequestId() string {
 
 /*** List Topics ***/
 type TopicArnResult struct {
-	TopicArn  string `xml:"TopicArn"`
-	NextToken string `xml:"NextToken"` // not implemented
+	TopicArn  string `json:"TopicArn" xml:"TopicArn"`
+	NextToken string `json:"NextToken" xml:"NextToken"` // not implemented
 }
 type TopicNamestype struct {
-	Member []TopicArnResult `xml:"member"`
+	Member []TopicArnResult `json:"Members" xml:"member"`
 }
 
 type ListTopicsResult struct {
-	Topics TopicNamestype `xml:"Topics"`
+	Topics TopicNamestype `json:"Topics" xml:"Topics"`
 }
 
 type ListTopicsResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Result   ListTopicsResult `xml:"ListTopicsResult"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ListTopicsResult `json:"ListTopicsResult" xml:"ListTopicsResult"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ListTopicsResponse) GetResult() interface{} {
@@ -458,8 +458,8 @@ func (r ListTopicsResponse) GetRequestId() string {
 
 /*** Delete Topic ***/
 type DeleteTopicResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r DeleteTopicResponse) GetResult() interface{} {
@@ -473,25 +473,25 @@ func (r DeleteTopicResponse) GetRequestId() string {
 /** List Subcriptions **/
 
 type TopicMemberResult struct {
-	TopicArn        string `xml:"TopicArn"`
-	Protocol        string `xml:"Protocol"`
-	SubscriptionArn string `xml:"SubscriptionArn"`
-	Owner           string `xml:"Owner"`
-	Endpoint        string `xml:"Endpoint"`
+	TopicArn        string `json:"TopicArn" xml:"TopicArn"`
+	Protocol        string `json:"Protocol" xml:"Protocol"`
+	SubscriptionArn string `json:"SubscriptionArn" xml:"SubscriptionArn"`
+	Owner           string `json:"Owner" xml:"Owner"`
+	Endpoint        string `json:"Endpoint" xml:"Endpoint"`
 }
 
 type TopicSubscriptions struct {
-	Member []TopicMemberResult `xml:"member"`
+	Member []TopicMemberResult `json:"Members" xml:"member"`
 }
 
 type ListSubscriptionsResult struct {
-	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
+	Subscriptions TopicSubscriptions `json:"Subscriptions" xml:"Subscriptions"`
 }
 
 type ListSubscriptionsResponse struct {
-	Xmlns    string                  `xml:"xmlns,attr"`
-	Result   ListSubscriptionsResult `xml:"ListSubscriptionsResult"`
-	Metadata ResponseMetadata        `xml:"ResponseMetadata"`
+	Xmlns    string                  `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ListSubscriptionsResult `json:"ListSubscriptionsResult" xml:"ListSubscriptionsResult"`
+	Metadata ResponseMetadata        `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ListSubscriptionsResponse) GetResult() interface{} {
@@ -504,23 +504,23 @@ func (r ListSubscriptionsResponse) GetRequestId() string {
 
 /*** Get Subscription Attributes ***/
 type GetSubscriptionAttributesResult struct {
-	Attributes GetSubscriptionAttributes `xml:"Attributes,omitempty"`
+	Attributes GetSubscriptionAttributes `json:"Attributes,omitempty" xml:"Attributes,omitempty"`
 }
 
 type GetSubscriptionAttributes struct {
 	/* SubscriptionArn, FilterPolicy */
-	Entries []SubscriptionAttributeEntry `xml:"entry,omitempty"`
+	Entries []SubscriptionAttributeEntry `json:"Entries,omitempty" xml:"entry,omitempty"`
 }
 
 type SubscriptionAttributeEntry struct {
-	Key   string `xml:"key,omitempty"`
-	Value string `xml:"value,omitempty"`
+	Key   string `json:"Key,omitempty" xml:"key,omitempty"`
+	Value string `json:"Value,omitempty" xml:"value,omitempty"`
 }
 
 type GetSubscriptionAttributesResponse struct {
-	Xmlns    string                          `xml:"xmlns,attr,omitempty"`
-	Result   GetSubscriptionAttributesResult `xml:"GetSubscriptionAttributesResult"`
-	Metadata ResponseMetadata                `xml:"ResponseMetadata,omitempty"`
+	Xmlns    string                          `json:"Xmlns" xml:"xmlns,attr"`
+	Result   GetSubscriptionAttributesResult `json:"GetSubscriptionAttributesResult" xml:"GetSubscriptionAttributesResult"`
+	Metadata ResponseMetadata                `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r GetSubscriptionAttributesResponse) GetResult() interface{} {
@@ -533,8 +533,8 @@ func (r GetSubscriptionAttributesResponse) GetRequestId() string {
 
 /*** Set Subscription Attributes ***/
 type SetSubscriptionAttributesResponse struct {
-	Xmlns    string           `xml:"xmlns,attr"`
-	Metadata ResponseMetadata `xml:"ResponseMetadata"`
+	Xmlns    string           `json:"Xmlns" xml:"xmlns,attr"`
+	Metadata ResponseMetadata `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r SetSubscriptionAttributesResponse) GetResult() interface{} {
@@ -547,14 +547,14 @@ func (r SetSubscriptionAttributesResponse) GetRequestId() string {
 
 /*** List Subscriptions By Topic Response */
 type ListSubscriptionsByTopicResult struct {
-	NextToken     string             `xml:"NextToken"` // not implemented
-	Subscriptions TopicSubscriptions `xml:"Subscriptions"`
+	NextToken     string             `json:"NextToken" xml:"NextToken"` // not implemented
+	Subscriptions TopicSubscriptions `json:"Subscriptions" xml:"Subscriptions"`
 }
 
 type ListSubscriptionsByTopicResponse struct {
-	Xmlns    string                         `xml:"xmlns,attr"`
-	Result   ListSubscriptionsByTopicResult `xml:"ListSubscriptionsByTopicResult"`
-	Metadata ResponseMetadata               `xml:"ResponseMetadata"`
+	Xmlns    string                         `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ListSubscriptionsByTopicResult `json:"ListSubscriptionsByTopicResult" xml:"ListSubscriptionsByTopicResult"`
+	Metadata ResponseMetadata               `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r ListSubscriptionsByTopicResponse) GetResult() interface{} {
@@ -567,7 +567,7 @@ func (r ListSubscriptionsByTopicResponse) GetRequestId() string {
 
 /*** Publish Batch ***/
 type PublishBatchFailed struct {
-	ErrorEntries []BatchResultErrorEntry `xml:"member"`
+	ErrorEntries []BatchResultErrorEntry `json:"ErrorEntries" xml:"member"`
 }
 
 type PublishBatchResultEntry struct {
@@ -576,18 +576,18 @@ type PublishBatchResultEntry struct {
 }
 
 type PublishBatchSuccessful struct {
-	SuccessEntries []PublishBatchResultEntry `xml:"member"`
+	SuccessEntries []PublishBatchResultEntry `json:"SuccessEntries" xml:"member"`
 }
 
 type PublishBatchResult struct {
-	Failed     PublishBatchFailed     `xml:"Failed"`
-	Successful PublishBatchSuccessful `xml:"Successful"`
+	Failed     PublishBatchFailed     `json:"Failed" xml:"Failed"`
+	Successful PublishBatchSuccessful `json:"Successful" xml:"Successful"`
 }
 
 type PublishBatchResponse struct {
-	Xmlns    string             `xml:"xmlns,attr"`
-	Result   PublishBatchResult `xml:"PublishBatchResult"`
-	Metadata ResponseMetadata   `xml:"ResponseMetadata"`
+	Xmlns    string             `json:"Xmlns" xml:"xmlns,attr"`
+	Result   PublishBatchResult `json:"PublishBatchResult" xml:"PublishBatchResult"`
+	Metadata ResponseMetadata   `json:"ResponseMetadata" xml:"ResponseMetadata"`
 }
 
 func (r PublishBatchResponse) GetResult() interface{} {

@@ -302,7 +302,7 @@ func TestSendMessageBatchV1_Json_Success_including_attributes(t *testing.T) {
 	assert.Equal(t, messageBody1, *receivedMessage1.Body)
 	assert.Len(t, receivedMessage1.MessageAttributes, 0)
 	assert.Equal(t, "1c538b76fce1a234bce865025c02b042", *receivedMessage1.MD5OfBody)
-	assert.Equal(t, "", *receivedMessage1.MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage1.MD5OfMessageAttributes)
 
 	assert.Equal(t, messageBody2, *receivedMessage2.Body)
 	assert.Len(t, receivedMessage2.MessageAttributes, 3)
@@ -407,7 +407,7 @@ func TestSendMessageBatchV1_Xml_Success_including_attributes(t *testing.T) {
 	assert.Equal(t, messageBody1, *receivedMessage1.Body)
 	assert.Len(t, receivedMessage1.MessageAttributes, 0)
 	assert.Equal(t, "1c538b76fce1a234bce865025c02b042", *receivedMessage1.MD5OfBody)
-	assert.Equal(t, "", *receivedMessage1.MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage1.MD5OfMessageAttributes)
 
 	assert.Equal(t, messageBody2, *receivedMessage2.Body)
 	assert.Len(t, receivedMessage2.MessageAttributes, 3)

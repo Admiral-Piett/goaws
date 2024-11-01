@@ -188,13 +188,13 @@ func Test_Publish_batch_sqs_json_not_raw(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[1].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[1].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[1].ReceiptHandle)
@@ -346,13 +346,13 @@ func Test_Publish_batch_sqs_json_not_raw_with_optional_fields(t *testing.T) {
 	assert.Len(t, receivedMessage.Messages, 2)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[1].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[1].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[1].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[1].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[1].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[1].ReceiptHandle)
@@ -722,13 +722,13 @@ func Test_Publish_batch_sqs_xml_not_raw(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Nil(t, receivedMessage.Messages[0].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
 
-	assert.NotEqual(t, "", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.NotEqual(t, "", *receivedMessage.Messages[1].MD5OfBody)
+	assert.Nil(t, receivedMessage.Messages[1].MD5OfMessageAttributes)
 	assert.Len(t, receivedMessage.Messages[1].MessageAttributes, 0)
 	assert.NotNil(t, receivedMessage.Messages[1].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[1].ReceiptHandle)
