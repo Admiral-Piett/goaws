@@ -468,12 +468,12 @@ func Test_DeleteMessageBatchV1_xml_success_not_found_message(t *testing.T) {
 	// delete messages
 	deletedMessages := e.POST("/").
 		WithForm(deleteMessageBatchRequestBodyXML).
-		WithFormField("Entries.0.Id", testId1).
-		WithFormField("Entries.0.ReceiptHandle", *receivedMessageResponse1.Messages[0].ReceiptHandle).
-		WithFormField("Entries.1.Id", testId2).
-		WithFormField("Entries.1.ReceiptHandle", *receivedMessageResponse2.Messages[0].ReceiptHandle).
-		WithFormField("Entries.2.Id", testId3).
-		WithFormField("Entries.2.ReceiptHandle", *receivedMessageResponse1.Messages[1].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.1.Id", testId1).
+		WithFormField("DeleteMessageBatchRequestEntry.1.ReceiptHandle", *receivedMessageResponse1.Messages[0].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.2.Id", testId2).
+		WithFormField("DeleteMessageBatchRequestEntry.2.ReceiptHandle", *receivedMessageResponse2.Messages[0].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.3.Id", testId3).
+		WithFormField("DeleteMessageBatchRequestEntry.3.ReceiptHandle", *receivedMessageResponse1.Messages[1].ReceiptHandle).
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
@@ -563,12 +563,12 @@ func Test_DeleteMessageBatchV1_xml_success_all_deletes(t *testing.T) {
 	// delete messages
 	deletedMessages := e.POST("/").
 		WithForm(deleteMessageBatchRequestBodyXML).
-		WithFormField("Entries.0.Id", testId1).
-		WithFormField("Entries.0.ReceiptHandle", *receivedMessageResponse.Messages[0].ReceiptHandle).
-		WithFormField("Entries.1.Id", testId2).
-		WithFormField("Entries.1.ReceiptHandle", *receivedMessageResponse.Messages[1].ReceiptHandle).
-		WithFormField("Entries.2.Id", testId3).
-		WithFormField("Entries.2.ReceiptHandle", *receivedMessageResponse.Messages[2].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.1.Id", testId1).
+		WithFormField("DeleteMessageBatchRequestEntry.1.ReceiptHandle", *receivedMessageResponse.Messages[0].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.2.Id", testId2).
+		WithFormField("DeleteMessageBatchRequestEntry.2.ReceiptHandle", *receivedMessageResponse.Messages[1].ReceiptHandle).
+		WithFormField("DeleteMessageBatchRequestEntry.3.Id", testId3).
+		WithFormField("DeleteMessageBatchRequestEntry.3.ReceiptHandle", *receivedMessageResponse.Messages[2].ReceiptHandle).
 		Expect().
 		Status(http.StatusOK).
 		Body().Raw()
