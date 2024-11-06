@@ -277,8 +277,9 @@ func Test_Publish_batch_sqs_json_raw_with_optional_fields(t *testing.T) {
 
 	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
 	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receivedMessage.Messages[0].MD5OfBody)
-	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", *receivedMessage.Messages[0].MD5OfMessageAttributes)
-	assert.Len(t, receivedMessage.Messages[0].MessageAttributes, 0)
+	assert.Equal(t, "45a48b32ccd821cc81a8c28fbac4cd97", *receivedMessage.Messages[0].MD5OfMessageAttributes)
+	assert.Equal(t, *receivedMessage.Messages[0].MessageAttributes["test"].DataType, "String")
+	assert.Equal(t, *receivedMessage.Messages[0].MessageAttributes["test"].StringValue, "string-value")
 	assert.NotNil(t, receivedMessage.Messages[0].MessageId)
 	assert.NotNil(t, receivedMessage.Messages[0].ReceiptHandle)
 

@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -187,30 +183,41 @@ type SendMessageRequest struct {
 	QueueUrl                string                      `json:"QueueUrl" schema:"QueueUrl"`
 }
 
-func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
+func parseMessageAttributes(values url.Values, keyPrefix string) map[string]MessageAttribute {
+	result := map[string]MessageAttribute{}
+
 	for i := 1; true; i++ {
-		nameKey := fmt.Sprintf("MessageAttribute.%d.Name", i)
+		nameKey := fmt.Sprintf("%s.%d.Name", keyPrefix, i)
 		name := values.Get(nameKey)
 		if name == "" {
 			break
 		}
 
-		dataTypeKey := fmt.Sprintf("MessageAttribute.%d.Value.DataType", i)
+		dataTypeKey := fmt.Sprintf("%s.%d.Value.DataType", keyPrefix, i)
 		dataType := values.Get(dataTypeKey)
 		if dataType == "" {
-			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
+			log.Warnf("DataType of message attribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
 			continue
 		}
 
-		stringValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.StringValue", i))
-		binaryValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.BinaryValue", i))
+		stringValue := values.Get(fmt.Sprintf("%s.%d.Value.StringValue", keyPrefix, i))
+		binaryValue := values.Get(fmt.Sprintf("%s.%d.Value.BinaryValue", keyPrefix, i))
 
-		r.MessageAttributes[name] = MessageAttribute{
+		result[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
 			BinaryValue: []byte(binaryValue),
 		}
 	}
+
+	if len(result) > 0 {
+		return result
+	}
+	return nil
+}
+
+func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
+	r.MessageAttributes = parseMessageAttributes(values, "MessageAttribute")
 }
 
 func NewSendMessageBatchRequest() *SendMessageBatchRequest {
@@ -223,53 +230,8 @@ type SendMessageBatchRequest struct {
 }
 
 func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
-	for key := range values {
-
-		keySegments := strings.Split(key, ".")
-		//If index value size is 3 or less, there is no attribute value
-		if len(keySegments) <= 3 {
-			continue
-		}
-
-		// Both patterns below are supported here.
-		// strconv.Atoi(keySegments[1] - targets the index value in pattern: `Entries.1.MessageBody`
-		// strconv.Atoi(keySegments[3] - targets the index value in pattern: `Entries.1.MessageAttributes.1.Name`
-		entryIndex, err1 := strconv.Atoi(keySegments[1])
-		attributeIndex, err2 := strconv.Atoi(keySegments[3])
-
-		// If the entry index and attribute index cannot be obtained, the attribute will not be set, so skip
-		if err1 != nil || err2 != nil {
-			continue
-		}
-
-		nameKey := fmt.Sprintf("Entries.%d.MessageAttributes.%d.Name", entryIndex, attributeIndex)
-		if key != nameKey {
-			continue
-		}
-		name := values.Get(nameKey)
-		dataTypeKey := fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.DataType", entryIndex, attributeIndex)
-		dataType := values.Get(dataTypeKey)
-		if dataType == "" {
-			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
-			continue
-		}
-
-		stringValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.StringValue", entryIndex, attributeIndex))
-		binaryValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.BinaryValue", entryIndex, attributeIndex))
-
-		if r.Entries[entryIndex].MessageAttributes == nil {
-			r.Entries[entryIndex].MessageAttributes = make(map[string]MessageAttribute)
-		}
-
-		r.Entries[entryIndex].MessageAttributes[name] = MessageAttribute{
-			DataType:    dataType,
-			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
-		}
-
-		if _, ok := r.Entries[entryIndex].MessageAttributes[name]; !ok {
-			log.Warnf("StringValue or BinaryValue of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
-		}
+	for entryIndex := range r.Entries {
+		r.Entries[entryIndex].MessageAttributes = parseMessageAttributes(values, fmt.Sprintf("Entries.%d.MessageAttributes", entryIndex))
 	}
 }
 
@@ -742,34 +704,7 @@ type PublishRequest struct {
 }
 
 func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
-	attributes := map[string]MessageAttribute{}
-	for i := 1; true; i++ {
-		nameKey := fmt.Sprintf("MessageAttributes.entry.%d.Name", i)
-		name := values.Get(nameKey)
-		if name == "" {
-			break
-		}
-
-		dataTypeKey := fmt.Sprintf("MessageAttributes.entry.%d.Value.DataType", i)
-		dataType := values.Get(dataTypeKey)
-		if dataType == "" {
-			log.Warnf("DataType of MessageAttribute %s is missing, MD5 checksum will most probably be wrong!\n", name)
-			continue
-		}
-
-		stringValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
-		binaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
-
-		if r.MessageAttributes == nil {
-			r.MessageAttributes = make(map[string]MessageAttribute)
-		}
-		attributes[name] = MessageAttribute{
-			DataType:    cases.Title(language.AmericanEnglish).String(dataType), // capitalize
-			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
-		}
-	}
-	r.MessageAttributes = attributes
+	r.MessageAttributes = parseMessageAttributes(values, "MessageAttributes.entry")
 }
 
 // Satisfy the AbstractPublishEntry interface
@@ -888,7 +823,14 @@ type PublishBatchRequest struct {
 }
 
 func (r *PublishBatchRequest) SetAttributesFromForm(values url.Values) {
-	// TAG - Implement me
+	for entryIndex, entry := range r.PublishBatchRequestEntries.Member {
+		if entry == nil {
+			// The form values are 1-indexed; at the point that this is called, the first element in the
+			// list of requests will be nil.
+			continue
+		}
+		entry.MessageAttributes = parseMessageAttributes(values, fmt.Sprintf("PublishBatchRequestEntries.member.%d.MessageAttributes.entry", entryIndex))
+	}
 }
 
 type PublishBatchRequestEntries struct {

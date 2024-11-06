@@ -659,3 +659,81 @@ func TestPublishRequest_SetAttributesFromForm_success_concurrent(t *testing.T) {
 		wg.Wait()
 	}
 }
+
+func TestParseMessageAttributes(t *testing.T) {
+	for _, tc := range []struct {
+		description string
+		values      url.Values
+		keyPrefix   string
+		want        map[string]MessageAttribute
+	}{
+		{
+			description: "empty",
+			values:      url.Values{},
+			keyPrefix:   "foo",
+			want:        nil,
+		},
+		{
+			description: "simple",
+			values: url.Values{
+				"MessageAttribute.1.Name":              []string{"Attr1"},
+				"MessageAttribute.1.Value.DataType":    []string{"String"},
+				"MessageAttribute.1.Value.StringValue": []string{"Value1"},
+				"MessageAttribute.2.Name":              []string{"Attr2"},
+				"MessageAttribute.2.Value.DataType":    []string{"Binary"},
+				"MessageAttribute.2.Value.BinaryValue": []string{"VmFsdWUy"},
+			},
+			keyPrefix: "MessageAttribute",
+			want: map[string]MessageAttribute{
+				"Attr1": {
+					DataType:    "String",
+					StringValue: "Value1",
+					BinaryValue: []byte{},
+				},
+				"Attr2": {
+					DataType:    "Binary",
+					BinaryValue: []byte("VmFsdWUy"),
+				},
+			},
+		},
+		{
+			description: "attributes after empty name ignored",
+			values: url.Values{
+				"MessageAttribute.1.Name":              []string{""},
+				"MessageAttribute.1.Value.DataType":    []string{"String"},
+				"MessageAttribute.1.Value.StringValue": []string{"Value4"},
+				"MessageAttribute.2.Name":              []string{"Attr2"},
+				"MessageAttribute.2.Value.DataType":    []string{"Binary"},
+				"MessageAttribute.2.Value.BinaryValue": []string{"VmFsdWUy"},
+			},
+			keyPrefix: "MessageAttribute",
+			want:      nil,
+		},
+		{
+			description: "attributes after missing number ignored",
+			values: url.Values{
+				// Note starting from 2
+				"MessageAttribute.2.Name":              []string{"Attr2"},
+				"MessageAttribute.2.Value.DataType":    []string{"Binary"},
+				"MessageAttribute.2.Value.BinaryValue": []string{"VmFsdWUy"},
+			},
+			keyPrefix: "MessageAttribute",
+			want:      nil,
+		},
+		{
+			description: "empty DataType ignored",
+			values: url.Values{
+				"MessageAttribute.1.Name":              []string{"Attr4"},
+				"MessageAttribute.1.Value.DataType":    []string{""},
+				"MessageAttribute.1.Value.StringValue": []string{"Value4"},
+			},
+			keyPrefix: "MessageAttribute",
+			want:      nil,
+		},
+	} {
+		t.Run(tc.description, func(t *testing.T) {
+			got := parseMessageAttributes(tc.values, tc.keyPrefix)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
