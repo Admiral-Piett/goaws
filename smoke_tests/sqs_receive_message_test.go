@@ -268,7 +268,7 @@ func Test_ReceiveMessageV1_xml_with_attributes(t *testing.T) {
 	assert.Equal(t, 1, len(receiveMessageResponse.Result.Messages))
 	assert.Equal(t, "MyTestMessage", receiveMessageResponse.Result.Messages[0].Body)
 	assert.Equal(t, "ad4883a84ad41c79aa3a373698c0d4e9", receiveMessageResponse.Result.Messages[0].MD5OfBody)
-	assert.Equal(t, "", receiveMessageResponse.Result.Messages[0].MD5OfMessageAttributes)
+	assert.Equal(t, "ae8770938aee44bc548cf65ac377e3bf", receiveMessageResponse.Result.Messages[0].MD5OfMessageAttributes)
 
 	entry := "<Attribute><Name>ApproximateFirstReceiveTimestamp</Name><Value>"
 	assert.Contains(t, response, entry)
@@ -288,6 +288,6 @@ func Test_ReceiveMessageV1_xml_with_attributes(t *testing.T) {
 	entry = "<MessageAttribute><Name>attr2</Name><Value><DataType>Number</DataType><StringValue>number-value</StringValue></Value></MessageAttribute>"
 	assert.Contains(t, response, entry)
 
-	entry = "<MessageAttribute><Name>attr3</Name><Value><BinaryValue>binary-value</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
+	entry = "<MessageAttribute><Name>attr3</Name><Value><BinaryValue>YmluYXJ5LXZhbHVl</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
 	assert.Contains(t, response, entry)
 }

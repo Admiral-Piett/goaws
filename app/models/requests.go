@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -12,8 +13,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-var caser = cases.Title(language.AmericanEnglish)
 
 type CreateQueueRequest struct {
 	QueueName  string            `json:"QueueName" schema:"QueueName"`
@@ -205,12 +204,18 @@ func (r *SendMessageRequest) SetAttributesFromForm(values url.Values) {
 		}
 
 		stringValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.StringValue", i))
-		binaryValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.BinaryValue", i))
+		encodedBinaryValue := values.Get(fmt.Sprintf("MessageAttribute.%d.Value.BinaryValue", i))
+
+		binaryValue, err := base64.StdEncoding.DecodeString(encodedBinaryValue)
+		if err != nil {
+			log.Warnf("Failed to base64 decode. %s may not have been base64 encoded.", encodedBinaryValue)
+			continue
+		}
 
 		r.MessageAttributes[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
+			BinaryValue: binaryValue,
 		}
 	}
 }
@@ -257,16 +262,22 @@ func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
 		}
 
 		stringValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.StringValue", entryIndex, attributeIndex))
-		binaryValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.BinaryValue", entryIndex, attributeIndex))
+		encodedBinaryValue := values.Get(fmt.Sprintf("Entries.%d.MessageAttributes.%d.Value.BinaryValue", entryIndex, attributeIndex))
 
 		if r.Entries[entryIndex].MessageAttributes == nil {
 			r.Entries[entryIndex].MessageAttributes = make(map[string]MessageAttribute)
 		}
 
+		binaryValue, err := base64.StdEncoding.DecodeString(encodedBinaryValue)
+		if err != nil {
+			log.Warnf("Failed to base64 decode. %s may not have been base64 encoded.", encodedBinaryValue)
+			continue
+		}
+
 		r.Entries[entryIndex].MessageAttributes[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
+			BinaryValue: binaryValue,
 		}
 
 		if _, ok := r.Entries[entryIndex].MessageAttributes[name]; !ok {
@@ -741,15 +752,21 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 		}
 
 		stringValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i))
-		binaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
+		encodedBinaryValue := values.Get(fmt.Sprintf("MessageAttributes.entry.%d.Value.BinaryValue", i))
+		binaryValue, err := base64.StdEncoding.DecodeString(encodedBinaryValue)
+		if err != nil {
+			log.Warnf("Failed to base64 decode. %s may not have been base64 encoded.", encodedBinaryValue)
+			continue
+		}
 
 		if r.MessageAttributes == nil {
 			r.MessageAttributes = make(map[string]MessageAttribute)
 		}
+
 		attributes[name] = MessageAttribute{
-			DataType:    caser.String(dataType), // capitalize
+			DataType:    cases.Title(language.AmericanEnglish).String(dataType), // capitalize
 			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
+			BinaryValue: binaryValue,
 		}
 	}
 	r.MessageAttributes = attributes

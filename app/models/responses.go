@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/base64"
 	"encoding/xml"
 )
 
@@ -83,6 +84,9 @@ func (r *ResultMessage) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	}
 	var messageAttrs []MessageAttributes
 	for key, value := range r.MessageAttributes {
+		if value.DataType == "Binary" {
+			value.BinaryValue = []byte(base64.StdEncoding.EncodeToString(value.BinaryValue))
+		}
 		attribute := MessageAttributes{
 			Name:  key,
 			Value: value,
@@ -95,6 +99,9 @@ func (r *ResultMessage) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	e.EncodeElement(r.MessageId, xml.StartElement{Name: xml.Name{Local: "MessageId"}})
 	e.EncodeElement(r.ReceiptHandle, xml.StartElement{Name: xml.Name{Local: "ReceiptHandle"}})
 	e.EncodeElement(r.MD5OfBody, xml.StartElement{Name: xml.Name{Local: "MD5OfBody"}})
+	if r.MessageAttributes != nil {
+		e.EncodeElement(r.MD5OfMessageAttributes, xml.StartElement{Name: xml.Name{Local: "MD5OfMessageAttributes"}})
+	}
 	e.EncodeElement(r.Body, xml.StartElement{Name: xml.Name{Local: "Body"}})
 	e.EncodeElement(attrs, xml.StartElement{Name: xml.Name{Local: "Attribute"}})
 	e.EncodeElement(messageAttrs, xml.StartElement{Name: xml.Name{Local: "MessageAttribute"}})

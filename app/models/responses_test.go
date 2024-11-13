@@ -63,7 +63,7 @@ func Test_ResultMessage_MarshalXML_success_with_attributes(t *testing.T) {
 	resultString := string(result)
 
 	// We have to assert piecemeal like this, the maps go into their lists unordered, which will randomly break this.
-	entry := "<ResultMessage><MessageId>message-id</MessageId><ReceiptHandle>receipt-handle</ReceiptHandle><MD5OfBody>body-md5</MD5OfBody><Body>message-body</Body>"
+	entry := "<ResultMessage><MessageId>message-id</MessageId><ReceiptHandle>receipt-handle</ReceiptHandle><MD5OfBody>body-md5</MD5OfBody><MD5OfMessageAttributes>message-attrs-md5</MD5OfMessageAttributes><Body>message-body</Body>"
 	assert.Contains(t, resultString, entry)
 
 	entry = "<Attribute><Name>ApproximateFirstReceiveTimestamp</Name><Value>1</Value></Attribute>"
@@ -81,7 +81,7 @@ func Test_ResultMessage_MarshalXML_success_with_attributes(t *testing.T) {
 	entry = "<MessageAttribute><Name>attr1</Name><Value><DataType>String</DataType><StringValue>string-value</StringValue></Value></MessageAttribute>"
 	assert.Contains(t, resultString, entry)
 
-	entry = "<MessageAttribute><Name>attr2</Name><Value><BinaryValue>binary-value</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
+	entry = "<MessageAttribute><Name>attr2</Name><Value><BinaryValue>YmluYXJ5LXZhbHVl</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
 	assert.Contains(t, resultString, entry)
 
 	entry = "<MessageAttribute><Name>attr3</Name><Value><DataType>Number</DataType><StringValue>number-value</StringValue></Value></MessageAttribute>"
