@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -113,7 +114,8 @@ func HashAttributes(attributes map[string]models.MessageAttribute) string {
 			addStringToHash(hasher, attributeValue.StringValue)
 		} else if attributeValue.DataType == "Binary" {
 			hasher.Write([]byte{2})
-			addBytesToHash(hasher, attributeValue.BinaryValue)
+			bytes, _ := base64.StdEncoding.DecodeString(attributeValue.BinaryValue)
+			addBytesToHash(hasher, []byte(bytes))
 		}
 	}
 

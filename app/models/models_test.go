@@ -46,7 +46,7 @@ func TestFilterPolicy_IsSatisfiedBy(t *testing.T) {
 		},
 		{
 			&FilterPolicy{"foo": {"bar"}},
-			map[string]MessageAttribute{"foo": {DataType: "Binary", BinaryValue: []byte("bar")}},
+			map[string]MessageAttribute{"foo": {DataType: "Binary", BinaryValue: "bar"}},
 			false,
 		},
 	}

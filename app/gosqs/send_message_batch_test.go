@@ -42,7 +42,7 @@ func TestSendMessageBatchV1_Success(t *testing.T) {
 				MessageBody: "test%20message%20body%203",
 				MessageAttributes: map[string]models.MessageAttribute{
 					"my-attribute-name-1": {
-						BinaryValue: []byte("binary-value-1"),
+						BinaryValue: "binary-value-1",
 						DataType:    "Binary",
 					},
 					"my-attribute-name-2": {
