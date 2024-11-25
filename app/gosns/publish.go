@@ -1,6 +1,7 @@
 package gosns
 
 import (
+	"encoding/base64"
 	"net/http"
 	"strings"
 
@@ -27,6 +28,15 @@ func PublishV1(req *http.Request) (int, interfaces.AbstractResponseBody) {
 	// TODO - support TargetArn
 	if requestBody.TopicArn == "" || requestBody.Message == "" {
 		return utils.CreateErrorResponseV1("InvalidParameterValue", false)
+	}
+
+	for _, attr := range requestBody.MessageAttributes {
+		if attr.DataType == "Binary" {
+			_, err := base64.StdEncoding.DecodeString(attr.BinaryValue)
+			if err != nil {
+				return utils.CreateErrorResponseV1("MalformedInput", false)
+			}
+		}
 	}
 
 	arnSegments := strings.Split(requestBody.TopicArn, ":")

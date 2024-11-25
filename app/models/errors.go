@@ -26,6 +26,7 @@ func init() {
 		"BatchEntryIdsNotDistinct":     {HttpError: http.StatusBadRequest, Type: "BatchEntryIdsNotDistinct", Code: "AWS.SimpleNotificationService.BatchEntryIdsNotDistinct", Message: "Two or more batch entries in the request have the same Id."},
 		"EmptyBatchRequest":            {HttpError: http.StatusBadRequest, Type: "EmptyBatchRequest", Code: "AWS.SimpleNotificationService.EmptyBatchRequest", Message: "The batch request doesn't contain any entries."},
 		"TooManyEntriesInBatchRequest": {HttpError: http.StatusBadRequest, Type: "TooManyEntriesInBatchRequest", Code: "AWS.SimpleNotificationService.TooManyEntriesInBatchRequest", Message: "Maximum number of entries per request are 10."},
+		"MalformedInput":               {HttpError: http.StatusBadRequest, Type: "Sender", Code: "AWS.SimpleNotificationService.MalformedInput", Message: "Invalid Base64 encoding"},
 	}
 }
 

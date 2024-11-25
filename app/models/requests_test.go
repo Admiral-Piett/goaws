@@ -317,7 +317,7 @@ func TestSendMessageRequest_SetAttributesFromForm_success(t *testing.T) {
 	attr2 := r.MessageAttributes["Attr2"]
 	assert.Equal(t, "Binary", attr2.DataType)
 	assert.Empty(t, attr2.StringValue)
-	assert.Equal(t, []uint8("VmFsdWUy"), attr2.BinaryValue)
+	assert.Equal(t, "VmFsdWUy", attr2.BinaryValue)
 }
 
 func TestSetQueueAttributesRequest_SetAttributesFromForm_success(t *testing.T) {
@@ -688,11 +688,11 @@ func TestParseMessageAttributes(t *testing.T) {
 				"Attr1": {
 					DataType:    "String",
 					StringValue: "Value1",
-					BinaryValue: []byte{},
+					BinaryValue: "",
 				},
 				"Attr2": {
 					DataType:    "Binary",
-					BinaryValue: []byte("VmFsdWUy"),
+					BinaryValue: "VmFsdWUy",
 				},
 			},
 		},

@@ -134,3 +134,40 @@ func TestPublishV1_request_invalid_topic(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, status)
 }
+
+func TestPublishV1_request_invalid_base64_encoding(t *testing.T) {
+
+	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		models.ResetApp()
+		utils.REQUEST_TRANSFORMER = utils.TransformRequest
+	}()
+
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
+	message := "{\"IAm\": \"aMessage\"}"
+
+	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
+		v := resultingStruct.(*models.PublishRequest)
+		*v = models.PublishRequest{
+			TopicArn: topicArn,
+			Message:  message,
+			MessageAttributes: map[string]models.MessageAttribute{
+				"key-1": {
+					DataType:    "String",
+					StringValue: "valid",
+				},
+				"key-2": {
+					DataType:    "Binary",
+					BinaryValue: "invalid",
+				},
+			},
+		}
+		return true
+	}
+
+	_, r := test.GenerateRequestInfo("POST", "/", nil, true)
+	status, _ := PublishV1(r)
+
+	assert.Equal(t, http.StatusBadRequest, status)
+
+}
