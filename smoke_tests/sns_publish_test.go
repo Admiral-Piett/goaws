@@ -1,14 +1,17 @@
 package smoke_tests
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/Admiral-Piett/goaws/app/fixtures"
 	"github.com/Admiral-Piett/goaws/app/models"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -64,7 +67,92 @@ func Test_Publish_sqs_json_raw(t *testing.T) {
 	assert.Equal(t, message, *receivedMessage.Messages[0].Body)
 }
 
-func Test_Publish_Sqs_With_Message_Attributes(t *testing.T) {
+func Test_Publish_sqs_json_with_message_attributes_raw(t *testing.T) {
+	server := generateServer()
+	defer func() {
+		server.Close()
+		models.ResetResources()
+	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+	snsClient := sns.NewFromConfig(sdkConfig)
+
+	createQueueResult, _ := sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
+		QueueName: &af.QueueName,
+	})
+
+	topicName := aws.String("unit-topic2")
+
+	createTopicResult, _ := snsClient.CreateTopic(context.TODO(), &sns.CreateTopicInput{
+		Name: topicName,
+	})
+
+	subscribeResult, _ := snsClient.Subscribe(context.TODO(), &sns.SubscribeInput{
+		Protocol:              aws.String("sqs"),
+		TopicArn:              createTopicResult.TopicArn,
+		Attributes:            map[string]string{},
+		Endpoint:              aws.String(fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, af.QueueName)),
+		ReturnSubscriptionArn: true,
+	})
+
+	snsClient.SetSubscriptionAttributes(context.TODO(), &sns.SetSubscriptionAttributesInput{
+		SubscriptionArn: subscribeResult.SubscriptionArn,
+		AttributeName:   aws.String("RawMessageDelivery"),
+		AttributeValue:  aws.String("true"),
+	})
+	message := "{\"IAm\": \"aMessage\"}"
+	subject := "I am a subject"
+	stringKey := "string-key"
+	binaryKey := "binary-key"
+	numberKey := "number-key"
+	stringValue := "string-value"
+	binaryValue := []byte("binary-value")
+	numberValue := "100"
+	attributes := map[string]types.MessageAttributeValue{
+		stringKey: {
+			StringValue: aws.String(stringValue),
+			DataType:    aws.String("String"),
+		},
+		binaryKey: {
+			BinaryValue: binaryValue,
+			DataType:    aws.String("Binary"),
+		},
+		numberKey: {
+			StringValue: aws.String(numberValue),
+			DataType:    aws.String("Number"),
+		},
+	}
+
+	publishResponse, publishErr := snsClient.Publish(context.TODO(), &sns.PublishInput{
+		TopicArn:          createTopicResult.TopicArn,
+		Message:           &message,
+		Subject:           &subject,
+		MessageAttributes: attributes,
+	})
+
+	receiveMessageResponse, receiveErr := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl: createQueueResult.QueueUrl,
+	})
+
+	assert.Nil(t, publishErr)
+	assert.NotNil(t, publishResponse)
+
+	assert.Nil(t, receiveErr)
+	assert.NotNil(t, receiveMessageResponse)
+	assert.Equal(t, message, *receiveMessageResponse.Messages[0].Body)
+
+	assert.Equal(t, "649b2c548f103e499304eda4d6d4c5a2", *receiveMessageResponse.Messages[0].MD5OfBody)
+	assert.Equal(t, "ddfbe54b92058bf5b5f00055fa2032a5", *receiveMessageResponse.Messages[0].MD5OfMessageAttributes)
+
+	assert.Equal(t, stringValue, *receiveMessageResponse.Messages[0].MessageAttributes[stringKey].StringValue)
+	assert.True(t, bytes.Equal(binaryValue, receiveMessageResponse.Messages[0].MessageAttributes[binaryKey].BinaryValue))
+	assert.Equal(t, numberValue, *receiveMessageResponse.Messages[0].MessageAttributes[numberKey].StringValue)
+
+}
+
+func Test_Publish_sqs_json_with_message_attributes_not_raw(t *testing.T) {
 	server := generateServer()
 	defer func() {
 		server.Close()
@@ -559,6 +647,47 @@ func Test_Publish_sqs_xml_not_raw(t *testing.T) {
 	assert.Contains(t, body0, "Signature")
 	assert.Contains(t, body0, "SigningCertURL")
 	assert.Contains(t, body0, "UnsubscribeURL")
+}
+
+func Test_Publish_sqs_xml_raw_error_invalid_base64_encoding(t *testing.T) {
+	server := generateServer()
+	defaultEnv := models.CurrentEnvironment
+	conf.LoadYamlConfig("../app/conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		server.Close()
+		models.ResetResources()
+		models.CurrentEnvironment = defaultEnv
+	}()
+
+	e := httpexpect.Default(t, server.URL)
+
+	topicArn := models.SyncTopics.Topics["unit-topic1"].Arn
+	message := "{\"IAm\": \"aMessage\"}"
+	subject := "I am a subject"
+
+	requestBody := struct {
+		Action   string `schema:"Action"`
+		TopicArn string `schema:"TopicArn"`
+		Message  string `schema:"Message"`
+		Subject  string `schema:"Subject"`
+	}{
+		Action:   "Publish",
+		TopicArn: topicArn,
+		Message:  message,
+		Subject:  subject,
+	}
+
+	response := e.POST("/").
+		WithForm(requestBody).
+		WithFormField("MessageAttributes.entry.1.Name", "attr").
+		WithFormField("MessageAttributes.entry.1.Value.DataType", "Binary").
+		WithFormField("MessageAttributes.entry.1.Value.BinaryValue", "invalid").
+		Expect().
+		Status(http.StatusBadRequest).
+		Body().Raw()
+
+	assert.Contains(t, response, "<Message>Invalid Base64 encoding</Message>")
+
 }
 
 func Test_Publish_http_xml(t *testing.T) {

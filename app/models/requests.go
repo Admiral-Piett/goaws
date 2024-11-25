@@ -206,7 +206,7 @@ func parseMessageAttributes(values url.Values, keyPrefix string) map[string]Mess
 		result[name] = MessageAttribute{
 			DataType:    dataType,
 			StringValue: stringValue,
-			BinaryValue: []byte(binaryValue),
+			BinaryValue: binaryValue,
 		}
 	}
 
