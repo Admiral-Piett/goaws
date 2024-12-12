@@ -3,8 +3,11 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/url"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -620,4 +623,36 @@ func Test_DeleteMessageBatchRequest_SetAttributesFromForm_stops_at_invalid_keys(
 	assert.Len(t, dmbr.Entries, 1)
 	assert.Equal(t, "message-id-1", dmbr.Entries[0].Id)
 	assert.Equal(t, "receipt-handle-1", dmbr.Entries[0].ReceiptHandle)
+}
+
+func TestPublishRequest_SetAttributesFromForm_success_concurrent(t *testing.T) {
+	form := url.Values{}
+	form.Add("MessageAttributes.entry.1.Name", "test1")
+	form.Add("MessageAttributes.entry.1.Value.DataType", "String")
+	form.Add("MessageAttributes.entry.1.Value.StringValue", "sample-string")
+	form.Add("MessageAttributes.entry.2.Name", "test2")
+	form.Add("MessageAttributes.entry.2.Value.DataType", "Binary")
+	form.Add("MessageAttributes.entry.2.Value.BinaryValue", "YmluYXJ5LXZhbHVl")
+
+	cqr := &PublishRequest{
+		MessageAttributes: make(map[string]MessageAttribute),
+	}
+	for r := 0; r < 10; r++ {
+		var wg sync.WaitGroup
+		goroutineCount := 40
+		for g := 0; g < goroutineCount; g++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Introduce a random delay to encourage goroutine interleaving
+				time.Sleep(time.Duration(rand.Intn(5)) * time.Millisecond)
+				cqr.SetAttributesFromForm(form)
+				// validate the expected DataType values
+				assert.Equal(t, "String", cqr.MessageAttributes["test1"].DataType)
+				assert.Equal(t, "Binary", cqr.MessageAttributes["test2"].DataType)
+
+			}()
+		}
+		wg.Wait()
+	}
 }

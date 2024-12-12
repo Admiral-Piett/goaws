@@ -13,8 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var caser = cases.Title(language.AmericanEnglish)
-
 type CreateQueueRequest struct {
 	QueueName  string            `json:"QueueName" schema:"QueueName"`
 	Attributes QueueAttributes   `json:"Attributes" schema:"Attribute"`
@@ -766,7 +764,7 @@ func (r *PublishRequest) SetAttributesFromForm(values url.Values) {
 			r.MessageAttributes = make(map[string]MessageAttribute)
 		}
 		attributes[name] = MessageAttribute{
-			DataType:    caser.String(dataType), // capitalize
+			DataType:    cases.Title(language.AmericanEnglish).String(dataType), // capitalize
 			StringValue: stringValue,
 			BinaryValue: []byte(binaryValue),
 		}
