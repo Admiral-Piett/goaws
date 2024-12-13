@@ -634,23 +634,26 @@ func TestPublishRequest_SetAttributesFromForm_success_concurrent(t *testing.T) {
 	form.Add("MessageAttributes.entry.2.Value.DataType", "Binary")
 	form.Add("MessageAttributes.entry.2.Value.BinaryValue", "YmluYXJ5LXZhbHVl")
 
-	cqr := &PublishRequest{
-		MessageAttributes: make(map[string]MessageAttribute),
-	}
+	// if the code is not thread-safe, repeated runs increase the chance of detecting a race.
 	for r := 0; r < 10; r++ {
 		var wg sync.WaitGroup
 		goroutineCount := 40
+		// launch goroutines in parallel to simulate concurrent access.
 		for g := 0; g < goroutineCount; g++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				// Introduce a random delay to encourage goroutine interleaving
+				// introduce a random delay to encourage goroutine interleaving
 				time.Sleep(time.Duration(rand.Intn(5)) * time.Millisecond)
+				cqr := &PublishRequest{
+					MessageAttributes: make(map[string]MessageAttribute),
+				}
+
 				cqr.SetAttributesFromForm(form)
+
 				// validate the expected DataType values
 				assert.Equal(t, "String", cqr.MessageAttributes["test1"].DataType)
 				assert.Equal(t, "Binary", cqr.MessageAttributes["test2"].DataType)
-
 			}()
 		}
 		wg.Wait()
