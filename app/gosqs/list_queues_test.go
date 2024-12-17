@@ -35,7 +35,7 @@ func TestListQueuesV1_success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, code)
 	assert.Contains(t, r1.Result.QueueUrls, fmt.Sprintf("%s/%s", fixtures.BASE_URL, "unit-queue1"))
 	assert.Contains(t, r1.Result.QueueUrls, fmt.Sprintf("%s/%s", fixtures.BASE_URL, "unit-queue2"))
-	assert.Contains(t, r1.Result.QueueUrls, fmt.Sprintf("%s/%s", fixtures.BASE_URL, "other-queue1"))
+	assert.Contains(t, r1.Result.QueueUrls, fmt.Sprintf("%s/%s", fixtures.BASE_URL, "dead-letter-queue1"))
 }
 
 func TestListQueuesV1_success_no_queues(t *testing.T) {
@@ -67,7 +67,7 @@ func TestListQueuesV1_success_with_queue_name_prefix(t *testing.T) {
 
 	utils.REQUEST_TRANSFORMER = func(resultingStruct interfaces.AbstractRequestBody, req *http.Request, emptyRequestValid bool) (success bool) {
 		v := resultingStruct.(*models.ListQueueRequest)
-		*v = models.ListQueueRequest{QueueNamePrefix: "other"}
+		*v = models.ListQueueRequest{QueueNamePrefix: "dead-letter"}
 		return true
 	}
 
@@ -76,7 +76,7 @@ func TestListQueuesV1_success_with_queue_name_prefix(t *testing.T) {
 	r1 := response.(models.ListQueuesResponse)
 
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, []string{fmt.Sprintf("%s/%s", fixtures.BASE_URL, "other-queue1")}, r1.Result.QueueUrls)
+	assert.Equal(t, []string{fmt.Sprintf("%s/%s", fixtures.BASE_URL, "dead-letter-queue1")}, r1.Result.QueueUrls)
 }
 
 func TestListQueuesV1_success_with_queue_name_prefix_no_matching_queues(t *testing.T) {

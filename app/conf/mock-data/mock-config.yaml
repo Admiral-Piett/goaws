@@ -57,8 +57,8 @@ BaseUnitTests:
   Queues:
     - Name: unit-queue1
     - Name: unit-queue2
-      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:other-queue1"}'
-    - Name: other-queue1
+      RedrivePolicy: '{"maxReceiveCount": 1, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:dead-letter-queue1"}'
+    - Name: dead-letter-queue1
     - Name: subscribed-queue1
     - Name: subscribed-queue3
   Topics:
