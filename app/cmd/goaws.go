@@ -58,7 +58,7 @@ func main() {
 
 	r := router.New()
 
-	quit := make(chan struct{}, 0)
+	quit := make(chan bool, 0)
 	go gosqs.PeriodicTasks(1*time.Second, quit)
 
 	if len(portNumbers) == 1 {

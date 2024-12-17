@@ -1,411 +1,216 @@
 package gosqs
 
 import (
+	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Admiral-Piett/goaws/app/conf"
+
+	"github.com/Admiral-Piett/goaws/app/fixtures"
 
 	"github.com/Admiral-Piett/goaws/app/models"
 	"github.com/Admiral-Piett/goaws/app/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRequeueing_VisibilityTimeoutExpires(t *testing.T) {
-	done := make(chan struct{}, 0)
-	go PeriodicTasks(1*time.Second, done)
+// TODO - Admiral-Piett these are better but still screwy.  It's easy to have race conditions in here, so
+// we have to name all the queues uniquely and leave them around so we're not resetting ourselves.
+// Stupid.  Handle the global memory issues and this can be easily resolved.
+func Test_PeriodicTasks_deletes_deduplication_period_upon_expiration(t *testing.T) {
+	models.DeduplicationPeriod = 20 * time.Millisecond
+	quit := make(chan bool)
+	defer func() {
+		models.ResetApp()
+		quit <- true
+		models.DeduplicationPeriod = 5 * time.Minute
+	}()
 
-	// create a queue
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	//form := url.Values{}
-	//form.Add("Action", "CreateQueue")
-	//form.Add("QueueName", "requeue")
-	//form.Add("Attribute.1.Name", "VisibilityTimeout")
-	//form.Add("Attribute.1.Value", "1")
-	//form.Add("Version", "2012-11-05")
-	req.PostForm = url.Values{
-		"Action":            []string{"CreateQueue"},
-		"QueueName":         []string{"requeue"},
-		"Attribute.1.Name":  []string{"VisibilityTimeout"},
-		"Attribute.1.Value": []string{"1"},
-		"Version":           []string{"2012-11-05"},
-	}
-
-	rr := httptest.NewRecorder()
-	status, _ := CreateQueueV1(req)
-
-	assert.Equal(t, http.StatusOK, status)
-
-	// send a message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form := url.Values{}
-	form.Add("Action", "SendMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue")
-	form.Add("MessageBody", "1")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	rr = httptest.NewRecorder()
-	status, _ = SendMessageV1(req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
-
-	// receive message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	rr = httptest.NewRecorder()
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// try to receive another message.
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	rr = httptest.NewRecorder()
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-	time.Sleep(2 * time.Second)
-
-	// message needs to be requeued
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	rr = httptest.NewRecorder()
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-	done <- struct{}{}
-}
-
-func TestRequeueing_ResetVisibilityTimeout(t *testing.T) {
-	done := make(chan struct{}, 0)
-	go PeriodicTasks(1*time.Second, done)
-
-	// create a queue
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "requeue-reset")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "10")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ := CreateQueueV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// send a message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "SendMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset")
-	form.Add("MessageBody", "1")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = SendMessageV1(req)
-	if status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
-
-	// receive message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, resp := ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	receiptHandle := resp.GetResult().(models.ReceiveMessageResult).Messages[0].ReceiptHandle
-
-	// try to receive another message.
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// reset message visibility timeout to requeue it
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ChangeMessageVisibility")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset")
-	form.Add("VisibilityTimeout", "0")
-	form.Add("ReceiptHandle", receiptHandle)
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = ChangeMessageVisibilityV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// message needs to be requeued
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/requeue-reset")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-	done <- struct{}{}
-}
-
-func TestDeadLetterQueue(t *testing.T) {
-	done := make(chan struct{}, 0)
-	go PeriodicTasks(1*time.Second, done)
-
-	// create a queue
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	deadLetterQueue := &models.Queue{
-		Name:     "failed-messages",
-		Messages: []models.SqsMessage{},
+	qName := "gosqs-dedupe-queue1"
+	mainQueue := &models.Queue{
+		Name: qName,
+		URL:  fmt.Sprintf("%s/%s", fixtures.BASE_URL, qName),
+		Arn:  fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, qName),
+		Duplicates: map[string]time.Time{
+			"12345": time.Now(),
+		},
 	}
 	models.SyncQueues.Lock()
-	models.SyncQueues.Queues["failed-messages"] = deadLetterQueue
+	models.SyncQueues.Queues[qName] = mainQueue
 	models.SyncQueues.Unlock()
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "testing-deadletter")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "1")
-	form.Add("Attribute.2.Name", "RedrivePolicy")
-	form.Add("Attribute.2.Value", `{"maxReceiveCount": 2, "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages"}`)
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
 
-	status, _ := CreateQueueV1(req)
-	assert.Equal(t, status, http.StatusOK)
+	go PeriodicTasks(10*time.Millisecond, quit)
 
-	// send a message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
+	assertions := func() bool {
+		models.SyncQueues.Lock()
+		defer models.SyncQueues.Unlock()
+
+		ok := 0 == len(mainQueue.Duplicates)
+		if !ok {
+			return false
+		}
+		return true
 	}
-
-	form = url.Values{}
-	form.Add("Action", "SendMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter")
-	form.Add("MessageBody", "1")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = SendMessageV1(req)
-	if status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
-	if len(models.SyncQueues.Queues["testing-deadletter"].Messages) != 1 {
-		t.Fatal("expected a message in testing-deadletter")
-	}
-
-	// receive message
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	time.Sleep(2 * time.Second)
-
-	if len(models.SyncQueues.Queues["testing-deadletter"].Messages) != 1 {
-		t.Fatal("expected message in testing-deadletter after 1 receive attempt")
-	}
-	if len(deadLetterQueue.Messages) > 0 {
-		t.Fatal("expected no message in DLQ")
-	}
-
-	// receive the message one more time
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req.PostForm = form
-
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// wait for messages to be moved to DLQ and stop the periodic tasks to prevent data races.
-	time.Sleep(2 * time.Second)
-	done <- struct{}{}
-
-	if len(models.SyncQueues.Queues["testing-deadletter"].Messages) != 0 {
-		t.Fatal("expected no message in testing-deadletter")
-	}
-	if len(deadLetterQueue.Messages) == 0 {
-		t.Fatal("expected a message in DLQ")
-	}
+	assert.Eventually(t, assertions, 10*time.Second, 10*time.Millisecond)
 }
 
-func TestDeadLetterQueueMultiple(t *testing.T) {
-	done := make(chan struct{}, 0)
-	go PeriodicTasks(1*time.Second, done)
+func Test_PeriodicTasks_VisibilityTimeout_expires(t *testing.T) {
+	quit := make(chan bool)
+	defer func() {
+		models.ResetApp()
+		quit <- true
+	}()
+	qName := "gosqs-visibility-queue1"
+	mainQueue := &models.Queue{
+		Name: qName,
+		URL:  fmt.Sprintf("%s/%s", fixtures.BASE_URL, qName),
+		Arn:  fmt.Sprintf("%s:%s", fixtures.BASE_SQS_ARN, qName),
+	}
+	mainQueue.Messages = append(mainQueue.Messages, models.SqsMessage{
+		MessageBody:       "1",
+		ReceiptHandle:     "12345",
+		VisibilityTimeout: time.Now().Add(30 * time.Millisecond),
+	})
 
-	// create a queue
-	req, err := http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	deadLetterQueue := &models.Queue{
-		Name:     "failed-messages-multiple",
-		Messages: []models.SqsMessage{},
-	}
 	models.SyncQueues.Lock()
-	models.SyncQueues.Queues["failed-messages-multiple"] = deadLetterQueue
+	models.SyncQueues.Queues[qName] = mainQueue
 	models.SyncQueues.Unlock()
-	form := url.Values{}
-	form.Add("Action", "CreateQueue")
-	form.Add("QueueName", "testing-deadletter-multiple")
-	form.Add("Attribute.1.Name", "VisibilityTimeout")
-	form.Add("Attribute.1.Value", "1")
-	form.Add("Attribute.2.Name", "RedrivePolicy")
-	form.Add("Attribute.2.Value", `{"maxReceiveCount": 1, "deadLetterTargetArn":"arn:aws:sqs::000000000000:failed-messages-multiple"}`)
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
 
-	status, _ := CreateQueueV1(req)
-	assert.Equal(t, status, http.StatusOK)
+	go PeriodicTasks(10*time.Millisecond, quit)
 
-	// send 2 messages
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
+	assertions := func() bool {
+		models.SyncQueues.Lock()
+		defer models.SyncQueues.Unlock()
+
+		ok := !mainQueue.Messages[0].ReceiptTime.IsZero()
+		if !ok {
+			return false
+		}
+		ok = "1" == mainQueue.Messages[0].MessageBody
+		if !ok {
+			return false
+		}
+		ok = "" == mainQueue.Messages[0].ReceiptHandle
+		if !ok {
+			return false
+		}
+		ok = 1 == mainQueue.Messages[0].Retry
+		if !ok {
+			return false
+		}
+		return true
 	}
-
-	form = url.Values{}
-	form.Add("Action", "SendMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter-multiple")
-	form.Add("MessageBody", "1")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = SendMessageV1(req)
-	if status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
-	status, _ = SendMessageV1(req)
-	if status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got \n%v want %v",
-			status, http.StatusOK)
-	}
-
-	if len(models.SyncQueues.Queues["testing-deadletter-multiple"].Messages) != 2 {
-		t.Fatal("expected 2 messages in testing-deadletter-multiple")
-	}
-
-	// receive messages
-	req, err = http.NewRequest("POST", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	form = url.Values{}
-	form.Add("Action", "ReceiveMessage")
-	form.Add("QueueUrl", "http://localhost:4100/queue/testing-deadletter-multiple")
-	form.Add("MaxNumberOfMessages", "2")
-	form.Add("Version", "2012-11-05")
-	req.PostForm = form
-
-	status, _ = ReceiveMessageV1(req)
-	assert.Equal(t, status, http.StatusOK)
-
-	// wait for messages to be moved to DLQ and stop the periodic tasks to prevent data races.
-	time.Sleep(3 * time.Second)
-	done <- struct{}{}
-
-	numMessages := len(models.SyncQueues.Queues["testing-deadletter-multiple"].Messages)
-	if numMessages != 0 {
-		t.Fatalf("expected no messages in testing-deadletter-multiple, found: %d", numMessages)
-	}
-	if len(deadLetterQueue.Messages) != 2 {
-		t.Fatal("expected 2 messages in DLQ")
-	}
+	assert.Eventually(t, assertions, 10*time.Second, 10*time.Millisecond)
 }
 
+func Test_PeriodicTasks_moves_single_message_to_dead_letter_queue_upon_passing_receive_count(t *testing.T) {
+	quit := make(chan bool)
+	defer func() {
+		models.ResetApp()
+		quit <- true
+	}()
+
+	qName := "gosqs-main-queue1"
+	dlqName := "gosqs-dead-letter-queue1"
+	dlqQueue := &models.Queue{
+		Arn:  fmt.Sprintf("%s/%s", fixtures.BASE_SQS_ARN, dlqName),
+		Name: dlqName,
+		URL:  fmt.Sprintf("%s/%s", fixtures.BASE_URL, dlqName),
+	}
+	mainQueue := &models.Queue{
+		Arn:             fmt.Sprintf("%s/%s", fixtures.BASE_SQS_ARN, qName),
+		DeadLetterQueue: dlqQueue,
+		MaxReceiveCount: 1,
+		Name:            qName,
+		URL:             fmt.Sprintf("%s/%s", fixtures.BASE_URL, qName),
+	}
+
+	go PeriodicTasks(10*time.Millisecond, quit)
+
+	models.SyncQueues.Lock()
+	mainQueue.Messages = append(mainQueue.Messages, models.SqsMessage{
+		MessageBody:       "1",
+		Retry:             100,
+		ReceiptHandle:     "12345",
+		VisibilityTimeout: time.Now().Add(10 * time.Millisecond),
+	})
+	models.SyncQueues.Queues[qName] = mainQueue
+	models.SyncQueues.Queues[dlqName] = dlqQueue
+	models.SyncQueues.Unlock()
+
+	assertions := func() bool {
+		models.SyncQueues.Lock()
+		defer models.SyncQueues.Unlock()
+
+		ok := len(dlqQueue.Messages) == 1
+		if !ok {
+			return false
+		}
+		ok = "1" == dlqQueue.Messages[0].MessageBody
+		if !ok {
+			return false
+		}
+		return true
+	}
+	assert.Eventually(t, assertions, 10*time.Second, 10*time.Millisecond)
+}
+
+func Test_PeriodicTasks_moves_multiple_messages_to_dead_letter_queue_upon_passing_receive_count(t *testing.T) {
+	quit := make(chan bool)
+	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		models.ResetApp()
+		quit <- true
+	}()
+
+	mainQueue := models.SyncQueues.Queues["unit-queue2"]
+	dlqQueue := models.SyncQueues.Queues["dead-letter-queue1"]
+
+	assert.Len(t, dlqQueue.Messages, 0)
+
+	go PeriodicTasks(10*time.Millisecond, quit)
+
+	models.SyncQueues.Lock()
+	mainQueue.Messages = append(mainQueue.Messages, models.SqsMessage{
+		MessageBody:   "1",
+		Retry:         100,
+		ReceiptHandle: "12345",
+	})
+	mainQueue.Messages = append(mainQueue.Messages, models.SqsMessage{
+		MessageBody:   "2",
+		Retry:         100,
+		ReceiptHandle: "23456",
+	})
+	models.SyncQueues.Unlock()
+
+	assertions := func() bool {
+		models.SyncQueues.Lock()
+		defer models.SyncQueues.Unlock()
+
+		ok := len(dlqQueue.Messages) == 2
+		if !ok {
+			return false
+		}
+		ok = "1" == dlqQueue.Messages[0].MessageBody
+		if !ok {
+			return false
+		}
+		ok = "2" == dlqQueue.Messages[1].MessageBody
+		if !ok {
+			return false
+		}
+		return true
+	}
+	assert.Eventually(t, assertions, 10*time.Second, 10*time.Millisecond)
+}
+
+// TODO - I think all these below belong in handler tests, not in here.  Double check the relevant
+// handlers for coverage and delete.
 func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T) {
-	done := make(chan struct{}, 0)
+	done := make(chan bool)
 	go PeriodicTasks(1*time.Second, done)
 
 	// create a queue
@@ -556,11 +361,11 @@ func TestSendingAndReceivingFromFIFOQueueReturnsSameMessageOnError(t *testing.T)
 		break
 	}
 
-	done <- struct{}{}
+	done <- true
 }
 
 func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
-	done := make(chan struct{}, 0)
+	done := make(chan bool)
 	go PeriodicTasks(1*time.Second, done)
 
 	// create a queue
@@ -621,10 +426,11 @@ func TestSendMessage_POST_DuplicatationNotAppliedToStandardQueue(t *testing.T) {
 	if len(models.SyncQueues.Queues["stantdard-testing"].Messages) == 1 {
 		t.Fatal("there should be 2 messages in queue")
 	}
+	done <- true
 }
 
 func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
-	done := make(chan struct{}, 0)
+	done := make(chan bool)
 	go PeriodicTasks(1*time.Second, done)
 
 	// create a queue
@@ -685,10 +491,11 @@ func TestSendMessage_POST_DuplicatationDisabledOnFifoQueue(t *testing.T) {
 	if len(models.SyncQueues.Queues["no-dup-testing.fifo"].Messages) != 2 {
 		t.Fatal("there should be 2 message in queue")
 	}
+	done <- true
 }
 
 func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
-	done := make(chan struct{}, 0)
+	done := make(chan bool)
 	go PeriodicTasks(1*time.Second, done)
 
 	// create a queue
@@ -754,6 +561,7 @@ func TestSendMessage_POST_DuplicatationEnabledOnFifoQueue(t *testing.T) {
 	if body := models.SyncQueues.Queues["dup-testing.fifo"].Messages[0].MessageBody; string(body) == "Test2" {
 		t.Fatal("duplicate message should not be added to queue")
 	}
+	done <- true
 }
 
 func TestSendMessage_POST_DelaySeconds(t *testing.T) {

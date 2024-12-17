@@ -13,26 +13,26 @@ func init() {
 	models.SyncQueues.Queues = make(map[string]*models.Queue)
 }
 
-func PeriodicTasks(d time.Duration, quit <-chan struct{}) {
+func PeriodicTasks(d time.Duration, quit chan bool) {
 	ticker := time.NewTicker(d)
 	for {
 		select {
 		case <-ticker.C:
 			models.SyncQueues.Lock()
-			for j := range models.SyncQueues.Queues {
-				queue := models.SyncQueues.Queues[j]
+			for qName := range models.SyncQueues.Queues {
+				queue := models.SyncQueues.Queues[qName]
+
+				// Reset deduplication period
+				for dedupId, startTime := range queue.Duplicates {
+					if time.Now().After(startTime.Add(models.DeduplicationPeriod)) {
+						log.Debugf("deduplication period for message with deduplicationId [%s] expired", dedupId)
+						delete(queue.Duplicates, dedupId)
+					}
+				}
 
 				log.Debugf("Queue [%s] length [%d]", queue.Name, len(queue.Messages))
 				for i := 0; i < len(queue.Messages); i++ {
 					msg := &queue.Messages[i]
-
-					// Reset deduplication period
-					for dedupId, startTime := range queue.Duplicates {
-						if time.Now().After(startTime.Add(models.DeduplicationPeriod)) {
-							log.Debugf("deduplication period for message with deduplicationId [%s] expired", dedupId)
-							delete(queue.Duplicates, dedupId)
-						}
-					}
 
 					if msg.ReceiptHandle != "" {
 						if msg.VisibilityTimeout.Before(time.Now()) {

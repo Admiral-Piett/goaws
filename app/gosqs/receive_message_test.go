@@ -14,8 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO - figure out a better way to handle the wait time in these tests.  Maybe in the smoke tests alone
-// if there's nothing else?
+// TODO Admiral-Piett - fix all these tests, we don't want to be waiting for 5 seconds plus like this.
 func TestReceiveMessageV1_with_WaitTimeEnforced(t *testing.T) {
 	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
 	defer func() {
@@ -216,3 +215,9 @@ func TestReceiveMessageV1_with_MessageAttributes(t *testing.T) {
 	assert.Equal(t, "String", result.Messages[0].MessageAttributes["TestMessageAttrName"].DataType)
 	assert.Equal(t, "TestMessageAttrValue", result.Messages[0].MessageAttributes["TestMessageAttrName"].StringValue)
 }
+
+func TestReceiveMessageV1_request_transformer_error(t *testing.T) {
+	// TODO
+}
+
+// TODO - other tests

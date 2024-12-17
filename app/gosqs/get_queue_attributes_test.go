@@ -85,7 +85,7 @@ func TestGetQueueAttributesV1_success_all_with_redrive_queue(t *testing.T) {
 	expectedResponse.Result.Attrs = append(expectedResponse.Result.Attrs,
 		models.Attribute{
 			Name:  "RedrivePolicy",
-			Value: fmt.Sprintf(`{"maxReceiveCount":"100", "deadLetterTargetArn":"%s:%s"}`, fixtures.BASE_SQS_ARN, "other-queue1"),
+			Value: fmt.Sprintf(`{"maxReceiveCount":"1", "deadLetterTargetArn":"%s:%s"}`, fixtures.BASE_SQS_ARN, "dead-letter-queue1"),
 		},
 	)
 
