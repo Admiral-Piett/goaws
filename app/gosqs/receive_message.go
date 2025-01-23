@@ -108,7 +108,12 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 			}
 			msg.ReceiptHandle = msg.Uuid + "#" + randomId
 			msg.ReceiptTime = time.Now().UTC()
-			msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
+
+			if requestBody.VisibilityTimeout {
+				msg.VisibilityTimeout = requestBody.VisibilityTimeout
+			} else {
+				msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
+			}
 
 			if models.SyncQueues.Queues[queueName].IsFIFO {
 				// If we got messages here it means we have not processed it yet, so get next
