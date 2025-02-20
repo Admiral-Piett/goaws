@@ -288,6 +288,6 @@ func Test_ReceiveMessageV1_xml_with_attributes(t *testing.T) {
 	entry = "<MessageAttribute><Name>attr2</Name><Value><DataType>Number</DataType><StringValue>number-value</StringValue></Value></MessageAttribute>"
 	assert.Contains(t, response, entry)
 
-	entry = "<MessageAttribute><Name>attr3</Name><Value><BinaryValue>binary-value</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
+	entry = "<MessageAttribute><Name>attr3</Name><Value><BinaryValue>YmluYXJ5LXZhbHVl</BinaryValue><DataType>Binary</DataType></Value></MessageAttribute>"
 	assert.Contains(t, response, entry)
 }

@@ -12,7 +12,7 @@ type Protocol string
 
 type MessageAttribute struct {
 	BinaryListValues []string `json:"BinaryListValues,omitempty" xml:"BinaryListValues,omitempty"` // currently unsupported by AWS
-	BinaryValue      []byte   `json:"BinaryValue,omitempty" xml:"BinaryValue,omitempty"`
+	BinaryValue      string   `json:"BinaryValue,omitempty" xml:"BinaryValue,omitempty"`
 	DataType         string   `json:"DataType,omitempty" xml:"DataType,omitempty"`
 	StringListValues []string `json:"StringListValues,omitempty" xml:"StringListValues,omitempty"` // currently unsupported by AWS
 	StringValue      string   `json:"StringValue,omitempty" xml:"StringValue,omitempty"`

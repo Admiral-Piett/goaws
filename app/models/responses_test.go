@@ -42,7 +42,7 @@ func Test_ResultMessage_MarshalXML_success_with_attributes(t *testing.T) {
 			},
 			"attr2": {
 				DataType:    "Binary",
-				BinaryValue: []byte("binary-value"),
+				BinaryValue: "binary-value",
 			},
 			"attr3": {
 				DataType:    "Number",
