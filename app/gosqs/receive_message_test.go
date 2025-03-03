@@ -220,4 +220,85 @@ func TestReceiveMessageV1_request_transformer_error(t *testing.T) {
 	// TODO
 }
 
+func TestReceiveMessageV1_with_CustomVisibilityTimeout(t *testing.T) {
+	// create a queue
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		models.ResetApp()
+	}()
+
+	// Create a queue with a default visibility timeout of 30 seconds
+	q := &models.Queue{
+		Name:             "custom-visibility-queue",
+		VisibilityTimeout: 30,
+	}
+	models.SyncQueues.Queues["custom-visibility-queue"] = q
+
+	// Add a message to the queue
+	q.Messages = append(q.Messages, models.SqsMessage{
+		MessageBody: "test-message",
+		Uuid:        "test-uuid",
+	})
+
+	// Test 1: Receive message with custom visibility timeout
+	customTimeout := 60 // 60 seconds
+	_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		QueueUrl:          "http://localhost:4100/queue/custom-visibility-queue",
+		VisibilityTimeout: customTimeout,
+	}, true)
+
+	status, resp := ReceiveMessageV1(r)
+	assert.Equal(t, http.StatusOK, status)
+
+	result := resp.GetResult().(models.ReceiveMessageResult)
+	assert.Equal(t, 1, len(result.Messages))
+	assert.Equal(t, "test-message", string(result.Messages[0].Body))
+
+	// Verify the message in the queue has the custom visibility timeout
+	// We can't directly check the exact time, but we can verify it's not using the queue's default
+	// by checking that the visibility timeout is greater than now + default timeout - 1 second
+	// and less than now + custom timeout + 1 second
+	now := time.Now()
+	defaultExpiry := now.Add(time.Duration(q.VisibilityTimeout) * time.Second)
+	customExpiry := now.Add(time.Duration(customTimeout) * time.Second)
+
+	// The first message should have the custom visibility timeout
+	msgVisibilityTimeout := q.Messages[0].VisibilityTimeout
+	assert.True(t, msgVisibilityTimeout.After(defaultExpiry.Add(-1*time.Second)),
+		"Message visibility timeout should be greater than default timeout")
+	assert.True(t, msgVisibilityTimeout.Before(customExpiry.Add(1*time.Second)),
+		"Message visibility timeout should be less than custom timeout + 1 second")
+
+	// Test 2: Reset the queue and test with zero visibility timeout (should use queue default)
+	models.SyncQueues.Queues["custom-visibility-queue"] = &models.Queue{
+		Name:             "custom-visibility-queue",
+		VisibilityTimeout: 30,
+	}
+	q = models.SyncQueues.Queues["custom-visibility-queue"]
+	q.Messages = append(q.Messages, models.SqsMessage{
+		MessageBody: "test-message-2",
+		Uuid:        "test-uuid-2",
+	})
+
+	// Receive message with zero visibility timeout (should use queue default)
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		QueueUrl:          "http://localhost:4100/queue/custom-visibility-queue",
+		VisibilityTimeout: 0, // Zero should use queue default
+	}, true)
+
+	status, resp = ReceiveMessageV1(r)
+	assert.Equal(t, http.StatusOK, status)
+
+	// Verify the message in the queue has the default visibility timeout
+	now = time.Now()
+	defaultExpiry = now.Add(time.Duration(q.VisibilityTimeout) * time.Second)
+
+	// The message should have the default visibility timeout
+	msgVisibilityTimeout = q.Messages[0].VisibilityTimeout
+	assert.True(t, msgVisibilityTimeout.After(defaultExpiry.Add(-1*time.Second)),
+		"Message visibility timeout should be greater than default timeout - 1 second")
+	assert.True(t, msgVisibilityTimeout.Before(defaultExpiry.Add(1*time.Second)),
+		"Message visibility timeout should be less than default timeout + 1 second")
+}
+
 // TODO - other tests

@@ -109,8 +109,8 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 			msg.ReceiptHandle = msg.Uuid + "#" + randomId
 			msg.ReceiptTime = time.Now().UTC()
 
-			if requestBody.VisibilityTimeout {
-				msg.VisibilityTimeout = requestBody.VisibilityTimeout
+			if requestBody.VisibilityTimeout != 0 {
+				msg.VisibilityTimeout = time.Now().Add(time.Duration(requestBody.VisibilityTimeout) * time.Second)
 			} else {
 				msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
 			}
