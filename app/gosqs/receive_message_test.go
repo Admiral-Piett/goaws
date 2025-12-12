@@ -2,6 +2,7 @@ package gosqs
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
@@ -299,6 +300,105 @@ func TestReceiveMessageV1_with_CustomVisibilityTimeout(t *testing.T) {
 		"Message visibility timeout should be greater than default timeout - 1 second")
 	assert.True(t, msgVisibilityTimeout.Before(defaultExpiry.Add(1*time.Second)),
 		"Message visibility timeout should be less than default timeout + 1 second")
+}
+
+func TestReceiveMessageV1_FIFOSecondMessageAvailableAfterDelete(t *testing.T) {
+	models.CurrentEnvironment = fixtures.LOCAL_ENVIRONMENT
+	defer func() {
+		models.ResetApp()
+	}()
+
+	queueName := "fifo-delay-queue"
+	queueURL := fmt.Sprintf("http://localhost:4100/queue/%s", queueName)
+	now := time.Now().Add(-1 * time.Minute)
+
+	// create a queue with a visibility timeout of 10 seconds
+	q := &models.Queue{
+		Name:                queueName,
+		VisibilityTimeout:   10,
+		IsFIFO:              true,
+		FIFOMessages:        map[string]int{},
+		FIFOSequenceNumbers: map[string]int{},
+		Duplicates:          map[string]time.Time{},
+		Messages: []models.SqsMessage{
+			{
+				MessageBody: "first",
+				Uuid:        "first-uuid",
+				GroupID:     "company#worker",
+				SentTime:    now,
+			},
+			{
+				MessageBody: "second",
+				Uuid:        "second-uuid",
+				GroupID:     "company#worker",
+				SentTime:    now,
+			},
+		},
+	}
+	models.SyncQueues.Queues[queueName] = q
+
+	// receive the first FIFO message only
+	_, r := test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		QueueUrl:            queueURL,
+		MaxNumberOfMessages: 1,
+	}, true)
+	status, resp := ReceiveMessageV1(r)
+	assert.Equal(t, http.StatusOK, status)
+	result := resp.GetResult().(models.ReceiveMessageResult)
+	if len(result.Messages) != 1 {
+		t.Fatalf("expected to receive the first FIFO message, got %d", len(result.Messages))
+	}
+	assert.Equal(t, "first", result.Messages[0].Body)
+
+	firstReceipt := result.Messages[0].ReceiptHandle
+
+	// verify the second FIFO message is blocked while the first is in flight
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		QueueUrl: queueURL,
+	}, true)
+	status, resp = ReceiveMessageV1(r)
+	assert.Equal(t, http.StatusOK, status)
+	result = resp.GetResult().(models.ReceiveMessageResult)
+	if len(result.Messages) != 0 {
+		t.Fatalf("expected no FIFO message while the first is outstanding, got %d", len(result.Messages))
+	}
+
+	// delete the first FIFO message
+	_, deleteReq := test.GenerateRequestInfo("POST", "/", models.DeleteMessageRequest{
+		QueueUrl:      queueURL,
+		ReceiptHandle: firstReceipt,
+	}, true)
+	deleteStatus, _ := DeleteMessageV1(deleteReq)
+	assert.Equal(t, http.StatusOK, deleteStatus)
+
+	// receive the second FIFO message and ensure it does not wait for full 10 second visibility timeout
+	_, r = test.GenerateRequestInfo("POST", "/", models.ReceiveMessageRequest{
+		QueueUrl: queueURL,
+	}, true)
+	start := time.Now()
+	status, resp = ReceiveMessageV1(r)
+	elapsed := time.Since(start)
+	assert.Equal(t, http.StatusOK, status)
+	result = resp.GetResult().(models.ReceiveMessageResult)
+	if len(result.Messages) != 1 {
+		t.Fatalf("expected second FIFO message to be available immediately, got %d", len(result.Messages))
+	}
+	if elapsed > time.Second {
+		t.Fatalf("expected second FIFO message without waiting on visibility timeout, took %s", elapsed)
+	}
+	assert.Equal(t, "second", result.Messages[0].Body)
+
+	// delete the second FIFO message
+	_, deleteReq = test.GenerateRequestInfo("POST", "/", models.DeleteMessageRequest{
+		QueueUrl:      queueURL,
+		ReceiptHandle: result.Messages[0].ReceiptHandle,
+	}, true)
+	deleteStatus, _ = DeleteMessageV1(deleteReq)
+	assert.Equal(t, http.StatusOK, deleteStatus)
+
+	if len(q.Messages) != 0 {
+		t.Fatalf("expected all FIFO messages to be deleted, remaining %d", len(q.Messages))
+	}
 }
 
 // TODO - other tests

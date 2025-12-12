@@ -100,19 +100,9 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 				continue
 			}
 
-			randomId := uuid.NewString()
-
 			msg := &models.SyncQueues.Queues[queueName].Messages[i]
 			if !msg.IsReadyForReceipt() {
 				continue
-			}
-			msg.ReceiptHandle = msg.Uuid + "#" + randomId
-			msg.ReceiptTime = time.Now().UTC()
-
-			if requestBody.VisibilityTimeout != 0 {
-				msg.VisibilityTimeout = time.Now().Add(time.Duration(requestBody.VisibilityTimeout) * time.Second)
-			} else {
-				msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
 			}
 
 			if models.SyncQueues.Queues[queueName].IsFIFO {
@@ -122,6 +112,16 @@ func ReceiveMessageV1(req *http.Request) (int, interfaces.AbstractResponseBody) 
 				}
 				// Otherwise lock messages for group ID
 				models.SyncQueues.Queues[queueName].LockGroup(msg.GroupID)
+			}
+
+			randomId := uuid.NewString()
+			msg.ReceiptHandle = msg.Uuid + "#" + randomId
+			msg.ReceiptTime = time.Now().UTC()
+
+			if requestBody.VisibilityTimeout != 0 {
+				msg.VisibilityTimeout = time.Now().Add(time.Duration(requestBody.VisibilityTimeout) * time.Second)
+			} else {
+				msg.VisibilityTimeout = time.Now().Add(time.Duration(models.SyncQueues.Queues[queueName].VisibilityTimeout) * time.Second)
 			}
 
 			messages = append(messages, buildResultMessage(msg))
