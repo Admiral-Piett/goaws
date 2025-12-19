@@ -12,7 +12,8 @@ jobs:
   tag:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           ref: ${{ github.sha }}
           fetch-depth: '0'
@@ -20,8 +21,8 @@ jobs:
       - name: Print Input
         run: echo "${{ inputs.tag }}"
 
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.67.0
+      - name: Bump version and push tag v1.75.0
+        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
           WITH_V: true
@@ -31,34 +32,35 @@ jobs:
     needs: tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - name: Set up Go v6.1.0
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
         with:
-          go-version: '1.18'
+          go-version: 1.18
+
       - run: go version
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+      - name: Set up QEMU v3.7.0
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx v3.12.0
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
+
+      - name: Login to DockerHub v3.6.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+      - name: Run GoReleaser v6.4.0
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
         with:
           distribution: goreleaser
-          version: v1.19.2
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
