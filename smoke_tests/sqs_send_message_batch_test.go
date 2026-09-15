@@ -319,6 +319,70 @@ func TestSendMessageBatchV1_Json_Success_including_attributes(t *testing.T) {
 	assert.Equal(t, []uint8(binaryValue), receivedMessage2.MessageAttributes[binaryAttributeKey].BinaryValue)
 }
 
+// The aws-query protocol flattens batch entries as 1-indexed
+// SendMessageBatchRequestEntry.N.* form fields (and MessageAttribute.M.* within
+// each entry). This is what every AWS SDK on the query protocol sends, e.g.
+// aws-sdk-go below v1.48 and @aws-sdk/client-sqs below 3.447, so it must reach
+// the same queue the aws-json path writes to.
+func TestSendMessageBatchV1_Xml_Success_aws_query_wire_format(t *testing.T) {
+	server := generateServer()
+	defer func() {
+		server.Close()
+		models.ResetResources()
+	}()
+
+	sdkConfig, _ := config.LoadDefaultConfig(context.TODO())
+	sdkConfig.BaseEndpoint = aws.String(server.URL)
+	sqsClient := sqs.NewFromConfig(sdkConfig)
+	sqsClient.CreateQueue(context.TODO(), &sqs.CreateQueueInput{
+		QueueName: &af.QueueName,
+	})
+
+	e := httpexpect.Default(t, server.URL)
+
+	sendMessageBatchXML := struct {
+		Action   string `xml:"Action"`
+		Version  string `xml:"Version"`
+		QueueUrl string `xml:"QueueUrl"`
+	}{
+		Action:   "SendMessageBatch",
+		Version:  "2012-11-05",
+		QueueUrl: af.QueueUrl,
+	}
+
+	r := e.POST("/").WithForm(sendMessageBatchXML).
+		WithFormField("SendMessageBatchRequestEntry.1.Id", "msg-1").
+		WithFormField("SendMessageBatchRequestEntry.1.MessageBody", "body-1").
+		WithFormField("SendMessageBatchRequestEntry.2.Id", "msg-2").
+		WithFormField("SendMessageBatchRequestEntry.2.MessageBody", "body-2").
+		WithFormField("SendMessageBatchRequestEntry.2.MessageAttribute.1.Name", "string-key").
+		WithFormField("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.DataType", "String").
+		WithFormField("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.StringValue", "string-value").
+		Expect().
+		Status(http.StatusOK).
+		Body().Raw()
+
+	response := models.SendMessageBatchResponse{}
+	assert.Nil(t, xml.Unmarshal([]byte(r), &response))
+	assert.Len(t, response.Result.Entry, 2)
+	assert.Equal(t, "msg-1", response.Result.Entry[0].Id)
+	assert.Equal(t, "msg-2", response.Result.Entry[1].Id)
+	assert.NotEmpty(t, response.Result.Entry[0].MessageId)
+	assert.NotEmpty(t, response.Result.Entry[1].MessageId)
+
+	// The messages must be readable over aws-json: both protocols share one store.
+	receiveMessageOutput, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
+		QueueUrl:              &af.QueueUrl,
+		MaxNumberOfMessages:   10,
+		MessageAttributeNames: []string{"All"},
+	})
+	assert.Nil(t, err)
+	assert.Len(t, receiveMessageOutput.Messages, 2)
+	assert.Equal(t, "body-1", *receiveMessageOutput.Messages[0].Body)
+	assert.Equal(t, "body-2", *receiveMessageOutput.Messages[1].Body)
+	assert.Equal(t, "string-value", *receiveMessageOutput.Messages[1].MessageAttributes["string-key"].StringValue)
+}
+
 func TestSendMessageBatchV1_Xml_Success_including_attributes(t *testing.T) {
 	server := generateServer()
 	defer func() {
