@@ -77,3 +77,24 @@ BaseUnitTests:
           EndPoint: http://over.ride.me/for/tests
           TopicArn: arn:aws:sqs:region:accountID:unit-topic-http
           Raw: true
+
+MissingDeadLetterQueue:
+  Host: localhost
+  Port: 4100
+  Region: us-east-1
+  AccountId: "100010001000"
+  Queues:
+    - Name: redrive-queue
+      RedrivePolicy: '{"maxReceiveCount": 100, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:missing-dlq"}'
+    - Name: some-other-queue
+
+InvalidFilterPolicy:
+  Host: localhost
+  Port: 4100
+  Region: us-east-1
+  AccountId: "100010001000"
+  Topics:
+    - Name: bad-filter-topic
+      Subscriptions:
+        - QueueName: bad-filter-queue
+          FilterPolicy: '{not json'
