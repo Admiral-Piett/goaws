@@ -25,4 +25,6 @@ type AbstractPublishEntry interface {
 	GetMessageAttributes() map[string]models.MessageAttribute
 	GetMessageStructure() string
 	GetSubject() string
+	GetMessageGroupId() string
+	GetMessageDeduplicationId() string
 }

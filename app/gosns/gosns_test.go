@@ -130,6 +130,89 @@ func Test_publishSQS_missing_queue_returns_nil(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_publishSQS_fifo_queue_keeps_group_and_deduplication_ids(t *testing.T) {
+	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		models.ResetApp()
+	}()
+
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
+	sub := topic.Subscriptions[0]
+	models.SyncTopics.Unlock()
+	models.SyncQueues.Queues["subscribed-queue1"].IsFIFO = true
+
+	for _, group := range []string{"group-1", "group-2"} {
+		request := models.PublishRequest{
+			TopicArn:               topic.Arn,
+			Message:                "{\"IAm\": \"aMessage\"}",
+			MessageGroupId:         group,
+			MessageDeduplicationId: "dedup-" + group,
+		}
+		err := publishSQS(sub, topic, &request)
+		assert.Nil(t, err)
+	}
+
+	messages := models.SyncQueues.Queues["subscribed-queue1"].Messages
+	assert.Len(t, messages, 2)
+	assert.Equal(t, "group-1", messages[0].GroupID)
+	assert.Equal(t, "dedup-group-1", messages[0].DeduplicationID)
+	assert.Equal(t, "group-2", messages[1].GroupID)
+	assert.Equal(t, "dedup-group-2", messages[1].DeduplicationID)
+}
+
+func Test_publishSQS_fifo_queue_drops_duplicate_when_duplicates_enabled(t *testing.T) {
+	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		models.ResetApp()
+	}()
+
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
+	sub := topic.Subscriptions[0]
+	models.SyncTopics.Unlock()
+	queue := models.SyncQueues.Queues["subscribed-queue1"]
+	queue.IsFIFO = true
+	queue.EnableDuplicates = true
+
+	for i := 0; i < 2; i++ {
+		request := models.PublishRequest{
+			TopicArn:               topic.Arn,
+			Message:                "{\"IAm\": \"aMessage\"}",
+			MessageGroupId:         "group-1",
+			MessageDeduplicationId: "same-dedup",
+		}
+		err := publishSQS(sub, topic, &request)
+		assert.Nil(t, err)
+	}
+
+	assert.Len(t, models.SyncQueues.Queues["subscribed-queue1"].Messages, 1)
+}
+
+func Test_publishSQS_standard_queue_ignores_group_id(t *testing.T) {
+	conf.LoadYamlConfig("../conf/mock-data/mock-config.yaml", "BaseUnitTests")
+	defer func() {
+		models.ResetApp()
+	}()
+
+	models.SyncTopics.Lock()
+	topic := models.SyncTopics.Topics["unit-topic1"]
+	sub := topic.Subscriptions[0]
+	models.SyncTopics.Unlock()
+
+	request := models.PublishRequest{
+		TopicArn:       topic.Arn,
+		Message:        "{\"IAm\": \"aMessage\"}",
+		MessageGroupId: "group-1",
+	}
+	err := publishSQS(sub, topic, &request)
+
+	assert.Nil(t, err)
+	messages := models.SyncQueues.Queues["subscribed-queue1"].Messages
+	assert.Len(t, messages, 1)
+	assert.Equal(t, "", messages[0].GroupID)
+}
+
 func Test_publishHTTP_success(t *testing.T) {
 	called := false
 	subscribedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
