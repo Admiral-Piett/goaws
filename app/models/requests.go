@@ -694,8 +694,8 @@ func NewPublishRequest() *PublishRequest {
 type PublishRequest struct {
 	Message                string                      `json:"Message" schema:"Message"`
 	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`
-	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
-	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`
 	MessageStructure       string                      `json:"MessageStructure" schema:"MessageStructure"`
 	PhoneNumber            string                      `json:"PhoneNumber" schema:"PhoneNumber"` // Not implemented
 	Subject                string                      `json:"Subject" schema:"Subject"`
@@ -722,6 +722,14 @@ func (r *PublishRequest) GetMessageStructure() string {
 
 func (r *PublishRequest) GetSubject() string {
 	return r.Subject
+}
+
+func (r *PublishRequest) GetMessageGroupId() string {
+	return r.MessageGroupId
+}
+
+func (r *PublishRequest) GetMessageDeduplicationId() string {
+	return r.MessageDeduplicationId
 }
 
 // ListTopics
@@ -840,9 +848,9 @@ type PublishBatchRequestEntries struct {
 type PublishBatchRequestEntry struct {
 	ID                     string                      `json:"Id" schema:"Id"`
 	Message                string                      `json:"Message" schema:"Message"`
-	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"`           // Not implemented
-	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"` // Not implemented
-	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`                 // Not implemented
+	MessageAttributes      map[string]MessageAttribute `json:"MessageAttributes" schema:"MessageAttributes"` // Not implemented
+	MessageDeduplicationId string                      `json:"MessageDeduplicationId" schema:"MessageDeduplicationId"`
+	MessageGroupId         string                      `json:"MessageGroupId" schema:"MessageGroupId"`
 	MessageStructure       string                      `json:"MessageStructure" schema:"MessageStructure"`
 	Subject                string                      `json:"Subject" schema:"Subject"`
 }
@@ -862,4 +870,12 @@ func (r *PublishBatchRequestEntry) GetMessageStructure() string {
 
 func (r *PublishBatchRequestEntry) GetSubject() string {
 	return r.Subject
+}
+
+func (r *PublishBatchRequestEntry) GetMessageGroupId() string {
+	return r.MessageGroupId
+}
+
+func (r *PublishBatchRequestEntry) GetMessageDeduplicationId() string {
+	return r.MessageDeduplicationId
 }

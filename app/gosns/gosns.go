@@ -339,7 +339,20 @@ func publishSQS(subscription *models.Subscription, topic *models.Topic, entry in
 		msg.MD5OfMessageBody = utils.GetMD5Hash(entry.GetMessage())
 		msg.Uuid = uuid.NewString()
 		models.SyncQueues.Lock()
-		models.SyncQueues.Queues[queueName].Messages = append(models.SyncQueues.Queues[queueName].Messages, msg)
+		queue := models.SyncQueues.Queues[queueName]
+		if queue.IsFIFO {
+			// Fan-out to a FIFO queue keeps the publish's group and deduplication ids, as SendMessage does.
+			// Without the group id every message lands in group "" and ReceiveMessage's group lock
+			// serializes the whole queue.
+			msg.GroupID = entry.GetMessageGroupId()
+			msg.DeduplicationID = entry.GetMessageDeduplicationId()
+		}
+		if !queue.IsDuplicate(msg.DeduplicationID) {
+			queue.Messages = append(queue.Messages, msg)
+		} else {
+			log.Debugf("Message with deduplicationId [%s] in queue [%s] is duplicate ", msg.DeduplicationID, queueName)
+		}
+		queue.InitDuplicatation(msg.DeduplicationID)
 		models.SyncQueues.Unlock()
 
 		log.Debugf("SQS Publish Success - Topic: %s(%s), Message: %s\n", topic.Name, queueName, msg.MessageBody)
