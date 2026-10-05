@@ -448,6 +448,45 @@ type ChangeMessageVisibilityRequest struct {
 
 func (r *ChangeMessageVisibilityRequest) SetAttributesFromForm(values url.Values) {}
 
+type ChangeMessageVisibilityBatchRequestEntry struct {
+	Id                string `json:"Id" schema:"Id"`
+	ReceiptHandle     string `json:"ReceiptHandle" schema:"ReceiptHandle"`
+	VisibilityTimeout int    `json:"VisibilityTimeout" schema:"VisibilityTimeout"`
+}
+
+type ChangeMessageVisibilityBatchRequest struct {
+	Entries  []ChangeMessageVisibilityBatchRequestEntry `json:"Entries"`
+	QueueUrl string                                     `json:"QueueUrl" schema:"QueueUrl"`
+}
+
+func NewChangeMessageVisibilityBatchRequest() *ChangeMessageVisibilityBatchRequest {
+	return &ChangeMessageVisibilityBatchRequest{}
+}
+
+func (r *ChangeMessageVisibilityBatchRequest) SetAttributesFromForm(values url.Values) {
+	entries := []ChangeMessageVisibilityBatchRequestEntry{}
+	for i := 1; true; i++ {
+		msgIdKey := fmt.Sprintf("ChangeMessageVisibilityBatchRequestEntry.%d.Id", i)
+		receiptHandleKey := fmt.Sprintf("ChangeMessageVisibilityBatchRequestEntry.%d.ReceiptHandle", i)
+		visibilityTimeoutKey := fmt.Sprintf("ChangeMessageVisibilityBatchRequestEntry.%d.VisibilityTimeout", i)
+
+		msgId := values.Get(msgIdKey)
+		receiptHandle := values.Get(receiptHandleKey)
+		if msgId == "" || receiptHandle == "" {
+			break
+		}
+		visibilityTimeout, _ := strconv.Atoi(values.Get(visibilityTimeoutKey))
+		entries = append(entries, ChangeMessageVisibilityBatchRequestEntry{
+			Id:                msgId,
+			ReceiptHandle:     receiptHandle,
+			VisibilityTimeout: visibilityTimeout,
+		})
+	}
+	if len(entries) > 0 {
+		r.Entries = entries
+	}
+}
+
 func NewDeleteMessageRequest() *DeleteMessageRequest {
 	return &DeleteMessageRequest{}
 }

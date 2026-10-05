@@ -386,6 +386,30 @@ func (r UnsubscribeResponse) GetRequestId() string {
 	return r.Metadata.RequestId
 }
 
+type ChangeMessageVisibilityBatchResultEntry struct {
+	Id string `json:"Id" xml:"Id"`
+}
+
+type ChangeMessageVisibilityBatchResult struct {
+	Successful []ChangeMessageVisibilityBatchResultEntry `json:"Successful" xml:"ChangeMessageVisibilityBatchResultEntry"`
+	Failed     []BatchResultErrorEntry                   `json:"Failed,omitempty" xml:"BatchResultErrorEntry,omitempty"`
+}
+
+/*** Change Message Visibility Batch Response */
+type ChangeMessageVisibilityBatchResponse struct {
+	Xmlns    string                             `json:"Xmlns" xml:"xmlns,attr"`
+	Result   ChangeMessageVisibilityBatchResult `json:"ChangeMessageVisibilityBatchResult" xml:"ChangeMessageVisibilityBatchResult"`
+	Metadata ResponseMetadata                   `json:"ResponseMetadata" xml:"ResponseMetadata"`
+}
+
+func (r ChangeMessageVisibilityBatchResponse) GetResult() interface{} {
+	return r.Result
+}
+
+func (r ChangeMessageVisibilityBatchResponse) GetRequestId() string {
+	return r.Metadata.RequestId
+}
+
 type DeleteMessageBatchResultEntry struct {
 	Id string `xml:"Id"`
 }
