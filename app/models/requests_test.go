@@ -737,3 +737,90 @@ func TestParseMessageAttributes(t *testing.T) {
 		})
 	}
 }
+
+func Test_SendMessageBatchRequest_SetAttributesFromForm_success(t *testing.T) {
+	form := url.Values{}
+	form.Add("SendMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "message-body-1")
+	form.Add("SendMessageBatchRequestEntry.2.Id", "message-id-2")
+	form.Add("SendMessageBatchRequestEntry.2.MessageBody", "message-body-2")
+	form.Add("SendMessageBatchRequestEntry.2.DelaySeconds", "5")
+	form.Add("SendMessageBatchRequestEntry.2.MessageGroupId", "group-2")
+	form.Add("SendMessageBatchRequestEntry.2.MessageDeduplicationId", "dedup-2")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Name", "attr-string")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.DataType", "String")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.1.Value.StringValue", "string-value")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.2.Name", "attr-binary")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.2.Value.DataType", "Binary")
+	form.Add("SendMessageBatchRequestEntry.2.MessageAttribute.2.Value.BinaryValue", "YmluYXJ5LXZhbHVl")
+
+	smbr := &SendMessageBatchRequest{}
+	smbr.SetAttributesFromForm(form)
+
+	assert.Len(t, smbr.Entries, 2)
+
+	assert.Equal(t, "message-id-1", smbr.Entries[0].Id)
+	assert.Equal(t, "message-body-1", smbr.Entries[0].MessageBody)
+	assert.Equal(t, 0, smbr.Entries[0].DelaySeconds)
+	assert.Nil(t, smbr.Entries[0].MessageAttributes)
+
+	assert.Equal(t, "message-id-2", smbr.Entries[1].Id)
+	assert.Equal(t, "message-body-2", smbr.Entries[1].MessageBody)
+	assert.Equal(t, 5, smbr.Entries[1].DelaySeconds)
+	assert.Equal(t, "group-2", smbr.Entries[1].MessageGroupId)
+	assert.Equal(t, "dedup-2", smbr.Entries[1].MessageDeduplicationId)
+	assert.Equal(t, map[string]MessageAttribute{
+		"attr-string": {DataType: "String", StringValue: "string-value"},
+		"attr-binary": {DataType: "Binary", BinaryValue: "YmluYXJ5LXZhbHVl"},
+	}, smbr.Entries[1].MessageAttributes)
+}
+
+func Test_SendMessageBatchRequest_SetAttributesFromForm_allows_empty_message_body(t *testing.T) {
+	form := url.Values{}
+	form.Add("SendMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "")
+
+	smbr := &SendMessageBatchRequest{}
+	smbr.SetAttributesFromForm(form)
+
+	assert.Len(t, smbr.Entries, 1)
+	assert.Equal(t, "", smbr.Entries[0].MessageBody)
+}
+
+func Test_SendMessageBatchRequest_SetAttributesFromForm_stops_at_non_sequential_keys(t *testing.T) {
+	form := url.Values{}
+	form.Add("SendMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "message-body-1")
+	form.Add("SendMessageBatchRequestEntry.3.Id", "message-id-3")
+	form.Add("SendMessageBatchRequestEntry.3.MessageBody", "message-body-3")
+
+	smbr := &SendMessageBatchRequest{}
+	smbr.SetAttributesFromForm(form)
+
+	assert.Len(t, smbr.Entries, 1)
+	assert.Equal(t, "message-id-1", smbr.Entries[0].Id)
+}
+
+func Test_SendMessageBatchRequest_SetAttributesFromForm_ignores_invalid_delay_seconds(t *testing.T) {
+	form := url.Values{}
+	form.Add("SendMessageBatchRequestEntry.1.Id", "message-id-1")
+	form.Add("SendMessageBatchRequestEntry.1.MessageBody", "message-body-1")
+	form.Add("SendMessageBatchRequestEntry.1.DelaySeconds", "soon")
+
+	smbr := &SendMessageBatchRequest{}
+	smbr.SetAttributesFromForm(form)
+
+	assert.Len(t, smbr.Entries, 1)
+	assert.Equal(t, 0, smbr.Entries[0].DelaySeconds)
+}
+
+func Test_SendMessageBatchRequest_SetAttributesFromForm_leaves_entries_alone_when_no_form_entries(t *testing.T) {
+	form := url.Values{}
+	form.Add("QueueUrl", "http://localhost:4100/queue/test")
+
+	smbr := &SendMessageBatchRequest{Entries: []SendMessageBatchRequestEntry{{Id: "pre-decoded"}}}
+	smbr.SetAttributesFromForm(form)
+
+	assert.Len(t, smbr.Entries, 1)
+	assert.Equal(t, "pre-decoded", smbr.Entries[0].Id)
+}

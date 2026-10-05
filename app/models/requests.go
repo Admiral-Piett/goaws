@@ -229,7 +229,53 @@ type SendMessageBatchRequest struct {
 	QueueUrl string
 }
 
+// SetAttributesFromForm decodes the aws-query (form-encoded) shape of a
+// SendMessageBatch request, which every AWS SDK on the query protocol emits as
+// 1-indexed, flattened entries:
+//
+//	SendMessageBatchRequestEntry.1.Id=...
+//	SendMessageBatchRequestEntry.1.MessageBody=...
+//	SendMessageBatchRequestEntry.1.MessageAttribute.1.Name=...
+//	SendMessageBatchRequestEntry.1.MessageAttribute.1.Value.DataType=...
+//	SendMessageBatchRequestEntry.1.MessageAttribute.1.Value.StringValue=...
+//
+// The gorilla/schema decoder cannot map that onto Entries, so the entries are
+// built here by hand, the same way DeleteMessageBatchRequest does it.
 func (r *SendMessageBatchRequest) SetAttributesFromForm(values url.Values) {
+	entries := []SendMessageBatchRequestEntry{}
+	for i := 1; true; i++ {
+		prefix := fmt.Sprintf("SendMessageBatchRequestEntry.%d", i)
+		id := values.Get(prefix + ".Id")
+		if id == "" {
+			break
+		}
+		if !values.Has(prefix + ".MessageBody") {
+			break
+		}
+
+		entry := SendMessageBatchRequestEntry{
+			Id:                     id,
+			MessageBody:            values.Get(prefix + ".MessageBody"),
+			MessageDeduplicationId: values.Get(prefix + ".MessageDeduplicationId"),
+			MessageGroupId:         values.Get(prefix + ".MessageGroupId"),
+			MessageAttributes:      parseMessageAttributes(values, prefix+".MessageAttribute"),
+		}
+		if delay := values.Get(prefix + ".DelaySeconds"); delay != "" {
+			if parsed, err := strconv.Atoi(delay); err == nil {
+				entry.DelaySeconds = parsed
+			} else {
+				log.Warnf("DelaySeconds of batch entry %s is not an integer: %q", id, delay)
+			}
+		}
+		entries = append(entries, entry)
+	}
+	if len(entries) > 0 {
+		r.Entries = entries
+		return
+	}
+
+	// No AWS-shaped entries: keep honouring the decoder's own Entries.N.* form
+	// for any caller that was written against it.
 	for entryIndex := range r.Entries {
 		r.Entries[entryIndex].MessageAttributes = parseMessageAttributes(values, fmt.Sprintf("Entries.%d.MessageAttributes", entryIndex))
 	}
