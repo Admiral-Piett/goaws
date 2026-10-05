@@ -164,3 +164,47 @@ func TestConfig_LoadYamlConfig_invalid_config_loads_nothing(t *testing.T) {
 	assert.Equal(t, []string{"4100"}, ports)
 	assert.Equal(t, models.CurrentEnvironment, models.Environment{})
 }
+
+// assertSyncLocksReleased fails the test if LoadYamlConfig left SyncQueues or
+// SyncTopics locked. A leaked lock is released so later tests do not hang.
+func assertSyncLocksReleased(t *testing.T) {
+	t.Helper()
+	if models.SyncQueues.TryLock() {
+		models.SyncQueues.Unlock()
+	} else {
+		t.Error("SyncQueues is still locked after LoadYamlConfig returned")
+		models.SyncQueues.Unlock()
+	}
+	if models.SyncTopics.TryLock() {
+		models.SyncTopics.Unlock()
+	} else {
+		t.Error("SyncTopics is still locked after LoadYamlConfig returned")
+		models.SyncTopics.Unlock()
+	}
+}
+
+func TestConfig_LoadYamlConfig_missing_dead_letter_queue_releases_locks(t *testing.T) {
+	defer models.ResetApp()
+
+	ports := LoadYamlConfig("./mock-data/mock-config.yaml", "MissingDeadLetterQueue")
+	assert.Equal(t, []string{"4100"}, ports)
+
+	assertSyncLocksReleased(t)
+}
+
+func TestConfig_LoadYamlConfig_invalid_filter_policy_releases_locks(t *testing.T) {
+	defer models.ResetApp()
+
+	ports := LoadYamlConfig("./mock-data/mock-config.yaml", "InvalidFilterPolicy")
+	assert.Equal(t, []string{"4100"}, ports)
+
+	assertSyncLocksReleased(t)
+}
+
+func TestConfig_setQueueRedrivePolicy_names_missing_dead_letter_queue(t *testing.T) {
+	q := &models.Queue{Name: "redrive-queue"}
+	err := setQueueRedrivePolicy(map[string]*models.Queue{"redrive-queue": q}, q,
+		`{"maxReceiveCount": 3, "deadLetterTargetArn":"arn:aws:sqs:us-east-1:100010001000:missing-dlq"}`)
+
+	assert.EqualError(t, err, "deadletter queue not found: missing-dlq")
+}

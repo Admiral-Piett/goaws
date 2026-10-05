@@ -108,7 +108,9 @@ func LoadYamlConfig(filename string, env string) []string {
 	}
 
 	models.SyncQueues.Lock()
+	defer models.SyncQueues.Unlock()
 	models.SyncTopics.Lock()
+	defer models.SyncTopics.Unlock()
 	for _, queue := range envs[env].Queues {
 		queueUrl := "http://" + models.CurrentEnvironment.Host + ":" + models.CurrentEnvironment.Port +
 			"/" + models.CurrentEnvironment.AccountID + "/" + queue.Name
@@ -190,9 +192,6 @@ func LoadYamlConfig(filename string, env string) []string {
 		models.SyncTopics.Topics[topic.Name] = newTopic
 	}
 
-	models.SyncQueues.Unlock()
-	models.SyncTopics.Unlock()
-
 	return ports
 }
 
@@ -262,7 +261,7 @@ func setQueueRedrivePolicy(queues map[string]*models.Queue, q *models.Queue, str
 	deadLetterQueueName := dlt[len(dlt)-1]
 	deadLetterQueue, ok := queues[deadLetterQueueName]
 	if !ok {
-		return fmt.Errorf("deadletter queue not found")
+		return fmt.Errorf("deadletter queue not found: %s", deadLetterQueueName)
 	}
 	q.DeadLetterQueue = deadLetterQueue
 	q.MaxReceiveCount = maxReceiveCount
